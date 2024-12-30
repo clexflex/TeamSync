@@ -1,9 +1,14 @@
 import axios from 'axios';
 import React, { useState } from 'react';
+import { useAuth } from '../context/authContext';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [error, setError] = useState(null)
+    const {login} = useAuth()
+    const navigate = useNavigate()
 
     const handleSubmit = async (e)=> {
         e.preventDefault()
@@ -11,9 +16,21 @@ const Login = () => {
             const response = await axios.post("http://localhost:3000/api/auth/login", 
             {email, password}
         );
-        console.log(response)
+        if(response.data.success){
+            login(response.data.user)
+            localStorage.setItem("token", response.data.token)
+            if (response.data.user.role === "admin") {
+                navigate('/admin-dashboard')
+            } else{
+                navigate('/employee-dashboard')
+            }
+        }
         } catch (error) {
-            console.log(error);
+            if(error.response && !error.response.data.success){
+                setError(error.response.data.error)
+            } else {
+                setError("Server Error")
+            }
         }
     }
 
@@ -38,7 +55,7 @@ const Login = () => {
           </div>
           
           <h2 className="text-2xl font-bold text-gray-900 mb-8">Sign in to your account</h2>
-          
+          {error && <p className='text-red-500'>{error}</p>}
           <form 
           onSubmit={handleSubmit}
           className="space-y-6">
@@ -52,6 +69,7 @@ const Login = () => {
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" autoComplete='on'
                 placeholder="name@gmail.com"
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
             
@@ -65,6 +83,7 @@ const Login = () => {
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" autoComplete='on'
                 placeholder="••••••••"
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
             
