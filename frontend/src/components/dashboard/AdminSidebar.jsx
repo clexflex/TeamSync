@@ -20,7 +20,7 @@ const AdminSidebar = () => {
                     <span className="font-medium">Dashboard</span>
                     
                 </NavLink>
-                <NavLink to="/2"
+                <NavLink to="/admin-dashboard/employees"
                     className={({ isActive }) =>
                         `${isActive
                             ? "bg-blue-50 text-blue-600"
