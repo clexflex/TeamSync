@@ -88,58 +88,52 @@ const getEmployee = async (req, res) => {
 const updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
-        const {
-            name,
-            email,
-            employeeId,
-            dob,
-            gender,
-            maritalStatus,
-            designation,
-            department,
-            salary,
-            password,
-            role,
-        } = req.body;
+        const updateData = req.body;
 
-        const employee = await Employee.findById({ _id: id })
+        const employee = await Employee.findById(id);
         if (!employee) {
-            return res.status(404).json({ success: false, error: "Employee Not Found!" })
+            return res.status(404).json({ success: false, error: "Employee Not Found!" });
         }
 
-        const user = await User.findById({ _id: employee.userId })
+        const user = await User.findById(employee.userId);
         if (!user) {
-            return res.status(404).json({ success: false, error: "User Not Found!" })
+            return res.status(404).json({ success: false, error: "User Not Found!" });
         }
 
-        const hashPassword = await bcrypt.hash(password, 10)
-
-        const updateUser = await User.findByIdAndUpdate({ _id: employee.userId }, {
-            name,
-            email,
-            password: hashPassword,
-            role
-        })
-        const updateEmployee = await Employee.findByIdAndUpdate({ _id: id }, {
-            employeeId,
-            dob,
-            gender,
-            maritalStatus,
-            designation,
-            department,
-            salary
-        })
-
-        if(!updateEmployee || !updateUser){
-            return res.status(404).json({ success: false, error: "Document Not Found!" })
+        // Prepare user update data
+        const userUpdateData = {};
+        if (updateData.name) userUpdateData.name = updateData.name;
+        if (updateData.email) userUpdateData.email = updateData.email;
+        if (updateData.role) userUpdateData.role = updateData.role;
+        if (updateData.password) {
+            userUpdateData.password = await bcrypt.hash(updateData.password, 10);
         }
 
-        return res.status(200).json({ success: true, message: "Employee Updated" })
+        // Prepare employee update data
+        const employeeUpdateData = {};
+        if (updateData.employeeId) employeeUpdateData.employeeId = updateData.employeeId;
+        if (updateData.dob) employeeUpdateData.dob = updateData.dob;
+        if (updateData.gender) employeeUpdateData.gender = updateData.gender;
+        if (updateData.maritalStatus) employeeUpdateData.maritalStatus = updateData.maritalStatus;
+        if (updateData.designation) employeeUpdateData.designation = updateData.designation;
+        if (updateData.department) employeeUpdateData.department = updateData.department;
+        if (updateData.salary) employeeUpdateData.salary = updateData.salary;
+
+        // Only update if there are changes
+        if (Object.keys(userUpdateData).length > 0) {
+            await User.findByIdAndUpdate(employee.userId, userUpdateData);
+        }
+
+        if (Object.keys(employeeUpdateData).length > 0) {
+            await Employee.findByIdAndUpdate(id, employeeUpdateData);
+        }
+
+        return res.status(200).json({ success: true, message: "Employee Updated" });
 
     } catch (error) {
-        return res.status(500).json({ success: false, error: "Upload Employee server error" })
+        return res.status(500).json({ success: false, error: "Update Employee server error" });
     }
-}
+};
 
 
 export { addEmployee, upload, getEmployees, getEmployee, updateEmployee }

@@ -1,5 +1,5 @@
 import axios from "axios"
-import { FaEdit, FaEye, FaMoneyBill, FaTrash } from "react-icons/fa";
+import { FaCalendarCheck, FaEdit, FaEye, FaMoneyBill, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 export const columns = [
@@ -7,35 +7,49 @@ export const columns = [
         name: "S No",
         selector: (row) => row.sno,
         width: '70px',
+        sortable: true,
     },
     {
-        name: "Employee Name",
-        selector: (row) => row.name,
-        sortable: true,  
-        width: '200px',
-    },
-    {
-        name: "Image",
-        selector: (row) => row.profileImage,
-        width: '70px',
+        name: "Employee",
+        selector: (row) => (
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-x-auto ">
+                    {row.profileImage}
+                </div>
+                <div>
+                    <div className="font-medium text-gray-800">{row.name}</div>
+                    <div className="text-sm text-gray-500">{row.employeeId}</div>
+                </div>
+            </div>
+        ),
+        width: '250px',
+        sortable: true,
     },
     {
         name: "Department",
         selector: (row) => row.dep_name,
-        width: '150px',
+        sortable: true,
+        width: '70px',
     },
     {
-        name: "DOB",
-        selector: (row) => row.dob ,
-        sortable: true,  
-         width: '100px',
+        name: "Status",
+        selector: (row) => (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium
+                ${row.status === 'Active' ? 'bg-green-100 text-green-800' : 
+                 row.status === 'On Leave' ? 'bg-yellow-100 text-yellow-800' : 
+                 'bg-red-100 text-red-800'}`}>
+                {row.status}
+            </span>
+        ),
+        width: '100px',
+        sortable: true,
     },
     {
         name: "Action",
         selector: (row) => row.action,
        
     },
-]
+];
 
 export const fetchDepartments = async () => {
     let departments
@@ -81,6 +95,12 @@ export const EmployeeButtons = ({ Id}) => {
             >
                 <FaMoneyBill className="text-sm" />
                 <span>Salary</span>
+            </button>
+            <button 
+                className="flex items-center gap-1 px-3 py-1.5 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded transition-colors duration-200"
+            >
+                <FaCalendarCheck className="text-sm" />
+                <span>Attendance</span>
             </button>
             <button 
                 className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded transition-colors duration-200"

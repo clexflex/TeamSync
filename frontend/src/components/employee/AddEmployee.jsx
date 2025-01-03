@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { fetchDepartments } from '../../utils/EmployeeHelper'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { FaArrowLeft } from 'react-icons/fa'
 
 const AddEmployee = () => {
     const [departments, setDepartments] = useState([])
@@ -24,9 +25,9 @@ const AddEmployee = () => {
             setFormData((prevData) => ({ ...prevData, [name]: value }))
         }
     }
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const formDataObj = new FormData()
         Object.keys(formData).forEach((key) => {
             formDataObj.append(key, formData[key])
@@ -49,90 +50,102 @@ const AddEmployee = () => {
     }
 
     return (
-        <div>
-            <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-d shadow-md" >
-                <h2 className="text-2x1 font-bold mb-6">Add New Employee</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Name */}
+        <>
+            <div className="flex items-center gap-2 text-gray-600 mb-8 cursor-pointer group"
+                onClick={() => navigate('/admin-dashboard/employees')}>
+                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform duration-200" />
+                <span>Back to Employees</span>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm max-w-4xl mx-auto">
+                <div className="p-6 border-b">
+                    <h2 className="text-xl font-semibold text-gray-800">Add New Employee</h2>
+                    <p className="text-sm text-gray-500 mt-1">Create a new employee profile in your organization</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Basic Information */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Name </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Name
+                            </label>
                             <input
                                 type="text"
                                 name="name"
                                 onChange={handleChange}
-                                placeholder="Insert Name"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                placeholder="Enter full name"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
                         </div>
-                        {/* Email */}
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Email </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Email
+                            </label>
                             <input
                                 type="email"
                                 name="email"
                                 onChange={handleChange}
-                                placeholder="Insert Email"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                placeholder="Enter email address"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
                         </div>
-                        {/* Employee ID */}
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700" >
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Employee ID
-                            </label >
+                            </label>
                             <input
                                 type="text"
                                 name="employeeId"
                                 onChange={handleChange}
-                                placeholder="Employee ID"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                placeholder="Enter employee ID"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
                         </div>
-                        {/* Date of Birth */}
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Date of Birth
                             </label>
                             <input
                                 type="date"
                                 name="dob"
                                 onChange={handleChange}
-                                placeholder="DOB"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
                         </div>
-                        {/* Gender */}
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700" >
-                                Gender </label >
-                            < select
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Gender
+                            </label>
+                            <select
                                 name="gender"
                                 onChange={handleChange}
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-                                required>
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
+                                required
+                            >
                                 <option value="">Select Gender</option>
                                 <option value="male">Male</option>
                                 <option value="female">Female</option>
-                                <option value="other" >Other</option>
-                            </select >
+                                <option value="other">Other</option>
+                            </select>
                         </div>
-                        {/*  Marital Status */}
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700" >
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Marital Status
-                            </label >
-                            < select
+                            </label>
+                            <select
                                 name="maritalStatus"
                                 onChange={handleChange}
-                                placeholder="Marital Status"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             >
                                 <option value="">Select Status</option>
@@ -141,31 +154,28 @@ const AddEmployee = () => {
                             </select>
                         </div>
 
-                        {/* Designation */}
-                        < div>
-                            <label className="block text-sm font-medium text-gray-700" >
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Designation
                             </label>
-                            < input
+                            <input
                                 type="text"
                                 name="designation"
                                 onChange={handleChange}
-                                placeholder="Designation"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                placeholder="Enter designation"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
-                        </ div>
+                        </div>
 
-                        {/* Department */}
                         <div>
-                            < label className="block text-sm font-medium text-gray-700">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Department
-                            </ label>
-
-                            < select
+                            </label>
+                            <select
                                 name="department"
                                 onChange={handleChange}
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             >
                                 <option value="">Select Department</option>
@@ -174,77 +184,83 @@ const AddEmployee = () => {
                                 ))}
                             </select>
                         </div>
-                        {/* Salary */}
-                        < div>
-                            < label className="block text-sm font-medium text-gray-700" >
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Salary
                             </label>
                             <input
                                 type="number"
                                 name="salary"
                                 onChange={handleChange}
-                                placeholder="Salary"
-                                className="t-1 p-2 block w-full border border-gray-300 rounded-md"
+                                placeholder="Enter salary"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
                         </div>
 
-                        {/* Password */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Password
-                            </ label>
+                            </label>
                             <input
                                 type="password"
                                 name="password"
                                 onChange={handleChange}
-                                placeholder="******"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                placeholder="Enter password"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                                 required
                             />
                         </div>
 
-                        {/* Role */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Role
                             </label>
-                            < select
+                            <select
                                 name="role"
                                 onChange={handleChange}
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-                                required >
-
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
+                                required
+                            >
                                 <option value="">Select Role</option>
                                 <option value="admin">Admin</option>
-                                <option value="employee"> Employee</option>
-                            </ select>
+                                <option value="employee">Employee</option>
+                            </select>
                         </div>
 
-                        {/* Image Upload */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700" >
-                                Upload Image
-                            </label >
-                            < input
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Profile Image
+                            </label>
+                            <input
                                 type="file"
                                 name="image"
                                 onChange={handleChange}
-                                placeholder="Upload Image"
                                 accept="image/*"
-                                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
                             />
                         </div>
-
                     </div>
-                    < button
-                        type="submit"
-                        className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 ">
-                        Add Employee
-                    </button>
+
+                    <div className="flex items-center gap-4 mt-8">
+                        <button
+                            type="submit"
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                        >
+                            Create Employee
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/admin-dashboard/employees')}
+                            className="px-6 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </form>
-            </div >
-        </div >
+            </div>
+        </>
     )
 }
 
