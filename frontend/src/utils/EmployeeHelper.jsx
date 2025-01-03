@@ -29,7 +29,7 @@ export const columns = [
         name: "Department",
         selector: (row) => row.dep_name,
         sortable: true,
-        width: '70px',
+        width: '100px',
     },
     {
         name: "Status",
