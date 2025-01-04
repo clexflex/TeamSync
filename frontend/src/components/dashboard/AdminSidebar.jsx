@@ -50,7 +50,7 @@ const AdminSidebar = () => {
                     <FaCalendarAlt className="text-lg" />
                     <span className="font-medium">Leave</span>
                 </NavLink>
-                <NavLink to="/5"
+                <NavLink to="/admin-dashboard/salary/add"
                     className={({ isActive }) =>
                         `${isActive
                             ? "bg-blue-50 text-blue-600"

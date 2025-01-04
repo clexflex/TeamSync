@@ -66,7 +66,7 @@ const addEmployee = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ success: false, error: "erver error in adding employee" });
     }
-}
+};
 
 const getEmployees = async (req, res) => {
     try {
@@ -75,7 +75,8 @@ const getEmployees = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ success: false, error: "Fetch Employees server error" })
     }
-}
+};
+
 const getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
@@ -84,7 +85,8 @@ const getEmployee = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ success: false, error: "Fetch Employee server error" })
     }
-}
+};
+
 const updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
@@ -135,5 +137,16 @@ const updateEmployee = async (req, res) => {
     }
 };
 
+const fetchEmployeesByDepId = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const employees = await Employee.find({ department: id })
 
-export { addEmployee, upload, getEmployees, getEmployee, updateEmployee }
+        return res.status(200).json({ success: true, employees })
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Fetch EmployeesByDepId server error" })
+    }
+};
+
+
+export { addEmployee, upload, getEmployees, getEmployee, updateEmployee ,fetchEmployeesByDepId}

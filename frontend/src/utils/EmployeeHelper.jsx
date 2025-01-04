@@ -52,7 +52,7 @@ export const columns = [
 ];
 
 export const fetchDepartments = async () => {
-    let departments
+    let departments;
     try {
         const response = await axios.get('http://localhost:3000/api/department', {
             headers: {
@@ -69,6 +69,26 @@ export const fetchDepartments = async () => {
     }
     return departments
 };
+
+export const getEmployees = async (id) => {
+    let employees;
+    try {
+        const response = await axios.get(`http://localhost:3000/api/employee/department/${id}`, {
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        if (response.data.success) {
+            employees = response.data.employees;
+        }
+    } catch (error) {
+        if (error.response && !error.response.data.success) {
+            alert(error.response.data.error);
+        }
+    }
+    return employees || [];
+};
+
 
 
 export const EmployeeButtons = ({ Id}) => {
@@ -91,6 +111,7 @@ export const EmployeeButtons = ({ Id}) => {
                 <span>Edit</span>
             </button>
             <button 
+                onClick={() => navigate(`/admin-dashboard/employees/salary/${Id}`)}
                 className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-green-600 hover:bg-green-200 rounded transition-colors duration-200"
             >
                 <FaMoneyBill className="text-sm" />

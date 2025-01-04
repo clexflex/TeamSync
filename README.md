@@ -10,9 +10,8 @@
 
    press ctrl+shift+p and enter Project Tree to enter. Generate a tree structure of the project in README.md.
 
-   
 
-
+ 
 ```
 TeamSync
 ├─ .DS_Store
@@ -31,6 +30,7 @@ TeamSync
 │  │  ├─ App.jsx
 │  │  ├─ assets
 │  │  ├─ components
+│  │  │  ├─ .DS_Store
 │  │  │  ├─ dashboard
 │  │  │  │  ├─ AdminSidebar.jsx
 │  │  │  │  ├─ AdminSummary.jsx
@@ -42,11 +42,15 @@ TeamSync
 │  │  │  │  └─ EditDepartment.jsx
 │  │  │  ├─ employee
 │  │  │  │  ├─ AddEmployee.jsx
+│  │  │  │  ├─ EditEmployee Backup.js
 │  │  │  │  ├─ EditEmployee.jsx
 │  │  │  │  ├─ EmployeeList.jsx
 │  │  │  │  └─ ViewEmployee.jsx
-│  │  │  └─ layout
-│  │  │     └─ DashboardLayout.jsx
+│  │  │  ├─ layout
+│  │  │  │  └─ DashboardLayout.jsx
+│  │  │  └─ salary
+│  │  │     ├─ AddSalary.jsx
+│  │  │     └─ ViewSalary.jsx
 │  │  ├─ context
 │  │  │  └─ authContext.jsx
 │  │  ├─ index.css
@@ -68,7 +72,8 @@ TeamSync
    ├─ controllers
    │  ├─ authController.js
    │  ├─ departmentController.js
-   │  └─ employeeController.js
+   │  ├─ employeeController.js
+   │  └─ salaryController.js
    ├─ db
    │  └─ db.js
    ├─ index.js
@@ -77,6 +82,7 @@ TeamSync
    ├─ models
    │  ├─ Department.js
    │  ├─ Employee.js
+   │  ├─ Salary.js
    │  └─ User.js
    ├─ package-lock.json
    ├─ package.json
@@ -85,11 +91,22 @@ TeamSync
    │  └─ uploads
    │     ├─ .DS_Store
    │     ├─ 1735802768253.jpg
-   │     └─ 1735802774978.jpg
+   │     ├─ 1735802774978.jpg
+   │     ├─ 1735897601209.png
+   │     ├─ 1735902074948.jpeg
+   │     ├─ 1735902089229.jpeg
+   │     ├─ 1735902229766.png
+   │     ├─ 1735902450589.png
+   │     ├─ 1735902460547.png
+   │     ├─ 1735902521421.png
+   │     ├─ 1735984112939.jpeg
+   │     ├─ 1735984259909.jpeg
+   │     └─ 1735984329393.jpeg
    ├─ routes
    │  ├─ auth.js
    │  ├─ department.js
-   │  └─ employee.js
+   │  ├─ employee.js
+   │  └─ salary.js
    └─ userSeed.js
 
 ```
