@@ -10,7 +10,7 @@
 
    press ctrl+shift+p and enter Project Tree to enter. Generate a tree structure of the project in README.md.
 
-
+ 
 ```
 TeamSync
 ├─ .DS_Store

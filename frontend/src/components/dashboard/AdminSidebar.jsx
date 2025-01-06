@@ -60,7 +60,7 @@ const AdminSidebar = () => {
                     <FaMoneyBillWave className="text-lg" />
                     <span className="font-medium">Salary</span>
                 </NavLink>
-                <NavLink to="/6"
+                <NavLink to="/admin-dashboard/setting"
                     className={({ isActive }) =>
                         `${isActive
                             ? "bg-blue-50 text-blue-600"
