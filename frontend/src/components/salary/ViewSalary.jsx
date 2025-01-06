@@ -5,7 +5,7 @@ import axios from "axios";
 const ViewSalary = () => {
     const [salaries, setSalaries] = useState(null);
     const [filteredSalaries, setFilteredSalaries] = useState(null);
-    const [sortField, setSortField] = useState("");
+
     const { id } = useParams();
     let sno = 1;
 

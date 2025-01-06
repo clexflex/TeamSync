@@ -67,7 +67,7 @@ const addEmployee = async (req, res) => {
         return res.status(500).json({ success: false, error: "erver error in adding employee" });
     }
 };
-
+// for all employees
 const getEmployees = async (req, res) => {
     try {
         const employees = await Employee.find().populate('userId', { password: 0 }).populate('department')
@@ -77,10 +77,21 @@ const getEmployees = async (req, res) => {
     }
 };
 
+// for specefic employee
 const getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
-        const employee = await Employee.findById({ _id: id }).populate('userId', { password: 0 }).populate('department')
+        let employee;
+        employee = await Employee.findById({ _id: id })
+        .populate('userId', { password: 0 })
+        .populate('department');
+
+        if(!employee){
+            employee =  await Employee.findOne({ userId: id })
+            .populate('userId', { password: 0 })
+            .populate('department');
+        }
+
         return res.status(200).json({ success: true, employee })
     } catch (error) {
         return res.status(500).json({ success: false, error: "Fetch Employee server error" })

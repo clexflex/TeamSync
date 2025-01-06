@@ -11,7 +11,7 @@
    press ctrl+shift+p and enter Project Tree to enter. Generate a tree structure of the project in README.md.
 
 
- 
+
 ```
 TeamSync
 ├─ .DS_Store
@@ -31,6 +31,12 @@ TeamSync
 │  │  ├─ assets
 │  │  ├─ components
 │  │  │  ├─ .DS_Store
+│  │  │  ├─ EmployeeDashboard
+│  │  │  │  ├─ EmployeeSetting.jsx
+│  │  │  │  ├─ EmployeeSidebar.jsx
+│  │  │  │  ├─ EmployeeSummary.jsx
+│  │  │  │  ├─ SummaryCard.jsx
+│  │  │  │  └─ ViewProfile.jsx
 │  │  │  ├─ dashboard
 │  │  │  │  ├─ AdminSidebar.jsx
 │  │  │  │  ├─ AdminSummary.jsx
@@ -48,6 +54,11 @@ TeamSync
 │  │  │  │  └─ ViewEmployee.jsx
 │  │  │  ├─ layout
 │  │  │  │  └─ DashboardLayout.jsx
+│  │  │  ├─ leave
+│  │  │  │  ├─ AddLeave.jsx
+│  │  │  │  └─ LeaveList.jsx
+│  │  │  ├─ modal
+│  │  │  │  └─ LogoutModal.jsx
 │  │  │  └─ salary
 │  │  │     ├─ AddSalary.jsx
 │  │  │     └─ ViewSalary.jsx
@@ -73,7 +84,9 @@ TeamSync
    │  ├─ authController.js
    │  ├─ departmentController.js
    │  ├─ employeeController.js
-   │  └─ salaryController.js
+   │  ├─ leaveController.js
+   │  ├─ salaryController.js
+   │  └─ settingController.js
    ├─ db
    │  └─ db.js
    ├─ index.js
@@ -82,6 +95,7 @@ TeamSync
    ├─ models
    │  ├─ Department.js
    │  ├─ Employee.js
+   │  ├─ Leave.js
    │  ├─ Salary.js
    │  └─ User.js
    ├─ package-lock.json
@@ -106,7 +120,9 @@ TeamSync
    │  ├─ auth.js
    │  ├─ department.js
    │  ├─ employee.js
-   │  └─ salary.js
+   │  ├─ leave.js
+   │  ├─ salary.js
+   │  └─ setting.js
    └─ userSeed.js
 
 ```
