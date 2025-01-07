@@ -4,6 +4,7 @@ import DataTable from "react-data-table-component"
 import { columns, DepartmentButtons } from '../../utils/DepartmentHelper'
 import { FaPlus, FaSearch } from 'react-icons/fa'
 import axios from 'axios'
+import config from "../../config";
 
 const DepartmentList = () => {
 
@@ -13,7 +14,7 @@ const DepartmentList = () => {
 
   const onDepartmentDelete = async (_id) => {
     try {
-      const response = await axios.delete(`http://localhost:3000/api/department/${_id}`, {
+      const response = await axios.delete(`${config.API_URL}/api/department/${_id}`, {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem('token')}`
         }
@@ -21,7 +22,7 @@ const DepartmentList = () => {
 
       if (response.data.success) {
         // Fetch departments again
-        const fetchResponse = await axios.get('http://localhost:3000/api/department', {
+        const fetchResponse = await axios.get(`${config.API_URL}/api/department`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }
@@ -50,7 +51,7 @@ const DepartmentList = () => {
     const fetchDepartments = async () => {
       setDepLoading(true)
       try {
-        const response = await axios.get('http://localhost:3000/api/department', {
+        const response = await axios.get(`${config.API_URL}/api/department`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchDepartments, getEmployees } from '../../utils/EmployeeHelper';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import config from "../../config";
 
 const AddSalary = () => {
     const [salary, setSalary] = useState({
@@ -38,7 +39,7 @@ const AddSalary = () => {
 
         try {
             const response = await axios.post(
-                `http://localhost:3000/api/salary/add`,
+                `${config.API_URL}/api/salary/add`,
                 salary,
                 {
                     headers: {

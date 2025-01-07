@@ -1,6 +1,8 @@
 import axios from "axios"
-import { FaCalendarCheck, FaEdit, FaEye, FaMoneyBill, FaTrash } from "react-icons/fa";
+import { FaCalendarCheck, FaEdit, FaEye, FaHome, FaMoneyBill} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import config from "../config";
+
 
 export const columns = [
     {
@@ -54,7 +56,7 @@ export const columns = [
 export const fetchDepartments = async () => {
     let departments;
     try {
-        const response = await axios.get('http://localhost:3000/api/department', {
+        const response = await axios.get(`${config.API_URL}/api/department`, {
             headers: {
                 "Authorization": `Bearer ${localStorage.getItem('token')}`
             }
@@ -73,7 +75,7 @@ export const fetchDepartments = async () => {
 export const getEmployees = async (id) => {
     let employees;
     try {
-        const response = await axios.get(`http://localhost:3000/api/employee/department/${id}`, {
+        const response = await axios.get(`${config.API_URL}/api/employee/department/${id}`, {
             headers: {
                 "Authorization": `Bearer ${localStorage.getItem('token')}`
             }
@@ -124,9 +126,10 @@ export const EmployeeButtons = ({ Id}) => {
                 <span>Attendance</span>
             </button>
             <button 
+                onClick={() => navigate(`/admin-dashboard/employees/leaves/${Id}`)}
                 className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded transition-colors duration-200"
             >
-                <FaTrash className="text-sm" />
+                <FaHome className="text-sm" />
                 <span>Leave</span>
             </button>
         </div>

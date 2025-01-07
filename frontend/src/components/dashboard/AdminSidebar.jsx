@@ -40,7 +40,7 @@ const AdminSidebar = () => {
                     <FaBuilding className="text-lg" />
                     <span className="font-medium">Department</span>
                 </NavLink>
-                <NavLink to="/4"
+                <NavLink to="/admin-dashboard/leaves"
                     className={({ isActive }) =>
                         `${isActive
                             ? "bg-blue-50 text-blue-600"

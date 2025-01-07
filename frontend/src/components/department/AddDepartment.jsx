@@ -2,6 +2,7 @@ import axios from 'axios';
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
+import config from "../../config";
 
 const AddDepartment = () => {
     const [department, setDepartment] = useState({
@@ -19,7 +20,7 @@ const AddDepartment = () => {
     const handleSubmit = async (e) =>{
         e.preventDefault()
         try {
-            const response = await axios.post('http://localhost:3000/api/department/add', department, {
+            const response = await axios.post(`${config.API_URL}/api/department/add`, department, {
                 headers: {
                     "Authorization" : `Bearer ${localStorage.getItem('token')}`
                 }

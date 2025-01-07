@@ -4,6 +4,8 @@ import { FaPlus, FaSearch, FaFilter } from 'react-icons/fa';
 import DataTable from "react-data-table-component";
 import axios from 'axios';
 import { columns, EmployeeButtons } from '../../utils/EmployeeHelper';
+import config from "../../config";
+
 
 const EmployeeList = () => {
     const [employees, setEmployees] = useState([]);
@@ -14,7 +16,7 @@ const EmployeeList = () => {
         const fetchEmployees = async () => {
             setEmpLoading(true);
             try {
-                const response = await axios.get('http://localhost:3000/api/employee', {
+                const response = await axios.get(`${config.API_URL}/api/employee`, {
                     headers: {
                         "Authorization": `Bearer ${localStorage.getItem('token')}`
                     }
@@ -30,7 +32,7 @@ const EmployeeList = () => {
                         dep_name: emp.department.dep_name,
                         status: 'Active', // You'll need to add this field in your backend
                         profileImage: <img alt={emp.userId.name} className='w-full h-full object-cover' 
-                        src={`http://localhost:3000/${emp.userId.profileImage}`} />,
+                        src={`${config.API_URL}/${emp.userId.profileImage}`} />,
                         action: <EmployeeButtons Id={emp._id} />,
                     }));
                     setEmployees(data);

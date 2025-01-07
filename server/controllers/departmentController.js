@@ -15,7 +15,7 @@ const addDepartment = async (req, res) => {
         const { dep_name, description } = req.body;
         const newDep = new Department({
             dep_name,
-            description
+            description 
         })
         await newDep.save()
         return res.status(200).json({ success: true, department: newDep })
@@ -53,7 +53,8 @@ const updateDepartment = async (req, res) => {
 const deleteDepartment = async (req, res) => {
     try {
         const {id} = req.params;
-        const deleteDep = await Department.findByIdAndDelete({_id: id})
+        const deleteDep = await Department.findById({_id: id})
+        await deleteDep.deleteOne()
         return res.status(200).json({ success: true, deleteDep })
     } catch (error) {
         console.log(error)

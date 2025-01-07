@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../../context/authContext";
+import config from "../../config";
 
 const ViewSalary = () => {
     const [salaries, setSalaries] = useState(null);
     const [filteredSalaries, setFilteredSalaries] = useState(null);
-
     const { id } = useParams();
     let sno = 1;
+    const { user } = useAuth()
 
     const fetchSalaries = async () => {
         try {
-            const response = await axios.get(`http://localhost:3000/api/salary/${id}`, {
+            const response = await axios.get(`${config.API_URL}/api/salary/${id}/${user.role}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("token")}`,
                 },
@@ -37,19 +39,19 @@ const ViewSalary = () => {
         setFilteredSalaries(filteredRecords);
     };
 
-    
 
-const handleSort = (field) => {
-    const sortedRecords = [...filteredSalaries].sort((a, b) => {
-        if (field === "payDate") {
-            return new Date(a.payDate) - new Date(b.payDate);
-        } else if (field === "netSalary") {
-            return b.netSalary - a.netSalary; // Descending order
-        }
-        return 0;
-    });
-    setFilteredSalaries(sortedRecords);
-};
+
+    const handleSort = (field) => {
+        const sortedRecords = [...filteredSalaries].sort((a, b) => {
+            if (field === "payDate") {
+                return new Date(a.payDate) - new Date(b.payDate);
+            } else if (field === "netSalary") {
+                return b.netSalary - a.netSalary; // Descending order
+            }
+            return 0;
+        });
+        setFilteredSalaries(sortedRecords);
+    };
     return (
         <div className="bg-white rounded-lg shadow-sm max-w-4xl mx-auto p-6">
             {filteredSalaries === null ? (
@@ -68,15 +70,15 @@ const handleSort = (field) => {
                         />
                     </div>
                     <div className="flex justify-end mb-4">
-                    <select
-                        className="border px-2 py-1 rounded-md border-gray-300"
-                        onChange={(e) => handleSort(e.target.value)}
-                    >
-                        <option value="">Sort By</option>
-                        <option value="payDate">Pay Date</option>
-                        <option value="netSalary">Net Salary</option>
-                    </select>
-                </div>
+                        <select
+                            className="border px-2 py-1 rounded-md border-gray-300"
+                            onChange={(e) => handleSort(e.target.value)}
+                        >
+                            <option value="">Sort By</option>
+                            <option value="payDate">Pay Date</option>
+                            <option value="netSalary">Net Salary</option>
+                        </select>
+                    </div>
                     {filteredSalaries.length > 0 ? (
                         <table className="w-full text-sm text-left text-gray-500">
                             <thead className="text-xs text-gray-700 uppercase bg-gray-50 border border-gray-200">

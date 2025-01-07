@@ -1,6 +1,7 @@
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { FaEdit, FaTrash } from 'react-icons/fa'
+import config from "../config";
 
 export const columns = [
     {
@@ -12,7 +13,7 @@ export const columns = [
         name: "Department Name",
         selector: (row) => row.dep_name,
         sortable: true,
-        grow: 2
+       
     },
     {
         name: "Action",
@@ -28,7 +29,7 @@ export const DepartmentButtons = ({ _id, onDepartmentDelete }) => {
         const confirm = window.confirm("Do you want to delete this department?")
         if (confirm) {
             try {
-                const response = await axios.delete(`http://localhost:3000/api/department/${id}`, {
+                const response = await axios.delete(`${config.API_URL}/api/department/${id}`, {
                     headers: {
                         "Authorization": `Bearer ${localStorage.getItem('token')}`
                     }

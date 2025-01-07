@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
+import config from "../../config";
+
 
 const AddLeave = () => {
     const {user} = useAuth();
@@ -20,14 +22,14 @@ const AddLeave = () => {
         e.preventDefault();
         
         try {
-            const response = await axios.post(`http://localhost:3000/api/leave/add`, leave,
+            const response = await axios.post(`${config.API_URL}/api/leave/add`, leave,
             {
                 headers: {
                     "Authorization": `Bearer ${localStorage.getItem('token')}`
                 }
             })
             if (response.data.success) {
-                navigate("/employee-dashboard/leaves")
+                navigate(`/employee-dashboard/leaves/${user._id}`)
             }
         } catch (error) {
             if (error.response && !error.response.data.success) {

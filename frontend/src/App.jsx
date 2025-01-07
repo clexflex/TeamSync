@@ -20,10 +20,11 @@ import LeaveList from "./components/leave/LeaveList"
 import AddLeave from "./components/leave/AddLeave"
 import EmployeeSetting from "./components/EmployeeDashboard/EmployeeSetting"
 import AdminSetting from "./components/dashboard/AdminSetting"
-
-
+import AdminLeaveList from "./components/leave/AdminLeaveList"
+import AdminLeaveDetail from "./components/leave/AdminLeaveDetail"
 
 function App() {
+  
   return (
     <BrowserRouter>
       <Routes>
@@ -48,9 +49,14 @@ function App() {
           <Route path="/admin-dashboard/add-employee" element={<AddEmployee />} ></Route>
           <Route path="/admin-dashboard/employees/:id" element={<ViewEmployee />} ></Route>
           <Route path="/admin-dashboard/employees/edit/:id" element={<EditEmployee />} ></Route>
-          <Route path="/admin-dashboard/employees/salary/:id" element={<ViewSalary />} ></Route>
+          
+          <Route path="/admin-dashboard/leaves" element={<AdminLeaveList />} ></Route>
+          <Route path="/admin-dashboard/leaves/:id" element={<AdminLeaveDetail />} ></Route>
+          <Route path="/admin-dashboard/employees/leaves/:id" element={<LeaveList />} ></Route>
 
+          <Route path="/admin-dashboard/employees/salary/:id" element={<ViewSalary />} ></Route>
           <Route path="/admin-dashboard/salary/add" element={<AddSalary />} ></Route>
+
           <Route path="/admin-dashboard/setting" element={<AdminSetting /> } ></Route>
 
         </Route>
@@ -66,7 +72,7 @@ function App() {
           <Route index element={<EmployeeSummary />} ></Route>
           
           <Route path="/employee-dashboard/profile/:id" element={<ViewProfile /> } ></Route>
-          <Route path="/employee-dashboard/leaves" element={<LeaveList /> } ></Route>
+          <Route path="/employee-dashboard/leaves/:id" element={<LeaveList /> } ></Route>
           <Route path="/employee-dashboard/add-leave" element={<AddLeave /> } ></Route>
           <Route path="/employee-dashboard/salary/:id" element={<ViewSalary /> } ></Route>
           <Route path="/employee-dashboard/setting" element={<EmployeeSetting /> } ></Route>

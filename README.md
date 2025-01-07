@@ -37,6 +37,7 @@ TeamSync
 │  │  │  │  ├─ SummaryCard.jsx
 │  │  │  │  └─ ViewProfile.jsx
 │  │  │  ├─ dashboard
+│  │  │  │  ├─ AdminSetting.jsx
 │  │  │  │  ├─ AdminSidebar.jsx
 │  │  │  │  ├─ AdminSummary.jsx
 │  │  │  │  ├─ Navbar.jsx
@@ -55,6 +56,8 @@ TeamSync
 │  │  │  │  └─ DashboardLayout.jsx
 │  │  │  ├─ leave
 │  │  │  │  ├─ AddLeave.jsx
+│  │  │  │  ├─ AdminLeaveDetail.jsx
+│  │  │  │  ├─ AdminLeaveList.jsx
 │  │  │  │  └─ LeaveList.jsx
 │  │  │  ├─ modal
 │  │  │  │  └─ LogoutModal.jsx
@@ -72,6 +75,7 @@ TeamSync
 │  │  └─ utils
 │  │     ├─ DepartmentHelper.jsx
 │  │     ├─ EmployeeHelper.jsx
+│  │     ├─ LeaveHelper.jsx
 │  │     ├─ PrivateRoutes.jsx
 │  │     └─ RoleBaseRoutes.jsx
 │  ├─ tailwind.config.js
@@ -81,6 +85,7 @@ TeamSync
    ├─ .env
    ├─ controllers
    │  ├─ authController.js
+   │  ├─ dashboardController.js
    │  ├─ departmentController.js
    │  ├─ employeeController.js
    │  ├─ leaveController.js
@@ -117,6 +122,7 @@ TeamSync
    │     └─ 1735984329393.jpeg
    ├─ routes
    │  ├─ auth.js
+   │  ├─ dashboard.js
    │  ├─ department.js
    │  ├─ employee.js
    │  ├─ leave.js

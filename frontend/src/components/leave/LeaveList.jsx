@@ -1,23 +1,24 @@
 import axios from 'axios';
-import React, { useEffect , useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import { FaPlus, FaSearch } from 'react-icons/fa'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../context/authContext';
+import config from "../../config";
+
 
 const LeaveList = () => {
-    const {user} = useAuth()
     const [leaves, setLeaves] = useState([]);
     let sno = 1;
-
+    const { id } = useParams()
+    const { user } = useAuth()
     const fetchLeaves = async () => {
         try {
-            const response = await axios.get(`http://localhost:3000/api/leave/${user._id}`, {
+            const response = await axios.get(`${config.API_URL}/api/leave/${id}/${user.role}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("token")}`,
                 },
             });
-            
-            console.log(response.data);
+
             if (response.data.success) {
                 setLeaves(response.data.leaves);
             }
@@ -30,20 +31,27 @@ const LeaveList = () => {
         fetchLeaves();
     }, []);
 
-
+    if (!leaves) {
+        return (<div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>)
+    }
 
     return (
         <>
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <h3 className="text-2xl font-bold text-gray-800">Manage Leaves</h3>
-                    <Link
+                    {user.role === "employee" && (
+                        <Link
                         to="/employee-dashboard/add-leave"
                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
                     >
                         <FaPlus className="text-sm" />
                         <span>Add New Leave</span>
                     </Link>
+                    )}
+                    
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm">
@@ -81,10 +89,10 @@ const LeaveList = () => {
                                     >
                                         <td className="px-6 py-3">{sno++}</td>
                                         <td className="px-6 py-3">{leave.leaveType}</td>
-                                        <td className="px-6 py-3">{ new Date(leave.startDate).toLocaleDateString() }</td>
-                                        <td className="px-6 py-3">{ new Date(leave.endDate).toLocaleDateString() }</td>
+                                        <td className="px-6 py-3">{new Date(leave.startDate).toLocaleDateString()}</td>
+                                        <td className="px-6 py-3">{new Date(leave.endDate).toLocaleDateString()}</td>
                                         <td className="px-6 py-3">{leave.reason}</td>
-                                        <td className="px-6 py-3">{leave.status }</td>
+                                        <td className="px-6 py-3">{leave.status}</td>
                                         {/* <td className="px-6 py-3"> {new Date(leave.appliedAt).toLocaleDateString()}</td> */}
                                     </tr>
                                 ))}
