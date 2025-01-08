@@ -1,8 +1,10 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import { verifyUser } from "../middleware/authMiddleware.js";
 import { changePassword } from "../controllers/settingController.js";
 
 const router = express.Router();
-router.put("/change-password", authMiddleware, changePassword);
+
+// All authenticated users can change passwords
+router.put("/change-password", verifyUser, changePassword);
 
 export default router;

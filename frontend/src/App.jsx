@@ -22,6 +22,7 @@ import EmployeeSetting from "./components/EmployeeDashboard/EmployeeSetting"
 import AdminSetting from "./components/dashboard/AdminSetting"
 import AdminLeaveList from "./components/leave/AdminLeaveList"
 import AdminLeaveDetail from "./components/leave/AdminLeaveDetail"
+import Unauthorized from "./Unauthorized"
 
 function App() {
   
@@ -79,6 +80,8 @@ function App() {
 
 
         </Route>
+        <Route path="/unauthorized" element={<Unauthorized />} />
+
       </Routes>
     </BrowserRouter>
 

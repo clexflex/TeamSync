@@ -1,10 +1,11 @@
-import express from 'express'
-import authMiddleware from '../middleware/authMiddleware.js'
-import { addSalary, getSalary } from '../controllers/salaryController.js'
+import express from 'express';
+import { verifyUser, verifyRole } from '../middleware/authMiddleware.js';
+import { addSalary, getSalary } from '../controllers/salaryController.js';
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/add', authMiddleware, addSalary )
-router.get('/:id/:role', authMiddleware, getSalary)
+// Admin-only access for salary management
+router.post('/add', verifyUser, verifyRole(['admin']), addSalary);
+router.get('/:id/:role', verifyUser, getSalary);
 
-export default router
+export default router;

@@ -45,6 +45,7 @@ const addEmployee = async (req, res) => {
             name,
             email,
             password: hashPassword,
+            department,
             role,
             profileImage: req.file ? req.file.filename : ""
         })

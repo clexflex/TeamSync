@@ -1,8 +1,10 @@
-import express from 'express'
-import authMiddleware from '../middleware/authMiddleware.js'
-import { getSummary } from '../controllers/dashboardController.js'
+import express from 'express';
+import { verifyUser, verifyRole } from '../middleware/authMiddleware.js';
+import { getSummary } from '../controllers/dashboardController.js';
 
-const router = express.Router()
-router.get('/summary', authMiddleware, getSummary)
+const router = express.Router();
 
-export default router
+// Admin-only access for summary
+router.get('/summary', verifyUser, verifyRole(['admin']), getSummary);
+
+export default router;
