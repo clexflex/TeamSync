@@ -265,7 +265,7 @@ const AdminAttendanceReport = () => {
   }
 
   return (
-    <div className="p-6 w-full bg-gray-50">
+    <div className="p-6  bg-gray-50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
         <h1 className="text-2xl font-bold text-gray-900">Attendance Report</h1>
         {renderMonthSelector()}
