@@ -1,4 +1,3 @@
-// server/index.js
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -11,7 +10,6 @@ import leaveRouter from './routes/leave.js';
 import settingRouter from './routes/setting.js';
 import dashboardRouter from './routes/dashboard.js';
 import connectToDatabase from './db/db.js';
-//  new routes
 import teamRouter from './routes/team.js';
 import managerRouter from './routes/manager.js';
 import attendanceRouter from './routes/attendance.js';

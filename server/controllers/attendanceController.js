@@ -436,314 +436,201 @@ export const getAllAttendance = async (req, res) => {
     }
 };
 
+
 export const getAttendanceReports = async (req, res) => {
     try {
-               const { startDate, endDate } = req.query;
-
-        if (!startDate || !endDate) {
-            return res.status(400).json({
-                success: false,
-                error: "Start and end dates are required"
-            });
+      const { startDate, endDate } = req.query;
+  
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          error: "Start and end dates are required"
+        });
+      }
+  
+      const startDateObj = new Date(startDate + 'T00:00:00.000Z');
+      const endDateObj = new Date(endDate + 'T23:59:59.999Z');
+  
+      // Get holidays within the date range
+      const holidays = await Holiday.find({
+        date: {
+          $gte: startDateObj,
+          $lte: endDateObj
         }
-
-        const dateQuery = {
-            date: {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate)
-            }
-        };
-
+      });
+  
+      const dateQuery = {
+        date: {
+          $gte: startDateObj,
+          $lte: endDateObj
+        }
+      };
+  
+      const attendanceRecords = await Attendance.aggregate([
+        { $match: dateQuery },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $lookup: {
+            from: "employees",
+            localField: "userId",
+            foreignField: "userId",
+            as: "employeeDetails"
+          }
+        },
+        {
+          $lookup: {
+            from: "managers",
+            localField: "userId",
+            foreignField: "userId",
+            as: "managerDetails"
+          }
+        },
+        {
+          $lookup: {
+            from: "teams",
+            localField: "teamId",
+            foreignField: "_id",
+            as: "teamDetails"
+          }
+        },
+        // Updated department lookup to handle both employee and manager cases
+        {
+          $lookup: {
+            from: "departments",
+            let: {
+              empDeptId: { $arrayElemAt: ["$employeeDetails.department", 0] },
+              mgrDeptId: { $arrayElemAt: ["$managerDetails.department", 0] }
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ["$_id", "$$empDeptId"] },
+                      { $eq: ["$_id", "$$mgrDeptId"] }
+                    ]
+                  }
+                }
+              }
+            ],
+            as: "departmentDetails"
+          }
+        }
+      ]);
+  
+      const userAttendanceMap = {};
+      const workingDays = new Set();
+  
+      // Calculate total working days excluding holidays and weekends
+      let currentDate = new Date(startDateObj);
+      while (currentDate <= endDateObj) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayOfWeek = currentDate.getDay();
+        const isHoliday = holidays.some(h => h.date.toISOString().split('T')[0] === dateStr);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         
-
-        // Calculate total working days (excluding weekends)
-        const startDateObj = new Date(startDate);
-        const endDateObj = new Date(endDate);
-        const totalDays = Math.ceil((endDateObj - startDateObj) / (1000 * 60 * 60 * 24)) + 1;
-
-        // User attendance statistics with enhanced information
-        const userAttendanceStats = await Attendance.aggregate([
-            { $match: dateQuery },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "userId",
-                    foreignField: "_id",
-                    as: "userDetails"
-                }
-            },
-            {
-                $lookup: {
-                    from: "employees",
-                    localField: "userId",
-                    foreignField: "userId",
-                    as: "employeeDetails"
-                }
-            },
-            {
-                $lookup: {
-                    from: "departments",
-                    localField: "employeeDetails.department",
-                    foreignField: "_id",
-                    as: "departmentDetails"
-                }
-            },
-            {
-                $lookup: {
-                    from: "leaves",
-                    let: { userId: "$userId", startDate: new Date(startDate), endDate: new Date(endDate) },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$employeeId", "$$userId"] },
-                                        { $gte: ["$startDate", "$$startDate"] },
-                                        { $lte: ["$endDate", "$$endDate"] },
-                                        { $eq: ["$status", "Approved"] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: "leaveDetails"
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        userId: "$userId",
-                        role: "$role"
-                    },
-                    name: { $first: { $arrayElemAt: ["$userDetails.name", 0] } },
-                    email: { $first: { $arrayElemAt: ["$userDetails.email", 0] } },
-                    department: { $first: { $arrayElemAt: ["$departmentDetails.name", 0] } },
-                    role: { $first: "$role" },
-                    totalPresent: {
-                        $sum: {
-                            $cond: [
-                                { $eq: ["$status", "Present"] },
-                                { $cond: [{ $eq: ["$status", "Half-Day"] }, 0.5, 1] },
-                                0
-                            ]
-                        }
-                    },
-                    totalValidPresent: {
-                        $sum: {
-                            $cond: [
-                                { 
-                                    $and: [
-                                        { $eq: ["$status", "Present"] },
-                                        { $eq: ["$approvalStatus", "Approved"] }
-                                    ]
-                                },
-                                { $cond: [{ $eq: ["$status", "Half-Day"] }, 0.5, 1] },
-                                0
-                            ]
-                        }
-                    },
-                    weekendWork: {
-                        $sum: { $cond: [{ $eq: ["$isWeekend", true] }, 1, 0] }
-                    },
-                    holidayWork: {
-                        $sum: { $cond: [{ $eq: ["$isHoliday", true] }, 1, 0] }
-                    },
-                    totalLeaves: {
-                        $sum: { $size: "$leaveDetails" }
-                    },
-                    remoteWork: {
-                        $sum: { $cond: [{ $eq: ["$workLocation", "Remote"] }, 1, 0] }
-                    },
-                    onsiteWork: {
-                        $sum: { $cond: [{ $eq: ["$workLocation", "Onsite"] }, 1, 0] }
-                    },
-                    avgHoursWorked: { $avg: "$hoursWorked" },
-                    totalHoursWorked: { $sum: "$hoursWorked" }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    userId: "$_id.userId",
-                    role: "$_id.role",
-                    name: 1,
-                    email: 1,
-                    department: 1,
-                    totalPresent: 1,
-                    totalValidPresent: 1,
-                    weekendWork: 1,
-                    holidayWork: 1,
-                    remoteWork: 1,
-                    onsiteWork: 1,
-                    totalLeaves: 1,
-                    totalWorkingDays: {
-                        $subtract: [
-                            { $add: ["$totalValidPresent", "$weekendWork", "$holidayWork"] },
-                            "$totalLeaves"
-                        ]
-                    },
-                    totalDays: { $literal: totalDays },
-                    avgHoursWorked: { $round: ["$avgHoursWorked", 2] },
-                    totalHoursWorked: { $round: ["$totalHoursWorked", 2] },
-                    attendancePercentage: {
-                        $round: [
-                            {
-                                $multiply: [
-                                    { 
-                                        $divide: [
-                                            { $add: ["$totalValidPresent", "$weekendWork", "$holidayWork"] },
-                                            { $subtract: [totalDays, "$totalLeaves"] }
-                                        ]
-                                    },
-                                    100
-                                ]
-                            },
-                            1
-                        ]
-                    }
-                }
-            },
-            {
-                $sort: { role: -1, name: 1 }
+        if (!isHoliday && !isWeekend) {
+          workingDays.add(dateStr);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+  
+      attendanceRecords.forEach(record => {
+        const dateStr = record.date.toISOString().split('T')[0];
+        const userRole = record.userDetails[0]?.role;
+        
+        if (!userAttendanceMap[record.userId]) {
+          userAttendanceMap[record.userId] = {
+            name: record.userDetails[0]?.name,
+            role: userRole,
+            team: record.teamDetails[0]?.name || 'N/A',
+            department: record.departmentDetails[0]?.dep_name || 'N/A',
+            attendance: {},
+            stats: {
+              totalPresent: 0,
+              totalAbsent: 0,
+              totalHalfDay: 0,
+              totalHoursWorked: 0
             }
-        ]);
-
-
-        // Get team-wise statistics
-        const teamStats = await Attendance.aggregate([
-            { $match: dateQuery },
-            {
-                $lookup: {
-                    from: "teams",
-                    localField: "teamId",
-                    foreignField: "_id",
-                    as: "team"
-                }
-            },
-            {
-                $group: {
-                    _id: "$teamId",
-                    teamName: { $first: { $arrayElemAt: ["$team.name", 0] } },
-                    totalAttendance: { $sum: 1 },
-                    validAttendance: {
-                        $sum: {
-                            $cond: [
-                                {
-                                    $and: [
-                                        { $eq: ["$status", "Present"] },
-                                        { $eq: ["$approvalStatus", "Approved"] }
-                                    ]
-                                },
-                                1,
-                                0
-                            ]
-                        }
-                    },
-                    weekendWork: {
-                        $sum: { $cond: [{ $eq: ["$isWeekend", true] }, 1, 0] }
-                    },
-                    holidayWork: {
-                        $sum: { $cond: [{ $eq: ["$isHoliday", true] }, 1, 0] }
-                    },
-                    avgHoursWorked: { $avg: "$hoursWorked" },
-                    remoteWork: {
-                        $sum: { $cond: [{ $eq: ["$workLocation", "Remote"] }, 1, 0] }
-                    }
-                }
-            },
-            {
-                $project: {
-                    teamName: 1,
-                    totalAttendance: 1,
-                    validAttendance: 1,
-                    weekendWork: 1,
-                    holidayWork: 1,
-                    avgHoursWorked: { $round: ["$avgHoursWorked", 2] },
-                    remoteWork: 1,
-                    attendancePercentage: {
-                        $round: [
-                            {
-                                $multiply: [
-                                    { $divide: ["$validAttendance", "$totalAttendance"] },
-                                    100
-                                ]
-                            },
-                            1
-                        ]
-                    }
-                }
-            },
-            { $sort: { attendancePercentage: -1 } }
-        ]);
-
-        // Daily attendance trends
-        const dailyTrends = await Attendance.aggregate([
-            { $match: dateQuery },
-            {
-                $group: {
-                    _id: {
-                        $dateToString: { format: "%Y-%m-%d", date: "$date" }
-                    },
-                    totalPresent: {
-                        $sum: {
-                            $cond: [
-                                { $eq: ["$status", "Present"] },
-                                1,
-                                0
-                            ]
-                        }
-                    },
-                    validAttendance: {
-                        $sum: {
-                            $cond: [
-                                {
-                                    $and: [
-                                        { $eq: ["$status", "Present"] },
-                                        { $eq: ["$approvalStatus", "Approved"] }
-                                    ]
-                                },
-                                1,
-                                0
-                            ]
-                        }
-                    },
-                    remoteWork: {
-                        $sum: { $cond: [{ $eq: ["$workLocation", "Remote"] }, 1, 0] }
-                    },
-                    avgHoursWorked: { $avg: "$hoursWorked" }
-                }
-            },
-            {
-                $project: {
-                    date: "$_id",
-                    totalPresent: 1,
-                    validAttendance: 1,
-                    remoteWork: 1,
-                    avgHoursWorked: { $round: ["$avgHoursWorked", 2] }
-                }
-            },
-            { $sort: { date: 1 } }
-        ]);
-
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                userAttendanceStats,
-                teamStats,
-                dailyTrends,
-                periodInfo: {
-                    totalDays,
-                    startDate,
-                    endDate
-                }
-            }
+          };
+        }
+  
+        const status = record.approvalStatus === 'Approved' 
+          ? record.status 
+          : 'Pending';
+  
+        userAttendanceMap[record.userId].attendance[dateStr] = {
+          status,
+          hoursWorked: record.hoursWorked || 0,
+          isHoliday: holidays.some(h => h.date.toISOString().split('T')[0] === dateStr)
+        };
+  
+        // Update statistics for present days
+        if (status === 'Present') userAttendanceMap[record.userId].stats.totalPresent++;
+        if (status === 'Half-Day') userAttendanceMap[record.userId].stats.totalHalfDay++;
+        userAttendanceMap[record.userId].stats.totalHoursWorked += record.hoursWorked || 0;
+      });
+  
+      // Calculate absent days and other statistics
+      Object.values(userAttendanceMap).forEach(user => {
+        const totalWorkingDays = workingDays.size;
+        const absentDays = totalWorkingDays - user.stats.totalPresent - (user.stats.totalHalfDay * 0.5);
+        
+        user.stats.totalAbsent = Math.max(0, absentDays);
+        user.stats.workingDays = totalWorkingDays;
+        user.stats.attendancePercentage = ((user.stats.totalPresent + (user.stats.totalHalfDay * 0.5)) / totalWorkingDays * 100).toFixed(2);
+        user.stats.avgHoursPerDay = (user.stats.totalHoursWorked / user.stats.totalPresent || 0).toFixed(2);
+      });
+  
+      // Generate date range for the report
+      const dateRange = [];
+      currentDate = new Date(startDateObj);
+      while (currentDate <= endDateObj) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayOfWeek = currentDate.getDay();
+        dateRange.push({
+          date: dateStr,
+          dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+          isHoliday: holidays.some(h => h.date.toISOString().split('T')[0] === dateStr),
+          isWeekend: dayOfWeek === 0 || dayOfWeek === 6
         });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+  
+      // Group users by role
+      const usersByRole = Object.values(userAttendanceMap).reduce((acc, user) => {
+        if (!acc[user.role]) acc[user.role] = [];
+        acc[user.role].push(user);
+        return acc;
+      }, {});
+  
+      return res.status(200).json({
+        success: true,
+        data: {
+          dateRange,
+          usersByRole,
+          holidays,
+          periodInfo: {
+            startDate: startDateObj.toISOString().split('T')[0],
+            endDate: endDateObj.toISOString().split('T')[0],
+            totalDays: dateRange.length,
+            totalHolidays: holidays.length,
+            workingDays: workingDays.size
+          }
+        }
+      });
     } catch (error) {
-        console.error("Error in getAttendanceReports:", error);
-        return res.status(500).json({
-            success: false,
-            error: "Failed to generate attendance reports"
-        });
+      console.error("Error in getAttendanceReports:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to generate attendance reports"
+      });
     }
-};
+  };
