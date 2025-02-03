@@ -1,54 +1,90 @@
+// frontend/src/pages/Login.jsx
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/authContext';
-import { useNavigate } from 'react-router-dom';
-import config from "../config";
+import { useNavigate, useLocation } from 'react-router-dom';
+import config from '../config';
 
 const Login = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false); 
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+        rememberEmail: false
+    });
     const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
-        const savedEmail = localStorage.getItem('rememberedEmail');
-        const savedPassword = localStorage.getItem('rememberedPassword');
-        if (savedEmail && savedPassword) {
-            setEmail(savedEmail);
-            setPassword(savedPassword);
-            setRememberMe(true);
+        // Check for remembered email
+        const rememberedEmail = localStorage.getItem('rememberedEmail');
+        if (rememberedEmail) {
+            setFormData(prev => ({
+                ...prev,
+                email: rememberedEmail,
+                rememberEmail: true
+            }));
         }
+
+        // Clear any existing error when component mounts
+        setError(null);
     }, []);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+        // Clear error when user starts typing
+        if (error) setError(null);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
         try {
-            const response = await axios.post(`${config.API_URL}/api/auth/login`, 
-            { email, password });
+            const response = await axios.post(
+                `${config.API_URL}/api/auth/login`,
+                { email: formData.email, password: formData.password },
+                { withCredentials: true }
+            );
+
             if (response.data.success) {
-                if (rememberMe) {
-                    localStorage.setItem('rememberedEmail', email);
-                    localStorage.setItem('rememberedPassword', password);
+                // Handle "Remember Email" functionality
+                if (formData.rememberEmail) {
+                    localStorage.setItem('rememberedEmail', formData.email);
                 } else {
                     localStorage.removeItem('rememberedEmail');
-                    localStorage.removeItem('rememberedPassword');
                 }
-                login(response.data.user);
+
+                // Store token and login
                 localStorage.setItem('token', response.data.token);
-                if (response.data.user.role === 'admin') {
-                    navigate('/admin-dashboard');
-                } else {
-                    navigate('/employee-dashboard');
-                }
+                login(response.data.user);
+
+                // Redirect based on role
+                const redirectPath =
+                    response.data.user.role === "admin"
+                        ? "/admin-dashboard"
+                        : response.data.user.role === "manager"
+                            ? "/manager-dashboard"
+                            : "/employee-dashboard";
+
+
+                // Navigate to the intended page or default dashboard
+                const intendedPath = location.state?.from || redirectPath;
+                navigate(intendedPath, { replace: true });
             }
         } catch (error) {
-            if (error.response && !error.response.data.success) {
-                setError(error.response.data.error);
-            } else {
-                setError('Server Error');
-            }
+            const errorMessage = error.response?.data?.error ||
+                'Unable to connect to the server. Please try again later.';
+            setError(errorMessage);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -71,56 +107,80 @@ const Login = () => {
                     <div className="lg:hidden text-center mb-8">
                         <h1 className="text-3xl font-bold text-blue-600">TeamSync</h1>
                     </div>
-                    
+
                     <h2 className="text-2xl font-bold text-gray-900 mb-8">Sign in to your account</h2>
-                    {error && <p className="text-red-500">{error}</p>}
+
+                    {error && (
+                        <div className="mb-4 p-3 text-red-500 rounded">
+                            {error}
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                                 Email Address
                             </label>
-                            <input 
+                            <input
                                 id="email"
+                                name="email"
                                 type="email"
                                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                autoComplete="on"
-                                placeholder="name@gmail.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={formData.email}
+                                onChange={handleChange}
                                 required
+                                autoComplete="email"
+                                placeholder="name@company.com"
                             />
                         </div>
-                        
+
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                                 Password
                             </label>
-                            <input 
+                            <input
                                 id="password"
+                                name="password"
                                 type="password"
                                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                autoComplete="on"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                value={formData.password}
+                                onChange={handleChange}
                                 required
+                                autoComplete="current-password"
+                                placeholder="••••••••"
                             />
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                             <label className="flex items-center">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
+                                    name="rememberEmail"
                                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    checked={rememberMe}
-                                    onChange={() => setRememberMe(!rememberMe)} 
+                                    checked={formData.rememberEmail}
+                                    onChange={handleChange}
                                 />
-                                <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                                <span className="ml-2 text-sm text-gray-600">Remember email</span>
                             </label>
                         </div>
-                        
-                        <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium">
-                            Sign In
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className={`w-full ${isLoading
+                                    ? 'bg-blue-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                } text-white py-3 rounded-lg transition-all duration-200 font-medium flex items-center justify-center`}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Signing in...
+                                </>
+                            ) : 'Sign In'}
                         </button>
                     </form>
                 </div>

@@ -4,7 +4,7 @@ import { FaBuilding, FaCalendarAlt, FaCogs, FaMoneyBillWave, FaTachometerAlt, Fa
 import { useAuth } from '../../context/authContext'
 
 const EmployeeSidebar = () => {
-    const {user} = useAuth();
+    const { user } = useAuth();
 
     return (
         <div className="bg-white border-r border-gray-200 h-screen fixed left-0 top-0 bottom-0 w-64 overflow-y-auto">
@@ -21,7 +21,17 @@ const EmployeeSidebar = () => {
                     } end>
                     <FaTachometerAlt className="text-lg" />
                     <span className="font-medium">Dashboard</span>
-                    
+
+                </NavLink>
+                <NavLink to="/employee-dashboard/attendance-form"
+                    className={({ isActive }) =>
+                        `${isActive
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-gray-600 hover:bg-gray-50"
+                        } flex items-center space-x-3 py-2.5 px-4 rounded-lg transition-colors duration-200`
+                    }>
+                    <FaCalendarAlt className="text-lg" />
+                    <span className="font-medium">Attendance Form</span>
                 </NavLink>
                 <NavLink to={`/employee-dashboard/profile/${user._id}`}
                     className={({ isActive }) =>

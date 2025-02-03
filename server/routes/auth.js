@@ -6,7 +6,6 @@ const router = express.Router();
 
 // Public login route
 router.post('/login', login);
-
 // Verify route accessible only to authenticated users
 router.get('/verify', verifyUser, verify);
 

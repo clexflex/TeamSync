@@ -32,6 +32,9 @@ const addEmployee = async (req, res) => {
             salary,
             password,
             role,
+            teamId, // Optional field
+            managerId, // Optional field
+            status = "active", // Default value
         } = req.body;
 
         const user = await User.findOne({ email })
@@ -59,7 +62,10 @@ const addEmployee = async (req, res) => {
             maritalStatus,
             designation,
             department,
-            salary
+            salary,
+            status,
+            teamId: teamId || null, // Optional
+            managerId: managerId || null, // Optional
         })
 
         await newEmployee.save()

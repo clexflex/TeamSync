@@ -1,46 +1,78 @@
+// server/middleware/authMiddleware.js
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-// Middleware to verify user token
 const verifyUser = async (req, res, next) => {
     try {
-        const token = req.headers.authorization.split(' ')[1];
+        // Check for token in different places
+        const token = req.headers.authorization?.split(' ')[1] || 
+                     req.cookies?.token ||
+                     req.query?.token;
+
         if (!token) {
-            return res.status(404).json({ success: false, error: "Token Not Provided" });
+            return res.status(401).json({
+                success: false,
+                error: "Access denied. Please login."
+            });
         }
 
-        const decoded = await jwt.verify(token, process.env.JWT_KEY);
-        if (!decoded) {
-            return res.status(404).json({ success: false, error: "Token Not Valid" });
-        }
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_KEY);
+            const user = await User.findById(decoded._id).select('-password');
 
-        const user = await User.findById({ _id: decoded._id }).select('-password');
-        if (!user) {
-            return res.status(404).json({ success: false, error: "User Not Found" });
-        }
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    error: "User not found."
+                });
+            }
 
-        req.user = user; // Add user info to request object
-        next();
+            // Add user info to request
+            req.user = user;
+            next();
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    error: "Token expired. Please login again."
+                });
+            }
+            return res.status(401).json({
+                success: false,
+                error: "Invalid token."
+            });
+        }
     } catch (error) {
-        return res.status(500).json({ success: false, error: "Server Error" });
+        return res.status(500).json({
+            success: false,
+            error: "Server error in authentication."
+        });
     }
 };
 
-// Middleware to verify user role
 const verifyRole = (allowedRoles) => {
     return (req, res, next) => {
         try {
             if (!req.user) {
-                return res.status(401).json({ success: false, error: "Unauthorized: No user data available" });
+                return res.status(401).json({
+                    success: false,
+                    error: "User not authenticated."
+                });
             }
 
             if (!allowedRoles.includes(req.user.role)) {
-                return res.status(403).json({ success: false, error: "Access Denied: Insufficient Permissions" });
+                return res.status(403).json({
+                    success: false,
+                    error: "Access denied. Insufficient permissions."
+                });
             }
 
-            next(); // User has valid role, proceed to the next middleware or route
+            next();
         } catch (error) {
-            return res.status(500).json({ success: false, error: "Server Error in Role Verification" });
+            return res.status(500).json({
+                success: false,
+                error: "Server error in role verification."
+            });
         }
     };
 };

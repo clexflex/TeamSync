@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../../context/authContext";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import config from "../..//config";
+import config from "../../config";
 
 const EmployeeSetting = () => {
   const navigate = useNavigate();
