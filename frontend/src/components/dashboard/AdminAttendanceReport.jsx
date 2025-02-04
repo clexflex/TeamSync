@@ -195,7 +195,7 @@ const AdminAttendanceReport = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider  bg-gray-50 ">
                 Employee
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -222,7 +222,7 @@ const AdminAttendanceReport = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {users.map((user, idx) => (
               <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-4 py-4 whitespace-nowrap sticky left-0 bg-inherit">
+                <td className="px-4 py-4 whitespace-nowrap  bg-inherit">
                   <div className="text-sm font-medium text-gray-900">{user.name}</div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -265,7 +265,7 @@ const AdminAttendanceReport = () => {
   }
 
   return (
-    <div className="p-6  bg-gray-50">
+    <div className="p-6 w-full bg-gray-50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
         <h1 className="text-2xl font-bold text-gray-900">Attendance Report</h1>
         {renderMonthSelector()}

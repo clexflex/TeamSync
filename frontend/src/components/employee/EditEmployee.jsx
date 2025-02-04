@@ -16,7 +16,6 @@ const EditEmployee = () => {
         designation: '',
         department: '',
         salary: 0,
-        role: '',
         password: ''
     });
     const [departments, setDepartments] = useState(null);
@@ -53,7 +52,6 @@ const EditEmployee = () => {
                         designation: employeeData.designation,
                         department: employeeData.department._id,
                         salary: employeeData.salary,
-                        role: employeeData.userId.role,
                         password: ''
                     };
                     setEmployee(formattedEmployee);

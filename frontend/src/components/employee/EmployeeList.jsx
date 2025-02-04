@@ -32,7 +32,7 @@ const EmployeeList = () => {
                         dep_name: emp.department.dep_name,
                         status: 'Active', // You'll need to add this field in your backend
                         profileImage: <img alt={emp.userId.name} className='w-full h-full object-cover' 
-                        src={`${config.API_URL}/${emp.userId.profileImage}`} />,
+                        src={`${config.API_URL}/uploads/${emp.userId.profileImage}`} />,
                         action: <EmployeeButtons Id={emp._id} />,
                     }));
                     setEmployees(data);

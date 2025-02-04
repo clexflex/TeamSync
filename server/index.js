@@ -14,6 +14,11 @@ import teamRouter from './routes/team.js';
 import managerRouter from './routes/manager.js';
 import attendanceRouter from './routes/attendance.js';
 import holidayRouter from "./routes/holiday.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 connectToDatabase();
@@ -30,8 +35,11 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(express.static('public/uploads'));
-
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+  }));
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/department', departmentRouter);

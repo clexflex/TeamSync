@@ -7,19 +7,30 @@ import path from "path"
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "public/uploads")
+        cb(null, path.join(__dirname, '../public/uploads'));
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname))
+        // Add file type validation
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            cb(new Error('Invalid file type'), false);
+            return;
+        }
+        // Create a more secure filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
     }
-})
+});
 
-const upload = multer({ storage: storage })
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    }
+});
 
 const addEmployee = async (req, res) => {
     try {
-
-
         const {
             name,
             email,
@@ -50,6 +61,7 @@ const addEmployee = async (req, res) => {
             password: hashPassword,
             department,
             role,
+            status,
             profileImage: req.file ? req.file.filename : ""
         })
         const savedUser = await newUser.save()
@@ -63,7 +75,6 @@ const addEmployee = async (req, res) => {
             designation,
             department,
             salary,
-            status,
             teamId: teamId || null, // Optional
             managerId: managerId || null, // Optional
         })
@@ -124,7 +135,6 @@ const updateEmployee = async (req, res) => {
         const userUpdateData = {};
         if (updateData.name) userUpdateData.name = updateData.name;
         if (updateData.email) userUpdateData.email = updateData.email;
-        if (updateData.role) userUpdateData.role = updateData.role;
         if (updateData.password) {
             userUpdateData.password = await bcrypt.hash(updateData.password, 10);
         }
