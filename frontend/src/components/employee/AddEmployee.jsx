@@ -225,7 +225,7 @@ const AddEmployee = () => {
                                 required
                             >
                                 <option value="">Select Role</option>
-                                <option value="employee" selected>Employee</option>
+                                <option value="employee">Employee</option>
                             </select>
                         </div>
 

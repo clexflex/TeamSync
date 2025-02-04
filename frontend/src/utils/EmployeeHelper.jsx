@@ -24,23 +24,22 @@ export const columns = [
                 </div>
             </div>
         ),
-        width: '250px',
+        width: '220px',
         sortable: true,
     },
     {
         name: "Department",
         selector: (row) => row.dep_name,
         sortable: true,
-        width: '100px',
+        width: '140px',
     },
     {
         name: "Status",
         selector: (row) => (
             <span className={`px-2 py-1 rounded-full text-xs font-medium
-                ${row.status === 'Active' ? 'bg-green-100 text-green-800' : 
-                 row.status === 'On Leave' ? 'bg-yellow-100 text-yellow-800' : 
+                ${row.status === 'active' ? 'bg-green-100 text-green-800' : 
                  'bg-red-100 text-red-800'}`}>
-                {row.status}
+                {row.status === 'active' ? 'Active' : 'Inactive'}
             </span>
         ),
         width: '100px',
@@ -119,12 +118,12 @@ export const EmployeeButtons = ({ Id}) => {
                 <FaMoneyBill className="text-sm" />
                 <span>Salary</span>
             </button>
-            <button 
+            {/* <button 
                 className="flex items-center gap-1 px-3 py-1.5 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded transition-colors duration-200"
             >
                 <FaCalendarCheck className="text-sm" />
                 <span>Attendance</span>
-            </button>
+            </button> */}
             <button 
                 onClick={() => navigate(`/admin-dashboard/employees/leaves/${Id}`)}
                 className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded transition-colors duration-200"

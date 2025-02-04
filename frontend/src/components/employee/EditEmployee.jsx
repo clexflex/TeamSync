@@ -9,6 +9,7 @@ const EditEmployee = () => {
     const [employee, setEmployee] = useState({
         name: '',
         email: '',
+        status: '',
         employeeId: '',
         dob: '',
         gender: '',
@@ -45,6 +46,7 @@ const EditEmployee = () => {
                     const formattedEmployee = {
                         name: employeeData.userId.name,
                         email: employeeData.userId.email,
+                        status: employeeData.userId.status,
                         employeeId: employeeData.employeeId,
                         dob: employeeData.dob?.split('T')[0] || '',
                         gender: employeeData.gender,
@@ -147,6 +149,26 @@ const EditEmployee = () => {
                                                 {departments.map(dep => (
                                                     <option key={dep._id} value={dep._id}>{dep.dep_name}</option>
                                                 ))}
+                                            </select>
+                                        </div>
+                                    );
+                                }
+                                if (field === 'status') {
+                                    return (
+                                        <div  key={field}>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Status
+                                            </label>
+                                            <select
+                                                name={field}
+                                                value={employee[field]}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
+                                                required
+                                            >
+                                                <option value="">Select Status</option>
+                                                <option value="active">Active</option>
+                                                <option value="inactive">Inactive</option>
                                             </select>
                                         </div>
                                     );

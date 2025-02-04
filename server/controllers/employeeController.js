@@ -135,6 +135,7 @@ const updateEmployee = async (req, res) => {
         const userUpdateData = {};
         if (updateData.name) userUpdateData.name = updateData.name;
         if (updateData.email) userUpdateData.email = updateData.email;
+        if (updateData.status) userUpdateData.status = updateData.status;
         if (updateData.password) {
             userUpdateData.password = await bcrypt.hash(updateData.password, 10);
         }
@@ -175,6 +176,8 @@ const fetchEmployeesByDepId = async (req, res) => {
         return res.status(500).json({ success: false, error: "Fetch EmployeesByDepId server error" })
     }
 };
+
+
 
 
 export { addEmployee, upload, getEmployees, getEmployee, updateEmployee ,fetchEmployeesByDepId}
