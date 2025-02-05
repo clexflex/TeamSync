@@ -21,7 +21,7 @@ const EmployeeList = () => {
                         "Authorization": `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-                
+
                 if (response.data.success) {
                     let sno = 1;
                     const data = response.data.employees.map((emp) => ({
@@ -30,9 +30,16 @@ const EmployeeList = () => {
                         name: emp.userId.name,
                         employeeId: emp.employeeId,
                         dep_name: emp.department.dep_name,
-                        status: emp.userId.status, 
-                        profileImage: <img alt={emp.userId.name} className='w-full h-full object-cover' 
-                        src={`${config.API_URL}/uploads/${emp.userId.profileImage}`} />,
+                        status: emp.userId.status,
+                        profileImage:
+                            <img
+                                src={emp.userId.profileImage
+                                    ? `${config.API_URL}/uploads/${emp.userId.profileImage}`
+                                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.userId.name)}&background=random`}
+                                alt={emp.userId.name}
+                                className="w-full h-full  object-cover"
+                            />
+                        ,
                         action: <EmployeeButtons Id={emp._id} />,
                     }));
                     setEmployees(data);
@@ -51,11 +58,11 @@ const EmployeeList = () => {
 
     const handleFilter = (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        const filtered = employees.filter((emp) => 
+        const filtered = employees.filter((emp) =>
             emp.name.toLowerCase().includes(searchTerm) ||
             emp.employeeId.toLowerCase().includes(searchTerm) ||
-            emp.dep_name.toLowerCase().includes(searchTerm) 
-                );
+            emp.dep_name.toLowerCase().includes(searchTerm)
+        );
         setFilteredEmployees(filtered);
     };
 

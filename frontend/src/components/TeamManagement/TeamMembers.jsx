@@ -43,7 +43,7 @@ const TeamMembers = () => {
       setMembers(membersResponse.data.employees);
 
       // Only fetch available employees if user has permission to add members
-      if (user.role === 'admin' || (user.role === 'manager' && teamData.managerId._id === user._id)) {
+      if (user.role === 'admin' || (user.role === 'manager' )) {
         const availableResponse = await axios.get(
           `${config.API_URL}/api/employee/department/${teamData.department._id}`,
           { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
@@ -68,17 +68,17 @@ const TeamMembers = () => {
       setError("Please select an employee to add");
       return;
     }
-    
+
     try {
       setIsLoading(true);
       setError("");
-      
+
       await axios.post(
         `${config.API_URL}/api/team/${teamId}/members`,
         { employeeId: selectedEmployee },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      
+
       setSuccess("Team member added successfully");
       setSelectedEmployee("");
       await fetchTeamData(); // Refresh data
@@ -91,16 +91,16 @@ const TeamMembers = () => {
 
   const handleRemoveMember = async (memberId) => {
     if (!window.confirm("Are you sure you want to remove this member from the team?")) return;
-    
+
     try {
       setIsLoading(true);
       setError("");
-      
+
       await axios.delete(
         `${config.API_URL}/api/team/${teamId}/members/${memberId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      
+
       setSuccess("Team member removed successfully");
       await fetchTeamData(); // Refresh data
     } catch (error) {
@@ -111,30 +111,31 @@ const TeamMembers = () => {
   };
 
   const columns = [
-    { 
+    {
       name: "Employee ID",
       selector: row => row.employeeId,
-      sortable: true 
+      sortable: true
     },
-    { 
+    {
       name: "Name",
       selector: row => row.userId?.name,
-      sortable: true 
+      sortable: true
     },
-    { 
+    {
       name: "Email",
-      selector: row => row.userId?.email 
+      selector: row => row.userId?.email
     },
-    { 
+    {
       name: "Department",
-      selector: row => row.department?.dep_name 
+      selector: row => row.department?.dep_name
     },
     {
       name: "Actions",
       cell: row => {
-        const canModifyTeam = user.role === 'admin' || 
-          (user.role === 'manager' && team?.managerId?._id === user._id);
-        
+        const canModifyTeam = user.role === 'admin' ||
+          (user.role === 'manager' );
+
+        // Show Remove button only if the user is allowed to modify
         return canModifyTeam ? (
           <button
             onClick={() => handleRemoveMember(row._id)}
@@ -177,7 +178,7 @@ const TeamMembers = () => {
           </div>
           <div>
             <p className="text-sm text-gray-600">Manager</p>
-            <p className="font-medium">{team?.managerId?.userId?.name}</p>
+            <p className="font-medium">{team.managerId?.userId?.name}</p>
           </div>
           {team?.description && (
             <div className="col-span-2">
@@ -194,7 +195,7 @@ const TeamMembers = () => {
           {error}
         </div>
       )}
-      
+
       {success && (
         <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
           {success}
@@ -202,32 +203,33 @@ const TeamMembers = () => {
       )}
 
       {/* Add Member Section */}
-      {(user.role === 'admin' || (user.role === 'manager' && team?.managerId?._id === user._id)) && (
+      {(user.role === 'admin' || (user.role === 'manager' )) && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Add Team Member</h3>
-          <div className="flex gap-4">
-            <select
-              value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
-              className="flex-1 p-2 border rounded focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Select Employee</option>
-              {availableEmployees.map(emp => (
-                <option key={emp._id} value={emp._id}>
-                  {emp.userId?.name} - {emp.employeeId}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleAddMember}
-              disabled={!selectedEmployee || isLoading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 
+        <h3 className="text-lg font-semibold mb-4">Add Team Member</h3>
+        <div className="flex gap-4">
+          <select
+            value={selectedEmployee}
+            onChange={(e) => setSelectedEmployee(e.target.value)}
+            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Select Employee</option>
+            {availableEmployees.map(emp => (
+              <option key={emp._id} value={emp._id}>
+                {emp.userId?.name} - {emp.employeeId}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={handleAddMember}
+            disabled={!selectedEmployee || isLoading}
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 
                        disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? 'Adding...' : 'Add Member'}
-            </button>
-          </div>
+          >
+            {isLoading ? 'Adding...' : 'Add Member'}
+          </button>
         </div>
+      </div>
       )}
 
       {/* Members Table */}
@@ -252,5 +254,6 @@ const TeamMembers = () => {
     </div>
   );
 };
+
 
 export default TeamMembers;

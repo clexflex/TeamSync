@@ -2,14 +2,31 @@ import Team from "../models/Team.js";
 import Manager from "../models/Manager.js";
 import Employee from "../models/Employee.js";
 
-
+const isAuthorizedForTeam = async (userId, teamId, role) => {
+    if (role === 'admin') return true;
+    if (role === 'manager') {
+        const manager = await Manager.findOne({ userId }).populate('department');
+        const team = await Team.findById(teamId).populate('department');
+        // Manager exists and team exists
+        if (!manager || !team) return false;
+        // Check if manager belongs to the same department as the team
+        return manager.department.toString() === team.department.toString();
+    }
+    return false;
+};
 // Get a specific team by ID
 const getTeamById = async (req, res) => {
     try {
         const { id } = req.params;
 
         const team = await Team.findById(id)
-            .populate("managerId", "userId designation")
+            .populate({
+                path: "managerId",
+                populate: {
+                    path: "userId",
+                    select: "name email"
+                }
+            })
             .populate("department", "dep_name");
 
         if (!team) {
@@ -29,32 +46,29 @@ const deleteTeam = async (req, res) => {
         // Find the team and ensure it exists
         const team = await Team.findById(id);
         if (!team) {
-            return res.status(404).json({ success: false, error: "Team not found." });
+            return res.status(404).json({ success: false, error: "Team not found" });
+        }
+        // Check authorization
+        const isAuthorized = await isAuthorizedForTeam(req.user._id, id, req.user.role);
+        if (!isAuthorized) {
+            return res.status(403).json({ success: false, error: "Not authorized to delete this team" });
         }
 
-        // Update all employees in the team to remove team association
         await Employee.updateMany(
             { teamId: id },
-            { 
-                $unset: { 
-                    teamId: "",
-                    managerId: "" 
-                }
-            }
+            { $unset: { teamId: "", managerId: "" } }
         );
 
-        // Remove team reference from manager
         await Manager.updateOne(
             { _id: team.managerId },
             { $pull: { teams: team._id } }
         );
 
-        // Delete the team
         await team.deleteOne();
 
         return res.status(200).json({
             success: true,
-            message: "Team and related references deleted successfully."
+            message: "Team and related references deleted successfully"
         });
 
     } catch (error) {
@@ -211,8 +225,11 @@ const addTeamMember = async (req, res) => {
         if (!team) {
             return res.status(404).json({ success: false, error: "Team not found." });
         }
-
-        const employee = await Employee.findById(employeeId);
+        const isAuthorized = await isAuthorizedForTeam(req.user._id, id, req.user.role);
+        if (!isAuthorized) {
+            return res.status(403).json({ success: false, error: "Not authorized to modify team members" });
+        }
+        const employee = await Employee.findById(employeeId).populate('department');
         if (!employee) {
             return res.status(404).json({ success: false, error: "Employee not found." });
         }
@@ -233,91 +250,80 @@ const addTeamMember = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to add member." });
     }
 };
+
+
 const updateTeam = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, members } = req.body;
+        const { name, description, managerId } = req.body;
 
-        // Find the existing team with all necessary populated fields
-        const team = await Team.findById(id)
-            .populate('members')
-            .populate('managerId');
-            
+        // Find the existing team
+        const team = await Team.findById(id);
         if (!team) {
-            return res.status(404).json({ success: false, error: "Team not found." });
+            return res.status(404).json({ success: false, error: "Team not found" });
         }
 
-        // Check authorization for managers
-        if (req.user.role === 'manager' && team.managerId.userId.toString() !== req.user._id.toString()) {
+        // Check authorization
+        const isAuthorized = await isAuthorizedForTeam(req.user._id, id, req.user.role);
+        if (!isAuthorized) {
             return res.status(403).json({ success: false, error: "Not authorized to update this team" });
         }
 
-        // Get current team members for comparison
-        const currentMembers = team.members.map(member => member.toString());
-        const newMembers = members.map(id => id.toString());
-
-        // Find members to remove and add
-        const membersToRemove = currentMembers.filter(id => !newMembers.includes(id));
-        const membersToAdd = newMembers.filter(id => !currentMembers.includes(id));
-
-        // Validate new members aren't in other teams
-        if (membersToAdd.length > 0) {
-            const conflictingEmployees = await Employee.find({
-                _id: { $in: membersToAdd },
-                teamId: { $ne: null, $ne: team._id }
+        // If manager is being changed and user is not admin, prevent the change
+        if (managerId && managerId !== team.managerId.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ 
+                success: false, 
+                error: "Only admin can change team manager" 
             });
+        }
 
-            if (conflictingEmployees.length > 0) {
-                const conflictNames = conflictingEmployees.map(emp => emp.employeeId).join(", ");
-                return res.status(400).json({
-                    success: false,
-                    error: `Employees already assigned to another team: ${conflictNames}`
+        // If manager is being changed, handle the manager change process
+        if (managerId && managerId !== team.managerId.toString()) {
+            // Verify new manager exists
+            const newManager = await Manager.findById(managerId);
+            if (!newManager) {
+                return res.status(404).json({ 
+                    success: false, 
+                    error: "New manager not found" 
                 });
             }
-        }
 
-        // Update team basic info
-        team.name = name;
-        team.description = description;
-        team.members = members;
-        await team.save();
+            // Remove team from old manager's teams array
+            await Manager.findByIdAndUpdate(
+                team.managerId,
+                { $pull: { teams: team._id } }
+            );
 
-        // Update removed employees - only unset teamId if they're actually being removed
-        if (membersToRemove.length > 0) {
+            // Add team to new manager's teams array
+            await Manager.findByIdAndUpdate(
+                managerId,
+                { $push: { teams: team._id } }
+            );
+
+            // Update all team members with new managerId
             await Employee.updateMany(
-                { 
-                    _id: { $in: membersToRemove },
-                    teamId: team._id // Only update if they're actually in this team
-                },
-                { 
-                    $unset: { 
-                        teamId: "",
-                        managerId: "" 
-                    }
-                }
+                { teamId: team._id },
+                { $set: { managerId: managerId } }
             );
         }
 
-        // Update added employees
-        if (membersToAdd.length > 0) {
-            await Employee.updateMany(
-                { _id: { $in: membersToAdd } },
-                { 
-                    $set: {
-                        teamId: team._id,
-                        managerId: team.managerId._id
-                    }
-                }
-            );
-        }
+        // Update team details
+        const updatedTeam = await Team.findByIdAndUpdate(
+            id,
+            {
+                name: name || team.name,
+                description: description || team.description,
+                managerId: managerId || team.managerId,
+                updatedAt: new Date()
+            },
+            { new: true, runValidators: true }
+        ).populate('managerId', 'userId designation')
+         .populate('department', 'dep_name');
 
         return res.status(200).json({
             success: true,
             message: "Team updated successfully",
-            team: await Team.findById(id)
-                .populate('members')
-                .populate('managerId')
-                .populate('department')
+            team: updatedTeam
         });
 
     } catch (error) {
@@ -331,25 +337,22 @@ const updateTeam = async (req, res) => {
 const removeTeamMember = async (req, res) => {
     try {
         const { id, employeeId } = req.params;
-
-        const team = await Team.findById(id);
+        const team = await Team.findById(id).populate('department');
         if (!team) {
             return res.status(404).json({ success: false, error: "Team not found." });
         }
-
+        const isAuthorized = await isAuthorizedForTeam(req.user._id, id, req.user.role);
+        if (!isAuthorized) {
+            return res.status(403).json({ success: false, error: "Not authorized to modify team members" });
+        }
         const employee = await Employee.findById(employeeId);
         if (!employee || !employee.teamId || employee.teamId.toString() !== id) {
             return res.status(404).json({ success: false, error: "Employee not found in this team." });
         }
-
-        // Update employee document - only remove references if they match this team
-        if (employee.teamId.toString() === id) {
-            employee.teamId = null;
-            if (employee.managerId && employee.managerId.toString() === team.managerId.toString()) {
-                employee.managerId = null;
-            }
-            await employee.save();
-        }
+        
+        employee.teamId = null;
+        employee.managerId = null;
+        await employee.save();
 
         // Remove from team members array
         team.members = team.members.filter(member => member.toString() !== employeeId);
@@ -361,14 +364,4 @@ const removeTeamMember = async (req, res) => {
     }
 };
 
-export {
-    createTeam,
-    getTeams,
-    getTeamMembers,
-    updateTeam,
-    deleteTeam,
-    getTeamById,
-    getManagerTeams,
-    addTeamMember,
-    removeTeamMember
-};
+export {     createTeam,     getTeams,     getTeamMembers,     updateTeam,     deleteTeam,     getTeamById,     getManagerTeams,     addTeamMember,     removeTeamMember };

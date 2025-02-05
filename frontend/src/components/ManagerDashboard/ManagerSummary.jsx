@@ -1,60 +1,31 @@
-// This component will provide a summary of key metrics for the manager, such as total teams, total members, and attendance stats.
-
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import config from "../../config";
+import React from 'react'
+import { FaUser } from 'react-icons/fa'
+import { useAuth } from '../../context/authContext'
 
 const ManagerSummary = () => {
-  const [summary, setSummary] = useState({
-    totalTeams: 0,
-    totalMembers: 0,
-    attendanceStats: {
-      present: 0,
-      absent: 0,
-      leave: 0,
-    },
-  });
+const{user} = useAuth()
+    return (
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const response = await axios.get(`${config.API_URL}/api/dashboard/manager-summary`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        <div>
+            <h3 className='text-2xl font-bold text-gray-800 mb-8'>Dashboard Overview</h3>
 
-        if (response.data.success) {
-          setSummary(response.data.summary);
-        }
-      } catch (error) {
-        alert("Failed to fetch summary.");
-      }
-    };
+            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+                <div className="flex items-center space-x-4">
+                    <div className="bg-blue-600bg-opacity-10 rounded-full p-3">
+                        <span className="bg-blue-600">
+                           <FaUser />
+                        </span>
+                    </div>
+                    <div>
+                        <p className="text-gray-600 font-medium">Welcome Back</p>
+                        <p className="text-2xl font-bold text-gray-800 mt-1">{user.name}</p>
+                    </div>
+                </div>
+            </div>
 
-    fetchSummary();
-  }, []);
+        </div>
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-      <div className="bg-white shadow-md p-4 rounded-lg">
-        <h3 className="text-lg font-semibold text-gray-600">Total Teams</h3>
-        <p className="text-2xl font-bold text-blue-600">{summary.totalTeams}</p>
-      </div>
-      <div className="bg-white shadow-md p-4 rounded-lg">
-        <h3 className="text-lg font-semibold text-gray-600">Total Members</h3>
-        <p className="text-2xl font-bold text-green-600">{summary.totalMembers}</p>
-      </div>
-      <div className="bg-white shadow-md p-4 rounded-lg">
-        <h3 className="text-lg font-semibold text-gray-600">Attendance Stats</h3>
-        <ul className="list-disc list-inside mt-2 text-gray-600">
-          <li>Present: {summary.attendanceStats.present}</li>
-          <li>Absent: {summary.attendanceStats.absent}</li>
-          <li>Leave: {summary.attendanceStats.leave}</li>
-        </ul>
-      </div>
-    </div>
-  );
-};
+    )
+}
 
 export default ManagerSummary;

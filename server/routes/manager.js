@@ -11,4 +11,5 @@ router.delete('/:id', verifyUser, deleteManager);
 router.get('/:id/teams', verifyUser, getManagerTeams);
 router.get('/available-departments', verifyUser, getAvailableDepartments);
 router.put('/:id', verifyUser, upload.single('image'), updateManager);
+
 export default router;

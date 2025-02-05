@@ -170,6 +170,7 @@ const fetchEmployeesByDepId = async (req, res) => {
     const { id } = req.params;
     try {
         const employees = await Employee.find({ department: id })
+        .populate('userId', { password: 0 })
 
         return res.status(200).json({ success: true, employees })
     } catch (error) {

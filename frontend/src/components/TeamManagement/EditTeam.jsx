@@ -12,6 +12,7 @@ const EditTeam = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [managers, setManagers] = useState([]);
     const basePath = getBasePath();
     
     const [formData, setFormData] = useState({
@@ -19,12 +20,26 @@ const EditTeam = () => {
         description: '',
         managerId: '',
         department: '',
-        members: [] // We'll keep this but won't modify it
+        members: []
     });
 
     useEffect(() => {
         fetchTeamData();
-    }, [teamId]);
+        if (user.role === 'admin') {
+            fetchManagers();
+        }
+    }, [teamId, user.role]);
+
+    const fetchManagers = async () => {
+        try {
+            const response = await axios.get(`${config.API_URL}/api/manager`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            setManagers(response.data.managers);
+        } catch (error) {
+            console.error('Error fetching managers:', error);
+        }
+    };
 
     const fetchTeamData = async () => {
         try {
@@ -134,6 +149,26 @@ const EditTeam = () => {
                         className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                 </div>
+
+                {user.role === 'admin' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Team Manager</label>
+                        <select
+                            value={formData.managerId}
+                            onChange={(e) => setFormData(prev => ({ ...prev, managerId: e.target.value }))}
+                            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            {managers.map((manager) => (
+                                <option key={manager._id} value={manager._id}>
+                                    {manager.userId.name} ({manager.managerId})
+                                </option>
+                            ))}
+                        </select>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Only administrators can change team managers
+                        </p>
+                    </div>
+                )}
 
                 <div className="flex justify-end space-x-3 pt-4">
                     <button

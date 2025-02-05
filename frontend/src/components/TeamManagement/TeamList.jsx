@@ -1,10 +1,6 @@
-// A component to display the list of teams created by the manager.Displays a list of all teams with actions to edit or view team members.for both admin and manager
-
-
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
 import DataTable from '../shared/DataTable';
 import config from '../../config';
 import { useAuth } from '../../context/authContext';
@@ -13,9 +9,10 @@ import { getBasePath } from '../../utils/RoleHelper';
 const TeamList = () => {
   const [teams, setTeams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth()
+  const { user } = useAuth();
   const navigate = useNavigate();
   const basePath = getBasePath();
+
   useEffect(() => {
     fetchTeams();
   }, [user]);
@@ -23,23 +20,17 @@ const TeamList = () => {
   const fetchTeams = async () => {
     try {
       setIsLoading(true);
-      let endpoint = `${config.API_URL}/api/team`;
-      
-      // If user is a manager, only fetch their teams
-      if (user.role === 'manager') {
-        endpoint = `${config.API_URL}/api/team/manager/${user._id}`;
-      }
-      
-      const response = await axios.get(endpoint, {
+      const response = await axios.get(`${config.API_URL}/api/team`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       
-      // Transform the data to include populated fields
       const transformedTeams = response.data.teams.map(team => ({
         ...team,
         managerName: team.managerId?.userId?.name || 'N/A',
         departmentName: team.department?.dep_name || 'N/A',
-        memberCount: team.memberCount || 0
+        memberCount: team.memberCount || 0,
+        // Add a flag to check if the current user is the team's manager
+        isTeamManager: user.role === 'manager' && team.managerId?.userId?._id === user._id
       }));
       
       setTeams(transformedTeams);
@@ -59,11 +50,10 @@ const TeamList = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       
-      // Refresh the team list
       fetchTeams();
     } catch (error) {
       console.error('Error deleting team:', error);
-      alert('Failed to delete team');
+      alert(error.response?.data?.error || 'Failed to delete team');
     }
   };
 
@@ -98,7 +88,7 @@ const TeamList = () => {
     },
     {
       name: 'Actions',
-       width: '300px',
+      width: '300px',
       cell: row => (
         <div className="flex gap-2">
           <button
@@ -107,7 +97,8 @@ const TeamList = () => {
           >
             View Members
           </button>
-          {(user.role === 'admin' || (user.role === 'manager' && row.managerId === user._id)) && (
+          {/* Show edit/delete buttons for admin or team's manager */}
+          {(user.role === 'admin' || row.isTeamManager) && (
             <>
               <button
                 onClick={() => navigate(`${basePath}/team/edit/${row._id}`)}
@@ -115,14 +106,12 @@ const TeamList = () => {
               >
                 Edit
               </button>
-              {user.role === 'admin' && (
-                <button
-                  onClick={() => handleDelete(row._id)}
-                  className="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              )}
+              <button
+                onClick={() => handleDelete(row._id)}
+                className="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600"
+              >
+                Delete
+              </button>
             </>
           )}
         </div>
@@ -146,7 +135,7 @@ const TeamList = () => {
       
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          Loading teams...
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
       ) : (
         <DataTable

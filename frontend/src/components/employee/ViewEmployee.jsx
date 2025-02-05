@@ -76,7 +76,7 @@ const ViewEmployee = () => {
                                 alt={employee.userId.name}
                                 className="w-24 h-24 rounded-full border-4 border-white object-cover"
                             />
-                            <span className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${employee.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                            <span className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${employee.userId.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
                         </div>
                         <div className="text-white">
                             <h1 className="text-2xl font-bold">{employee.userId.name}</h1>
@@ -108,7 +108,7 @@ const ViewEmployee = () => {
                             <div className="space-y-3">
                                 <InfoRow label="Department" value={employee.department.dep_name} />
                                 <InfoRow label="Role" value={employee.userId.role} />
-                                <InfoRow label="Status" value={employee.status} customStyle={`capitalize ${employee.status === 'active' ? 'text-green-600' : 'text-red-600'}`} />
+                                <InfoRow label="Status" value=  {employee.userId.status === 'active' ? 'Active' : 'Inactive'} customStyle={`capitalize ${employee.userId.status === 'active' ? 'text-green-600' : 'text-red-600'}`} />
                                 <InfoRow label="Joined Date" value={new Date(employee.createdAt).toLocaleDateString()} />
                                 <InfoRow label="Last Updated" value={new Date(employee.updatedAt).toLocaleDateString()} />
                             </div>
