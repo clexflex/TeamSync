@@ -1,8 +1,6 @@
 import Attendance from "../models/Attendance.js";
-import User from "../models/User.js";
 import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
-import Team from "../models/Team.js";
 import Holiday from "../models/Holiday.js";
 
 export const getCurrentStatus = async (req, res) => {
@@ -57,7 +55,7 @@ export const getCurrentStatus = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to fetch current status." });
     }
 };
-
+// Clock-In Functionality
 export const clockIn = async (req, res) => {
     try {
         const userId = req.user?._id;
@@ -116,7 +114,6 @@ export const clockIn = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to clock in." });
     }
 };
-
 // Clock-Out Functionality
 export const clockOut = async (req, res) => {
     try {
@@ -162,7 +159,97 @@ export const clockOut = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to clock out." });
     }
 };
+export const getMonthlyAttendance = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        const { month, year } = req.query;
 
+        if (!userId || !month || !year) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing required parameters"
+            });
+        }
+
+        // Create dates in UTC to avoid timezone issues
+        const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+        const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+
+        const attendance = await Attendance.find({
+            userId,
+            date: {
+                $gte: startDate,
+                $lte: endDate
+            }
+        }).sort({ date: 1 });
+
+        // Get holidays for the month
+        const holidays = await Holiday.find({
+            date: {
+                $gte: startDate,
+                $lte: endDate
+            },
+            $or: [
+                { isCompanyWide: true },
+                { applicableDepartments: req.user.department }
+            ]
+        });
+
+        // Create a map of attendance records
+        const attendanceMap = {};
+
+        // Initialize each day of the month
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const currentDate = new Date(d);
+            const dateStr = currentDate.toISOString().split('T')[0];
+
+            // Get day of week in local time (0 = Sunday, 6 = Saturday)
+            const dayOfWeek = currentDate.getUTCDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+
+            const holiday = holidays.find(h =>
+                new Date(h.date).toISOString().split('T')[0] === dateStr
+            );
+
+            attendanceMap[dateStr] = {
+                date: currentDate,
+                isWeekend,
+                isHoliday: !!holiday,
+                holidayName: holiday?.name || null,
+                attendance: null
+            };
+        }
+
+        // Populate attendance records
+        attendance.forEach(record => {
+            const dateStr = new Date(record.date).toISOString().split('T')[0];
+            if (attendanceMap[dateStr]) {
+                attendanceMap[dateStr].attendance = {
+                    _id: record._id,
+                    clockIn: record.clockIn,
+                    clockOut: record.clockOut,
+                    status: record.status,
+                    approvalStatus: record.approvalStatus,
+                    hoursWorked: record.hoursWorked,
+                    tasksDone: record.tasksDone,
+                    workLocation: record.workLocation
+                };
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            attendance: attendanceMap
+        });
+
+    } catch (error) {
+        console.error("Error fetching monthly attendance:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to fetch monthly attendance"
+        });
+    }
+};
 // Approve Attendance
 export const approveAttendance = async (req, res) => {
     try {
@@ -304,97 +391,7 @@ export const getAttendanceSummary = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to fetch summary." });
     }
 };
-export const getMonthlyAttendance = async (req, res) => {
-    try {
-        const userId = req.user?._id;
-        const { month, year } = req.query;
 
-        if (!userId || !month || !year) {
-            return res.status(400).json({
-                success: false,
-                error: "Missing required parameters"
-            });
-        }
-
-        // Create dates in UTC to avoid timezone issues
-        const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-        const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
-
-        const attendance = await Attendance.find({
-            userId,
-            date: {
-                $gte: startDate,
-                $lte: endDate
-            }
-        }).sort({ date: 1 });
-
-        // Get holidays for the month
-        const holidays = await Holiday.find({
-            date: {
-                $gte: startDate,
-                $lte: endDate
-            },
-            $or: [
-                { isCompanyWide: true },
-                { applicableDepartments: req.user.department }
-            ]
-        });
-
-        // Create a map of attendance records
-        const attendanceMap = {};
-
-        // Initialize each day of the month
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const currentDate = new Date(d);
-            const dateStr = currentDate.toISOString().split('T')[0];
-
-            // Get day of week in local time (0 = Sunday, 6 = Saturday)
-            const dayOfWeek = currentDate.getUTCDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
-
-            const holiday = holidays.find(h =>
-                new Date(h.date).toISOString().split('T')[0] === dateStr
-            );
-
-            attendanceMap[dateStr] = {
-                date: currentDate,
-                isWeekend,
-                isHoliday: !!holiday,
-                holidayName: holiday?.name || null,
-                attendance: null
-            };
-        }
-
-        // Populate attendance records
-        attendance.forEach(record => {
-            const dateStr = new Date(record.date).toISOString().split('T')[0];
-            if (attendanceMap[dateStr]) {
-                attendanceMap[dateStr].attendance = {
-                    _id: record._id,
-                    clockIn: record.clockIn,
-                    clockOut: record.clockOut,
-                    status: record.status,
-                    approvalStatus: record.approvalStatus,
-                    hoursWorked: record.hoursWorked,
-                    tasksDone: record.tasksDone,
-                    workLocation: record.workLocation
-                };
-            }
-        });
-
-        return res.status(200).json({
-            success: true,
-            attendance: attendanceMap
-        });
-
-    } catch (error) {
-        console.error("Error fetching monthly attendance:", error);
-        return res.status(500).json({
-            success: false,
-            error: "Failed to fetch monthly attendance"
-        });
-    }
-};
 
 export const getAllAttendance = async (req, res) => {
     try {

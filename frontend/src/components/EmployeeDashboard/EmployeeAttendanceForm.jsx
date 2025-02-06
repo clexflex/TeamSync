@@ -19,7 +19,6 @@ const EmployeeAttendanceForm = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // In EmployeeAttendanceForm.jsx
 const handleClockIn = async () => {
   try {
       setLoading(true);
@@ -49,7 +48,9 @@ const handleClockIn = async () => {
       setLoading(true);
       await axios.post(
         `${config.API_URL}/api/attendance/clock-out`,
-        { tasksDone: form.tasksDone },
+        { tasksDone: form.tasksDone,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone 
+         },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       setMessage('Clock-out successful');
