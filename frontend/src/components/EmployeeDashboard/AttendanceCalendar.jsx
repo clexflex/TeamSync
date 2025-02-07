@@ -70,9 +70,10 @@ const AttendanceCalendar = ({ onDateSelect }) => {
             setLoading(false);
         }
     };
-    useEffect(() => {
-        console.log("Attendance Data:", attendanceData);
-    }, [attendanceData]);
+    // Debugging
+    // useEffect(() => {
+    //     console.log("Attendance Data:", attendanceData);
+    // }, [attendanceData]);
     
     const isWeekend = (date) => {
         const day = date.getDay();

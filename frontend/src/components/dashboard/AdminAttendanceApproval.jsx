@@ -82,7 +82,7 @@ const AdminAttendanceApproval = () => {
         <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="bg-gray-100">
-              {["Name", "Clock In", "Clock Out", "Hours", "Tasks", "Status", "Actions"].map(
+              {["Name", "Clock In", "Clock Out", "Hours", "Tasks", "Status", "Actions","Manager","Admin","Comment"].map(
                 (header) => (
                   <th key={header} className="p-3 text-left text-gray-600 font-medium border">
                     {header}
@@ -141,6 +141,24 @@ const AdminAttendanceApproval = () => {
                     <X className="w-5 h-5 text-red-700" />
                   </button>
                 </td>
+                <td className="p-3 border">
+    <span className={`inline-block px-3 py-1 rounded-full text-xs ${
+        record.managerApproval ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+    }`}>
+        {record.managerApproval ? "Approved by Manager" : "Pending Manager"}
+    </span>
+</td>
+<td className="p-3 border">
+    <span className={`inline-block px-3 py-1 rounded-full text-xs ${
+        record.adminApproval ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+    }`}>
+        {record.adminApproval ? "Approved by Admin" : "Pending Admin"}
+    </span>
+</td>
+<td className="p-3 border">
+    <p className="text-gray-700 text-sm">{record.comments || "No Comments"}</p>
+</td>
+
               </tr>
             ))}
           </tbody>

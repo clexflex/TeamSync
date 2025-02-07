@@ -44,24 +44,30 @@ const TeamAttendanceApproval = () => {
 
   const handleApproval = async (attendanceId, status) => {
     try {
-      await axios.put(
-        `${config.API_URL}/api/attendance/approve`,
-        {
-          attendanceId,
-          approvalStatus: status,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+        const response = await axios.put(
+            `${config.API_URL}/api/attendance/approve`,
+            {
+                attendanceId,
+                approvalStatus: status
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                },
+            }
+        );
+
+        if (response.data.success) {
+            fetchTeamAttendance();
+        } else {
+            setError("Failed to update approval status");
         }
-      );
-      fetchTeamAttendance();
     } catch (err) {
-      setError('Failed to update approval status');
-      console.error('Error:', err);
+        setError("Failed to update approval status");
+        console.error('Error:', err);
     }
-  };
+};
+
 
   const formatTime = (dateString) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
@@ -115,6 +121,9 @@ const TeamAttendanceApproval = () => {
                   <th className="p-4 border-b">Tasks</th>
                   <th className="p-4 border-b">Status</th>
                   <th className="p-4 border-b">Actions</th>
+                  <th className="p-4 border-b">Manager </th>
+                  <th className="p-4 border-b">Admin</th>
+                  <th className="p-4 border-b">Comment</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,6 +182,28 @@ const TeamAttendanceApproval = () => {
                         </button>
                       </div>
                     </td>
+                    <td className="p-4">
+    <span className={`px-2 py-1 rounded-full text-xs ${
+        record.managerApproval
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+    }`}>
+        {record.managerApproval ? "Approved by Manager" : "Pending Manager Approval"}
+    </span>
+</td>
+<td className="p-4">
+    <span className={`px-2 py-1 rounded-full text-xs ${
+        record.adminApproval
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+    }`}>
+        {record.adminApproval ? "Approved by Admin" : "Pending Admin Approval"}
+    </span>
+</td>
+<td className="p-4">
+    <p className="text-gray-700 text-sm">{record.comments || "No Comments"}</p>
+</td>
+
                   </tr>
                 ))}
               </tbody>

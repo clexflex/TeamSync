@@ -46,14 +46,14 @@ const AttendanceHistoryModal = ({ attendance, onClose }) => {
             <p className="font-medium text-gray-700">Approval Status</p>
             <p className={`capitalize ${attendance.approvalStatus === 'Approved' ? 'text-green-600' :
               attendance.approvalStatus === 'Rejected' ? 'text-red-600' :
-              attendance.approvalStatus === 'Auto-Approved' ? 'text-blue-400' :
-                'text-yellow-600'
+                attendance.approvalStatus === 'Auto-Approved' ? 'text-blue-400' :
+                  'text-yellow-600'
               }`}>
               {attendance.approvalStatus || 'Pending'}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
-          {attendance.hoursWorked && (
+            {attendance.hoursWorked && (
               <div className="bg-gray-50 p-4 rounded-lg transition-all duration-200 hover:shadow-md">
                 <p className="font-medium text-gray-700">Hours Worked</p>
                 <p className="text-gray-600">{attendance.hoursWorked.toFixed(2) || 0} hours</p>
@@ -67,13 +67,12 @@ const AttendanceHistoryModal = ({ attendance, onClose }) => {
 
           <div className="bg-gray-50 p-4 rounded-lg transition-all duration-200 hover:shadow-md">
             <p className="font-medium text-gray-700">Status</p>
-            <p className={`capitalize ${
-              attendance.status === 'Present' ? 'text-green-600' :
+            <p className={`capitalize ${attendance.status === 'Present' ? 'text-green-600' :
               attendance.status === 'Absent' ? 'text-red-600' :
-              attendance.status === 'Half-Day' ? 'text-yellow-600' :
-              attendance.status === 'Leave' ? 'text-blue-600' :
-              attendance.status === 'Extra-Work' ? 'text-indigo-600' :
-                'text-gray-200'
+                attendance.status === 'Half-Day' ? 'text-yellow-600' :
+                  attendance.status === 'Leave' ? 'text-blue-600' :
+                    attendance.status === 'Extra-Work' ? 'text-indigo-600' :
+                      'text-gray-200'
               }`}>
               {attendance.status || 'No Status'}
             </p>
@@ -81,13 +80,34 @@ const AttendanceHistoryModal = ({ attendance, onClose }) => {
 
           <div className="bg-gray-50 p-4 rounded-lg transition-all duration-200 hover:shadow-md">
             <p className="font-medium text-gray-700">Tasks Completed</p>
-           
+
             <p className="text-gray-600">
               {attendance.tasksDone || 'NA'}
             </p>
-            
           </div>
-          
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-4 rounded-lg transition-all duration-200 hover:shadow-md">
+              <p className="font-medium text-gray-700">Manager Approval</p>
+              <p className={`capitalize ${attendance.managerApproval ? 'text-green-600' : 'text-red-600'}`}>
+                {attendance.managerApproval ? "Approved" : "Not Approved"}
+              </p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg transition-all duration-200 hover:shadow-md">
+              <p className="font-medium text-gray-700">Admin Approval</p>
+              <p className={`capitalize ${attendance.adminApproval ? 'text-green-600' : 'text-red-600'}`}>
+                {attendance.adminApproval ? "Approved" : "Not Approved"}
+              </p>
+            </div>
+
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg transition-all duration-200 hover:shadow-md">
+            <p className="font-medium text-gray-700">Approval Comments</p>
+            <p className="text-gray-600">{attendance.comments || "No comments yet"}</p>
+          </div>
+
+
         </div>
       </div>
     </div>

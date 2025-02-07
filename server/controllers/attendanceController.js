@@ -73,24 +73,12 @@ export const clockIn = async (req, res) => {
         const tomorrowUTC = new Date(todayUTC);
         tomorrowUTC.setUTCDate(todayUTC.getUTCDate() + 1);
 
-        const existingAttendance = await Attendance.findOne({
-            userId,
-            date: {
-                $gte: todayUTC,
-                $lt: tomorrowUTC
-            }
-        });
-
-        if (existingAttendance) {
-            return res.status(400).json({
-                success: false,
-                error: "Already clocked in for today.",
-                attendance: existingAttendance
-            });
-        }
-
-        // Get employee and team details
-        const employee = await Employee.findOne({ userId }).populate('teamId');
+        const [existingAttendance, employee] = await Promise.all([
+            Attendance.findOne({ userId, date: { $gte: todayUTC, $lt: tomorrowUTC } }),
+            Employee.findOne({ userId }).populate("teamId")
+        ]);
+        if (existingAttendance) return res.status(400).json({ success: false, error: "Already clocked in for today." });
+        
 
         // Check weekend based on UTC day
         const dayOfWeek = todayUTC.getUTCDay();
@@ -232,6 +220,9 @@ export const getMonthlyAttendance = async (req, res) => {
                     approvalStatus: record.approvalStatus,
                     hoursWorked: record.hoursWorked,
                     tasksDone: record.tasksDone,
+                    managerApproval: record.managerApproval,
+                    adminApproval: record.adminApproval,
+                    comments: record.comments,
                     workLocation: record.workLocation
                 };
             }
@@ -254,13 +245,31 @@ export const getMonthlyAttendance = async (req, res) => {
 export const approveAttendance = async (req, res) => {
     try {
         const { attendanceId, approvalStatus } = req.body;
+        const userId = req.user._id;
+        const userRole = req.user.role;
 
         const attendance = await Attendance.findById(attendanceId);
         if (!attendance) {
             return res.status(404).json({ success: false, error: "Attendance record not found." });
         }
 
-        attendance.approvedBy = req.user._id; // Approver's user ID
+        // Check if the user is authorized
+        if (!["manager", "admin"].includes(userRole)) {
+            return res.status(403).json({ success: false, error: "Unauthorized action." });
+        }
+
+        // Update approval status based on the role
+        if (userRole === "manager") {
+            attendance.managerApproval = approvalStatus === "Approved";
+        } else if (userRole === "admin") {
+            attendance.adminApproval = approvalStatus === "Approved";
+        }
+
+        // Append comment history
+        const approvalComment = `Attendance ${approvalStatus} by ${req.user.name} (${userRole}) on ${new Date().toLocaleString()}`;
+        attendance.comments = attendance.comments ? `${attendance.comments}\n${approvalComment}` : approvalComment;
+
+        attendance.approvedBy = userId;
         attendance.approvalStatus = approvalStatus;
 
         if (approvalStatus === "Approved") {
@@ -274,6 +283,7 @@ export const approveAttendance = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to approve attendance." });
     }
 };
+
 
 // Fetch Attendance for a User
 export const getMyAttendance = async (req, res) => {
@@ -289,8 +299,10 @@ export const getMyAttendance = async (req, res) => {
             };
         }
 
-        const attendance = await Attendance.find(query).sort({ date: -1 });
-        return res.status(200).json({ success: true, attendance });
+        const attendance = await Attendance.find(query)
+        .select("clockIn clockOut status approvalStatus managerApproval adminApproval hoursWorked tasksDone workLocation comments")
+        .sort({ date: -1 });
+      return res.status(200).json({ success: true, attendance });
     } catch (error) {
         console.error("Error fetching user's attendance:", error);
         return res.status(500).json({ success: false, error: "Failed to fetch attendance." });
@@ -497,7 +509,6 @@ export const getAttendanceReports = async (req, res) => {
             as: "teamDetails"
           }
         },
-        // Updated department lookup to handle both employee and manager cases
         {
           $lookup: {
             from: "departments",
