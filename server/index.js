@@ -1,3 +1,4 @@
+import logger from './utils/logger.js'; // Import the Winston logger
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -35,6 +36,8 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+logger.info('🚀 Server is starting...');
+
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
     setHeaders: (res) => {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -66,10 +69,15 @@ app.use((req, res) => {
         error: `Route ${req.originalUrl} not found`
     });
 });
-
+// Middleware to log all requests
+app.use((req, res, next) => {
+    logger.info(`📢 ${req.method} ${req.url}`);
+    next();
+});
 // Global error handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
+    logger.error(`❌ Error: ${err.message}`, { stack: err.stack });
     res.status(err.status || 500).json({
         success: false,
         error: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred'
@@ -79,7 +87,7 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    logger.info(`🌍 Server running on port ${PORT}`);
 });
 
 // Handle unhandled rejections

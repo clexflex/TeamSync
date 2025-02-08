@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import Attendance from "../models/Attendance.js";
 import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
@@ -55,13 +56,68 @@ export const getCurrentStatus = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to fetch current status." });
     }
 };
-// Clock-In Functionality
+
+
+// Add this function at the top of attendanceController.js
+const isInsideGeoFence = (lat, lon, geoFencePoints) => {
+    let inside = false;
+    for (let i = 0, j = geoFencePoints.length - 1; i < geoFencePoints.length; j = i++) {
+        const xi = geoFencePoints[i].lat, yi = geoFencePoints[i].lon;
+        const xj = geoFencePoints[j].lat, yj = geoFencePoints[j].lon;
+
+        const intersect = ((yi > lon) !== (yj > lon)) &&
+            (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+};
+// For testing
+// { lat: 20.338010, lon: 74.167355 },
+// { lat: 20.338010, lon: 73.268880 },
+// { lat: 19.659858, lon: 73.268880 },
+// { lat: 19.659858, lon: 74.167355 }
+const checkGeoFence = (lat, lon) => {
+    // Define the geofence coordinates (same as frontend)
+    const geoFencePoints = [
+        { lat: 18.886617, lon: 74.288205 },
+        { lat: 18.886617, lon: 73.389729 },
+        { lat: 18.202419, lon: 73.389729 },
+        { lat: 18.202419, lon: 74.288205 }
+    ];
+
+    return isInsideGeoFence(lat, lon, geoFencePoints);
+};
+
+// Update the clockIn function
 export const clockIn = async (req, res) => {
     try {
         const userId = req.user?._id;
         if (!userId) {
             return res.status(400).json({ success: false, error: "User ID is missing." });
         }
+
+        const { workLocation, location } = req.body;
+        // console.log("Received location:", location);
+
+        // Handle Remote Employees: Capture location
+        if (workLocation === "Remote" && !location) {
+            return res.status(400).json({ success: false, error: "Location is required for remote employees." });
+        }
+
+        // Handle Onsite Employees: Validate if inside geofencing area
+        if (workLocation === "Onsite") {
+            if (!location || !location.latitude || !location.longitude) {
+                return res.status(400).json({ success: false, error: "Location data is required for onsite check-in." });
+            }
+
+            const isInside = checkGeoFence(location.latitude, location.longitude);
+            // console.log("Geofence check result:", isInside);
+
+            if (!isInside) {
+                return res.status(400).json({ success: false, error: "You are not within the allowed geofencing area." });
+            }
+        }
+
         // Create today's date in UTC
         const today = new Date();
         const todayUTC = new Date(Date.UTC(
@@ -77,8 +133,10 @@ export const clockIn = async (req, res) => {
             Attendance.findOne({ userId, date: { $gte: todayUTC, $lt: tomorrowUTC } }),
             Employee.findOne({ userId }).populate("teamId")
         ]);
-        if (existingAttendance) return res.status(400).json({ success: false, error: "Already clocked in for today." });
-        
+
+        if (existingAttendance) {
+            return res.status(400).json({ success: false, error: "Already clocked in for today." });
+        }
 
         // Check weekend based on UTC day
         const dayOfWeek = todayUTC.getUTCDay();
@@ -88,16 +146,27 @@ export const clockIn = async (req, res) => {
             userId,
             teamId: employee?.teamId?._id || null,
             date: todayUTC,
-            clockIn: new Date(), // Current time with timezone
+            clockIn: new Date(),
             status: "Present",
-            workLocation: req.body.workLocation,
+            workLocation: workLocation,
+            location: {
+                accuracy: location.accuracy,
+                latitude: location.latitude,
+                longitude: location.longitude,
+                altitude: location.altitude,
+                altitudeAccuracy: location.altitudeAccuracy,
+                heading: location.heading,
+                speed: location.speed
+            },
             role: req.user.role,
             isWeekend,
         });
 
         await newAttendance.save();
+        logger.info(`User ${userId} successfully clocked in at ${new Date().toISOString()}`);
         return res.status(200).json({ success: true, attendance: newAttendance });
     } catch (error) {
+        logger.error(`Error during clock-in: ${error.message}`);
         console.error("Error during clock-in:", error);
         return res.status(500).json({ success: false, error: "Failed to clock in." });
     }
@@ -133,6 +202,7 @@ export const clockOut = async (req, res) => {
         }
 
         if (attendance.clockOut) {
+            logger.info(`User ${userId} successfully clocked Out at ${new Date().toISOString()}`);
             return res.status(400).json({ success: false, error: "Clock-out already recorded for today." });
         }
 
@@ -277,6 +347,8 @@ export const approveAttendance = async (req, res) => {
         }
 
         await attendance.save();
+        logger.info(`User ${userId} successfully approve at ${new Date().toISOString()}`);
+console.log("success")
         return res.status(200).json({ success: true, attendance });
     } catch (error) {
         console.error("Error during attendance approval:", error);
@@ -300,9 +372,9 @@ export const getMyAttendance = async (req, res) => {
         }
 
         const attendance = await Attendance.find(query)
-        .select("clockIn clockOut status approvalStatus managerApproval adminApproval hoursWorked tasksDone workLocation comments")
-        .sort({ date: -1 });
-      return res.status(200).json({ success: true, attendance });
+            .select("clockIn clockOut status approvalStatus managerApproval adminApproval hoursWorked tasksDone workLocation comments")
+            .sort({ date: -1 });
+        return res.status(200).json({ success: true, attendance });
     } catch (error) {
         console.error("Error fetching user's attendance:", error);
         return res.status(500).json({ success: false, error: "Failed to fetch attendance." });
@@ -448,197 +520,197 @@ export const getAllAttendance = async (req, res) => {
 
 export const getAttendanceReports = async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
-  
-      if (!startDate || !endDate) {
-        return res.status(400).json({
-          success: false,
-          error: "Start and end dates are required"
-        });
-      }
-  
-      const startDateObj = new Date(startDate + 'T00:00:00.000Z');
-      const endDateObj = new Date(endDate + 'T23:59:59.999Z');
-  
-      // Get holidays within the date range
-      const holidays = await Holiday.find({
-        date: {
-          $gte: startDateObj,
-          $lte: endDateObj
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({
+                success: false,
+                error: "Start and end dates are required"
+            });
         }
-      });
-  
-      const dateQuery = {
-        date: {
-          $gte: startDateObj,
-          $lte: endDateObj
-        }
-      };
-  
-      const attendanceRecords = await Attendance.aggregate([
-        { $match: dateQuery },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userDetails"
-          }
-        },
-        {
-          $lookup: {
-            from: "employees",
-            localField: "userId",
-            foreignField: "userId",
-            as: "employeeDetails"
-          }
-        },
-        {
-          $lookup: {
-            from: "managers",
-            localField: "userId",
-            foreignField: "userId",
-            as: "managerDetails"
-          }
-        },
-        {
-          $lookup: {
-            from: "teams",
-            localField: "teamId",
-            foreignField: "_id",
-            as: "teamDetails"
-          }
-        },
-        {
-          $lookup: {
-            from: "departments",
-            let: {
-              empDeptId: { $arrayElemAt: ["$employeeDetails.department", 0] },
-              mgrDeptId: { $arrayElemAt: ["$managerDetails.department", 0] }
-            },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $or: [
-                      { $eq: ["$_id", "$$empDeptId"] },
-                      { $eq: ["$_id", "$$mgrDeptId"] }
-                    ]
-                  }
-                }
-              }
-            ],
-            as: "departmentDetails"
-          }
-        }
-      ]);
-  
-      const userAttendanceMap = {};
-      const workingDays = new Set();
-  
-      // Calculate total working days excluding holidays and weekends
-      let currentDate = new Date(startDateObj);
-      while (currentDate <= endDateObj) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const dayOfWeek = currentDate.getDay();
-        const isHoliday = holidays.some(h => h.date.toISOString().split('T')[0] === dateStr);
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
-        if (!isHoliday && !isWeekend) {
-          workingDays.add(dateStr);
-        }
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-  
-      attendanceRecords.forEach(record => {
-        const dateStr = record.date.toISOString().split('T')[0];
-        const userRole = record.userDetails[0]?.role;
-        
-        if (!userAttendanceMap[record.userId]) {
-          userAttendanceMap[record.userId] = {
-            name: record.userDetails[0]?.name,
-            role: userRole,
-            team: record.teamDetails[0]?.name || 'N/A',
-            department: record.departmentDetails[0]?.dep_name || 'N/A',
-            attendance: {},
-            stats: {
-              totalPresent: 0,
-              totalAbsent: 0,
-              totalHalfDay: 0,
-              totalHoursWorked: 0
+
+        const startDateObj = new Date(startDate + 'T00:00:00.000Z');
+        const endDateObj = new Date(endDate + 'T23:59:59.999Z');
+
+        // Get holidays within the date range
+        const holidays = await Holiday.find({
+            date: {
+                $gte: startDateObj,
+                $lte: endDateObj
             }
-          };
-        }
-  
-        const status = record.approvalStatus === 'Approved' 
-          ? record.status 
-          : 'Pending';
-  
-        userAttendanceMap[record.userId].attendance[dateStr] = {
-          status,
-          hoursWorked: record.hoursWorked || 0,
-          isHoliday: holidays.some(h => h.date.toISOString().split('T')[0] === dateStr)
-        };
-  
-        // Update statistics for present days
-        if (status === 'Present') userAttendanceMap[record.userId].stats.totalPresent++;
-        if (status === 'Half-Day') userAttendanceMap[record.userId].stats.totalHalfDay++;
-        userAttendanceMap[record.userId].stats.totalHoursWorked += record.hoursWorked || 0;
-      });
-  
-      // Calculate absent days and other statistics
-      Object.values(userAttendanceMap).forEach(user => {
-        const totalWorkingDays = workingDays.size;
-        const absentDays = totalWorkingDays - user.stats.totalPresent - (user.stats.totalHalfDay * 0.5);
-        
-        user.stats.totalAbsent = Math.max(0, absentDays);
-        user.stats.workingDays = totalWorkingDays;
-        user.stats.attendancePercentage = ((user.stats.totalPresent + (user.stats.totalHalfDay * 0.5)) / totalWorkingDays * 100).toFixed(2);
-        user.stats.avgHoursPerDay = (user.stats.totalHoursWorked / user.stats.totalPresent || 0).toFixed(2);
-      });
-  
-      // Generate date range for the report
-      const dateRange = [];
-      currentDate = new Date(startDateObj);
-      while (currentDate <= endDateObj) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const dayOfWeek = currentDate.getDay();
-        dateRange.push({
-          date: dateStr,
-          dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
-          isHoliday: holidays.some(h => h.date.toISOString().split('T')[0] === dateStr),
-          isWeekend: dayOfWeek === 0 || dayOfWeek === 6
         });
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-  
-      // Group users by role
-      const usersByRole = Object.values(userAttendanceMap).reduce((acc, user) => {
-        if (!acc[user.role]) acc[user.role] = [];
-        acc[user.role].push(user);
-        return acc;
-      }, {});
-  
-      return res.status(200).json({
-        success: true,
-        data: {
-          dateRange,
-          usersByRole,
-          holidays,
-          periodInfo: {
-            startDate: startDateObj.toISOString().split('T')[0],
-            endDate: endDateObj.toISOString().split('T')[0],
-            totalDays: dateRange.length,
-            totalHolidays: holidays.length,
-            workingDays: workingDays.size
-          }
+
+        const dateQuery = {
+            date: {
+                $gte: startDateObj,
+                $lte: endDateObj
+            }
+        };
+
+        const attendanceRecords = await Attendance.aggregate([
+            { $match: dateQuery },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "userDetails"
+                }
+            },
+            {
+                $lookup: {
+                    from: "employees",
+                    localField: "userId",
+                    foreignField: "userId",
+                    as: "employeeDetails"
+                }
+            },
+            {
+                $lookup: {
+                    from: "managers",
+                    localField: "userId",
+                    foreignField: "userId",
+                    as: "managerDetails"
+                }
+            },
+            {
+                $lookup: {
+                    from: "teams",
+                    localField: "teamId",
+                    foreignField: "_id",
+                    as: "teamDetails"
+                }
+            },
+            {
+                $lookup: {
+                    from: "departments",
+                    let: {
+                        empDeptId: { $arrayElemAt: ["$employeeDetails.department", 0] },
+                        mgrDeptId: { $arrayElemAt: ["$managerDetails.department", 0] }
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        { $eq: ["$_id", "$$empDeptId"] },
+                                        { $eq: ["$_id", "$$mgrDeptId"] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "departmentDetails"
+                }
+            }
+        ]);
+
+        const userAttendanceMap = {};
+        const workingDays = new Set();
+
+        // Calculate total working days excluding holidays and weekends
+        let currentDate = new Date(startDateObj);
+        while (currentDate <= endDateObj) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const dayOfWeek = currentDate.getDay();
+            const isHoliday = holidays.some(h => h.date.toISOString().split('T')[0] === dateStr);
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+            if (!isHoliday && !isWeekend) {
+                workingDays.add(dateStr);
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
         }
-      });
+
+        attendanceRecords.forEach(record => {
+            const dateStr = record.date.toISOString().split('T')[0];
+            const userRole = record.userDetails[0]?.role;
+
+            if (!userAttendanceMap[record.userId]) {
+                userAttendanceMap[record.userId] = {
+                    name: record.userDetails[0]?.name,
+                    role: userRole,
+                    team: record.teamDetails[0]?.name || 'N/A',
+                    department: record.departmentDetails[0]?.dep_name || 'N/A',
+                    attendance: {},
+                    stats: {
+                        totalPresent: 0,
+                        totalAbsent: 0,
+                        totalHalfDay: 0,
+                        totalHoursWorked: 0
+                    }
+                };
+            }
+
+            const status = record.approvalStatus === 'Approved'
+                ? record.status
+                : 'Pending';
+
+            userAttendanceMap[record.userId].attendance[dateStr] = {
+                status,
+                hoursWorked: record.hoursWorked || 0,
+                isHoliday: holidays.some(h => h.date.toISOString().split('T')[0] === dateStr)
+            };
+
+            // Update statistics for present days
+            if (status === 'Present') userAttendanceMap[record.userId].stats.totalPresent++;
+            if (status === 'Half-Day') userAttendanceMap[record.userId].stats.totalHalfDay++;
+            userAttendanceMap[record.userId].stats.totalHoursWorked += record.hoursWorked || 0;
+        });
+
+        // Calculate absent days and other statistics
+        Object.values(userAttendanceMap).forEach(user => {
+            const totalWorkingDays = workingDays.size;
+            const absentDays = totalWorkingDays - user.stats.totalPresent - (user.stats.totalHalfDay * 0.5);
+
+            user.stats.totalAbsent = Math.max(0, absentDays);
+            user.stats.workingDays = totalWorkingDays;
+            user.stats.attendancePercentage = ((user.stats.totalPresent + (user.stats.totalHalfDay * 0.5)) / totalWorkingDays * 100).toFixed(2);
+            user.stats.avgHoursPerDay = (user.stats.totalHoursWorked / user.stats.totalPresent || 0).toFixed(2);
+        });
+
+        // Generate date range for the report
+        const dateRange = [];
+        currentDate = new Date(startDateObj);
+        while (currentDate <= endDateObj) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const dayOfWeek = currentDate.getDay();
+            dateRange.push({
+                date: dateStr,
+                dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+                isHoliday: holidays.some(h => h.date.toISOString().split('T')[0] === dateStr),
+                isWeekend: dayOfWeek === 0 || dayOfWeek === 6
+            });
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Group users by role
+        const usersByRole = Object.values(userAttendanceMap).reduce((acc, user) => {
+            if (!acc[user.role]) acc[user.role] = [];
+            acc[user.role].push(user);
+            return acc;
+        }, {});
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                dateRange,
+                usersByRole,
+                holidays,
+                periodInfo: {
+                    startDate: startDateObj.toISOString().split('T')[0],
+                    endDate: endDateObj.toISOString().split('T')[0],
+                    totalDays: dateRange.length,
+                    totalHolidays: holidays.length,
+                    workingDays: workingDays.size
+                }
+            }
+        });
     } catch (error) {
-      console.error("Error in getAttendanceReports:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Failed to generate attendance reports"
-      });
+        console.error("Error in getAttendanceReports:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to generate attendance reports"
+        });
     }
-  };
+};

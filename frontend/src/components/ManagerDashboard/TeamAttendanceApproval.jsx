@@ -3,6 +3,7 @@ import axios from 'axios';
 import config from '../../config';
 import { Check, X, AlertCircle, Clock, Building } from 'lucide-react';
 import TaskDetailsModal from '../modal/TaskDetailsModal';
+import AttendanceTable from "../shared/AttendanceTable";
 
 const TeamAttendanceApproval = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -44,37 +45,30 @@ const TeamAttendanceApproval = () => {
 
   const handleApproval = async (attendanceId, status) => {
     try {
-        const response = await axios.put(
-            `${config.API_URL}/api/attendance/approve`,
-            {
-                attendanceId,
-                approvalStatus: status
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            }
-        );
-
-        if (response.data.success) {
-            fetchTeamAttendance();
-        } else {
-            setError("Failed to update approval status");
+      const response = await axios.put(
+        `${config.API_URL}/api/attendance/approve`,
+        {
+          attendanceId,
+          approvalStatus: status
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
         }
-    } catch (err) {
+      );
+
+      if (response.data.success) {
+        fetchTeamAttendance();
+      } else {
         setError("Failed to update approval status");
-        console.error('Error:', err);
+      }
+    } catch (err) {
+      setError("Failed to update approval status");
+      console.error('Error:', err);
     }
-};
-
-
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
+
 
   if (loading) {
     return (
@@ -103,115 +97,32 @@ const TeamAttendanceApproval = () => {
         </div>
       )}
 
-      {Object.entries(groupedAttendance).map(([teamName, teamRecords]) => (
-        <div key={teamName} className="mt-6">
-          <div className="flex items-center mb-4">
-            <Building className="w-5 h-5 mr-2 text-gray-600" />
-            <h3 className="text-lg font-semibold text-gray-800">{teamName}</h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="p-4 border-b">Employee</th>
-                  <th className="p-4 border-b">Clock In</th>
-                  <th className="p-4 border-b">Clock Out</th>
-                  <th className="p-4 border-b">Hours</th>
-                  <th className="p-4 border-b">Tasks</th>
-                  <th className="p-4 border-b">Status</th>
-                  <th className="p-4 border-b">Actions</th>
-                  <th className="p-4 border-b">Manager </th>
-                  <th className="p-4 border-b">Admin</th>
-                  <th className="p-4 border-b">Comment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamRecords.map((record) => (
-                  <tr key={record._id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="font-medium">{record.userId.name}</div>
-                          <div className="text-sm text-gray-500">{record.workLocation}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">{formatTime(record.clockIn)}</td>
-                    <td className="p-4">{record.clockOut ? formatTime(record.clockOut) : '-'}</td>
-                    <td className="p-4">{record.hoursWorked ? record.hoursWorked.toFixed(2) : '-'}</td>
-                    <td className="p-4 border">
-                      <div className="flex items-center space-x-2">
-                        <div className="max-w-xs truncate">{record.tasksDone || '-'}</div>
-                        {record.tasksDone && (
-                          <button
-                            onClick={() => {
-                              setSelectedRecord(record);
-                              setIsModalOpen(true);
-                            }}
-                            className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            View Details
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${record.approvalStatus === 'Approved'
-                        ? 'bg-green-100 text-green-800'
-                        : record.approvalStatus === 'Rejected'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                        {record.approvalStatus}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleApproval(record._id, 'Approved')}
-                          className="p-1 hover:bg-green-100 rounded-full"
-                          disabled={record.approvalStatus === 'Approved'}>
-                          <Check className="w-5 h-5 text-green-600" />
-                        </button>
-                        <button
-                          onClick={() => handleApproval(record._id, 'Rejected')}
-                          className="p-1 hover:bg-red-100 rounded-full"
-                          disabled={record.approvalStatus === 'Rejected'}>
-                          <X className="w-5 h-5 text-red-600" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-4">
-    <span className={`px-2 py-1 rounded-full text-xs ${
-        record.managerApproval
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-    }`}>
-        {record.managerApproval ? "Approved by Manager" : "Pending Manager Approval"}
-    </span>
-</td>
-<td className="p-4">
-    <span className={`px-2 py-1 rounded-full text-xs ${
-        record.adminApproval
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-    }`}>
-        {record.adminApproval ? "Approved by Admin" : "Pending Admin Approval"}
-    </span>
-</td>
-<td className="p-4">
-    <p className="text-gray-700 text-sm">{record.comments || "No Comments"}</p>
-</td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {loading ? (
+        <div className="w-full h-96 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
         </div>
-      ))}
-      {/* Task Details Modal */}
+      ) : (
+        Object.entries(groupedAttendance).map(([teamName, teamRecords]) => (
+          <AttendanceTable
+            key={teamName}
+            records={teamRecords.map(record => ({
+              ...record,
+              onApprove: () => handleApproval(record._id, 'Approved'),
+              onReject: () => handleApproval(record._id, 'Rejected'),
+              onViewTasks: () => {
+                setSelectedRecord(record);
+                setIsModalOpen(true);
+              },
+              // Add work location that's specific to TeamAttendanceApproval
+              workLocation: record.workLocation
+            }))}
+            title={teamName}
+            icon={Building}
+          />
+        ))
+      )}
+
+      {/* Keep the TaskDetailsModal as is */}
       <TaskDetailsModal
         isOpen={isModalOpen}
         onClose={() => {

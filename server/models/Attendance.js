@@ -28,6 +28,7 @@ const attendanceSchema = new Schema(
         isHoliday: { type: Boolean, default: false }, // Automatically marked
         hoursWorked: { type: Number }, // Calculated hours worked
         workLocation: { type: String, enum: ["Onsite", "Remote"], default: "Onsite" }, // Location of work
+        location: { type: Object }, // Store location as an object { lat, lon }
         leaveId: { type: Schema.Types.ObjectId, ref: "Leave" }, // Linked leave record if applicable
         comments: { type: String }, // Additional comments
     },

@@ -116,7 +116,7 @@ const ManagerSetting = () => {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/employee-dashboard")}
+              onClick={() => navigate("/manager-dashboard")}
               className="px-6 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition"
             >
               Cancel
