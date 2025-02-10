@@ -21,7 +21,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
 connectToDatabase();
 const app = express();
 
@@ -36,7 +35,6 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-logger.info('🚀 Server is starting...');
 
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
     setHeaders: (res) => {
