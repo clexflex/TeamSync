@@ -2,8 +2,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { FaTachometerAlt, FaUsers, FaCalendarCheck, FaCalendarAlt, FaCogs, FaMoneyBillWave } from 'react-icons/fa';
+import { useAuth } from '../../context/authContext';
 
 const ManagerSidebar = () => {
+  const { user } = useAuth();
   return (
     <div className="bg-white border-r border-gray-200 h-screen fixed left-0 top-0 bottom-0 w-64 overflow-y-auto">
       <div className="h-16 flex items-center justify-center border-b border-gray-200">
@@ -50,7 +52,7 @@ const ManagerSidebar = () => {
           <FaCalendarAlt className="text-lg" />
           <span className="font-medium">Employee Attendance</span>
         </NavLink>
-        <NavLink to="/manager-dashboard/leaves"
+        <NavLink to={`/manager-dashboard/leaves/${user._id}`}
           className={({ isActive }) =>
             `${isActive
               ? "bg-blue-50 text-blue-600"

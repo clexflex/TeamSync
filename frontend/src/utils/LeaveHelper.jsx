@@ -10,14 +10,17 @@ export const columns = [
         sortable: true,
     },
     {
-        name: "Employee",
+        name: "Name",
         selector: (row) => (
             <div className="flex items-center gap-3">
-                    <div className="font-medium text-gray-800">{row.name}</div>
-                    <div className="text-sm text-gray-500">{row.employeeId}</div>
+                <div className="font-medium text-gray-800">
+                    {row.employeeId ? row.employeeId.userId.name : row.managerId.userId.name}
+                </div>
+                <div className="text-sm text-gray-500">
+                    {row.employeeId ? row.employeeId.employeeId : row.managerId.managerId}
+                </div>
             </div>
         ),
-
         sortable: true,
     },
     {

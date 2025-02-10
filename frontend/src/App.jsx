@@ -130,6 +130,8 @@ function App() {
           <Route path="attendance-approval" element={<TeamAttendanceApproval />} />
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
           <Route path="setting" element={<ManagerSetting />} />
+          <Route path="leaves/:id" element={<LeaveList />} />
+          <Route path="add-leave" element={<AddLeave />} />
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />
