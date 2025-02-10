@@ -4,7 +4,7 @@ import User from "../models/User.js"
 import Manager from "../models/Manager.js"
 import bcrypt from "bcrypt"
 import path from "path"
-
+import logger from "../utils/logger.js"; 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, "public/uploads")
@@ -62,10 +62,11 @@ const addManager = async (req, res) => {
         })
 
         await newManager.save()
+        logger.info(`Manager ${name} (ID: ${managerId}) added successfully.`);
         return res.status(200).json({ success: true, message: "Manager Created Successfully" });
     } catch (error) {
         console.error("Error in addManager:", error);
-        console.log("Error in addManager:", error);
+        logger.error(`Error adding manager ${name} (ID: ${managerId}): ${error.message}`);
         return res.status(500).json({ success: false, error: "Server error in adding manager" });
     }
 };
@@ -77,9 +78,10 @@ const getDepartments = async (req, res) => {
     try {
         // Fetch all departments
         const departments = await Department.find({}, "dep_name _id");
-
+        logger.info("Fetched all managers successfully.");
         return res.status(200).json({ success: true, departments });
     } catch (error) {
+        logger.error("Error fetching managers: " + error.message);
         console.error("Error fetching departments:", error);
         return res.status(500).json({ success: false, error: "Failed to fetch departments." });
     }
@@ -184,12 +186,13 @@ const updateManager = async (req, res) => {
         if (updates.designation) managerUpdates.designation = updates.designation;
 
         await Manager.findByIdAndUpdate(id, managerUpdates);
-
+        logger.info(`Updated manager with ID ${id} successfully.`);
         return res.status(200).json({
             success: true,
             message: "Manager updated successfully"
         });
     } catch (error) {
+        logger.error(`Error updating manager with ID ${id}: ${error.message}`);
         return res.status(500).json({
             success: false,
             error: "Error updating manager"
@@ -255,9 +258,10 @@ const getManagerById = async (req, res) => {
         if (!manager) {
             return res.status(404).json({ success: false, error: "Manager not found." });
         }
-
+        logger.info(`Fetched manager with ID ${id}.`);
         return res.status(200).json({ success: true, manager });
     } catch (error) {
+        logger.error(`Error fetching manager with ID ${id}: ${error.message}`);
         console.error("Error fetching manager:", error);
         return res.status(500).json({ success: false, error: "Failed to fetch manager." });
     }
@@ -276,9 +280,10 @@ const deleteManager = async (req, res) => {
 
         // Update user role back to "employee" if necessary
         await User.findByIdAndUpdate(manager.userId, { role: "employee" });
-
+        logger.info(`Deleting manager with ID ${id}.`);
         return res.status(200).json({ success: true, message: "Manager deleted successfully." });
     } catch (error) {
+        logger.error(`Error deleting manager with ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Failed to delete manager." });
     }
 };
@@ -287,15 +292,15 @@ const deleteManager = async (req, res) => {
 const getManagerTeams = async (req, res) => {
     try {
         const { id } = req.params;
-
         const manager = await Manager.findById(id).populate("teams");
 
         if (!manager) {
             return res.status(404).json({ success: false, error: "Manager not found." });
         }
-
+        logger.info(`Fetched teams managed by Manager ID ${id}.`);
         return res.status(200).json({ success: true, teams: manager.teams });
     } catch (error) {
+        logger.error(`Error fetching teams managed by Manager ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Failed to fetch teams." });
     }
 };

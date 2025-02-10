@@ -49,9 +49,10 @@ export const getCurrentStatus = async (req, res) => {
                 todayAttendance.clockOut ? 'completed' : 'clocked-in',
             teamId: employee?.teamId?._id || null
         };
-
+        logger.info(`User ${userId} checked attendance status.`);
         return res.status(200).json(response);
     } catch (error) {
+        logger.error(`Error fetching current status for user ${userId}: ${error.message}`);
         console.error("Error fetching current status:", error);
         return res.status(500).json({ success: false, error: "Failed to fetch current status." });
     }
@@ -211,8 +212,10 @@ export const clockOut = async (req, res) => {
         attendance.hoursWorked = (attendance.clockOut - attendance.clockIn) / (1000 * 60 * 60);
 
         await attendance.save();
+        logger.info(`User ${userId} clocked out at ${new Date().toISOString()}. Hours worked: ${attendance.hoursWorked}`);
         return res.status(200).json({ success: true, attendance });
     } catch (error) {
+        logger.error(`Error during clock-out for user ${userId}: ${error.message}`);
         console.error("Error during clock-out:", error);
         return res.status(500).json({ success: false, error: "Failed to clock out." });
     }
@@ -348,9 +351,10 @@ export const approveAttendance = async (req, res) => {
 
         await attendance.save();
         logger.info(`User ${userId} successfully approve at ${new Date().toISOString()}`);
-console.log("success")
+        console.log("success")
         return res.status(200).json({ success: true, attendance });
     } catch (error) {
+        logger.error(`Error approving attendance ${attendanceId} by user ${userId}: ${error.message}`);
         console.error("Error during attendance approval:", error);
         return res.status(500).json({ success: false, error: "Failed to approve attendance." });
     }

@@ -1,7 +1,7 @@
 import Team from "../models/Team.js";
 import Manager from "../models/Manager.js";
 import Employee from "../models/Employee.js";
-
+import logger from "../utils/logger.js"; 
 const isAuthorizedForTeam = async (userId, teamId, role) => {
     if (role === 'admin') return true;
     if (role === 'manager') {
@@ -32,9 +32,10 @@ const getTeamById = async (req, res) => {
         if (!team) {
             return res.status(404).json({ success: false, error: "Team not found." });
         }
-
+        logger.info(`Fetched team with ID ${id}.`);
         return res.status(200).json({ success: true, team });
     } catch (error) {
+        logger.error(`Error fetching team with ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Failed to fetch team." });
     }
 };
@@ -65,13 +66,14 @@ const deleteTeam = async (req, res) => {
         );
 
         await team.deleteOne();
-
+        logger.info(`Deleting team with ID ${id}.`);
         return res.status(200).json({
             success: true,
             message: "Team and related references deleted successfully"
         });
 
     } catch (error) {
+        logger.error(`Error deleting team with ID ${id}: ${error.message}`);
         console.error('Error deleting team:', error);
         return res.status(500).json({
             success: false,
@@ -147,9 +149,10 @@ const createTeam = async (req, res) => {
             managerId,
             { $push: { teams: team._id } }
         );
-
+        logger.info(`Team "${name}" created successfully by Manager ID ${managerId}.`);
         return res.status(201).json({ success: true, team });
     } catch (error) {
+        logger.error(`Error creating team "${name}" by Manager ID ${managerId}: ${error.message}`);
         console.error('Error creating team:', error);
         return res.status(500).json({ 
             success: false, 
@@ -190,9 +193,10 @@ const getTeams = async (req, res) => {
                 memberCount: count
             };
         }));
-
+        logger.info(`Fetched all teams successfully for User ID ${req.user._id}, Role: ${req.user.role}.`);
         return res.status(200).json({ success: true, teams: teamsWithCount });
     } catch (error) {
+        logger.error(`Error fetching teams for User ID ${req.user._id}: ${error.message}`);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -209,9 +213,10 @@ const getManagerTeams = async (req, res) => {
                     select: 'name email'
                 }
             });
-
+        logger.info(`Fetched teams managed by Manager ID ${managerId}.`);
         return res.status(200).json({ success: true, teams });
     } catch (error) {
+        logger.error(`Error fetching teams managed by Manager ID ${managerId}: ${error.message}`);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -244,9 +249,10 @@ const addTeamMember = async (req, res) => {
 
         team.members.push(employeeId);
         await team.save();
-
+        logger.info(`Added Employee ID ${employeeId} to Team ID ${id}.`);
         return res.status(200).json({ success: true, message: "Member added successfully." });
     } catch (error) {
+        logger.error(`Error adding Employee ID ${employeeId} to Team ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Failed to add member." });
     }
 };
@@ -319,7 +325,7 @@ const updateTeam = async (req, res) => {
             { new: true, runValidators: true }
         ).populate('managerId', 'userId designation')
          .populate('department', 'dep_name');
-
+        logger.info(`Updated team with ID ${id} successfully.`);
         return res.status(200).json({
             success: true,
             message: "Team updated successfully",
@@ -327,6 +333,7 @@ const updateTeam = async (req, res) => {
         });
 
     } catch (error) {
+        logger.error(`Error updating team with ID ${id}: ${error.message}`);
         console.error('Error updating team:', error);
         return res.status(500).json({
             success: false,
@@ -357,9 +364,10 @@ const removeTeamMember = async (req, res) => {
         // Remove from team members array
         team.members = team.members.filter(member => member.toString() !== employeeId);
         await team.save();
-
+        logger.info(`Removed Employee ID ${employeeId} from Team ID ${id}.`);
         return res.status(200).json({ success: true, message: "Member removed successfully." });
     } catch (error) {
+        logger.error(`Error removing Employee ID ${employeeId} from Team ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Failed to remove member." });
     }
 };

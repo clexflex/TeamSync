@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
-
+import logger from "../utils/logger.js"; 
 // Rate limiting for failed login attempts
 const loginAttempts = new Map();
 
@@ -15,6 +15,7 @@ const handleLoginAttempts = (ip) => {
     }
     
     if (attempts.count >= 20) {
+        logger.warn(`IP ${ip} blocked due to too many failed login attempts.`);
         throw new Error("Too many login attempts. Please try again after 15 minutes.");
     }
     
@@ -33,6 +34,7 @@ const login = async (req, res) => {
 
         // Input validation
         if (!email || !password) {
+            logger.warn(`Login attempt failed: Missing email or password from IP ${req.ip}`);
             return res.status(400).json({
                 success: false,
                 error: "Email and password are required."
@@ -44,6 +46,7 @@ const login = async (req, res) => {
         
         if (!user) {
             // Increment failed attempts
+            logger.warn(`Login failed for email: ${email} from IP ${req.ip}`);
             handleLoginAttempts(req.ip);
             return res.status(401).json({
                 success: false,
@@ -55,6 +58,7 @@ const login = async (req, res) => {
         
         if (!isMatch) {
             // Increment failed attempts
+            logger.warn(`Invalid password attempt for email: ${email} from IP ${req.ip}`);
             handleLoginAttempts(req.ip);
             return res.status(401).json({
                 success: false,
@@ -71,7 +75,7 @@ const login = async (req, res) => {
             process.env.JWT_KEY,
             { expiresIn: "24h" }
         );
-
+        logger.info(`User ${email} successfully logged in from IP ${req.ip}`);
         // Remove sensitive data before sending response
         const userResponse = {
             _id: user._id,
@@ -94,6 +98,7 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
+        logger.error(`Login error: ${error.message}`);
         res.status(500).json({
             success: false,
             error: error.message || "An error occurred during login."
@@ -105,16 +110,19 @@ const verify = async (req, res) => {
     try {
         const user = await User.findById(req.user._id).select('-password');
         if (!user) {
+            logger.warn(`User verification failed: User ID ${req.user._id} not found.`);
             return res.status(404).json({
                 success: false,
                 error: "User not found."
             });
         }
+        logger.info(`User ${user.email} successfully verified.`);
         return res.status(200).json({
             success: true,
             user
         });
     } catch (error) {
+        logger.error(`User verification error: ${error.message}`);
         return res.status(500).json({
             success: false,
             error: "Error verifying user."

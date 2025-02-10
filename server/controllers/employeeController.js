@@ -4,7 +4,7 @@ import User from "../models/User.js"
 import Employee from "../models/Employee.js"
 import bcrypt from "bcrypt"
 import path from "path"
-
+import logger from "../utils/logger.js"; 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, '../public/uploads'));
@@ -80,8 +80,10 @@ const addEmployee = async (req, res) => {
         })
 
         await newEmployee.save()
+        logger.info(`Employee ${name} (ID: ${employeeId}) added successfully.`);
         return res.status(200).json({ success: true, message: "Employee Created" });
     } catch (error) {
+        logger.error(`Error adding employee ${name} (ID: ${employeeId}): ${error.message}`);
         return res.status(500).json({ success: false, error: "erver error in adding employee" });
     }
 };
@@ -89,8 +91,10 @@ const addEmployee = async (req, res) => {
 const getEmployees = async (req, res) => {
     try {
         const employees = await Employee.find().populate('userId', { password: 0 }).populate('department')
+        logger.info("Fetched all employees successfully.");
         return res.status(200).json({ success: true, employees })
     } catch (error) {
+        logger.error("Error fetching employees: " + error.message);
         return res.status(500).json({ success: false, error: "Fetch Employees server error" })
     }
 };
@@ -109,9 +113,10 @@ const getEmployee = async (req, res) => {
             .populate('userId', { password: 0 })
             .populate('department');
         }
-
+        logger.info(`Fetched employee with ID ${id}.`);
         return res.status(200).json({ success: true, employee })
     } catch (error) {
+        logger.error(`Error fetching employee with ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Fetch Employee server error" })
     }
 };
@@ -120,17 +125,14 @@ const updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
-
         const employee = await Employee.findById(id);
         if (!employee) {
             return res.status(404).json({ success: false, error: "Employee Not Found!" });
         }
-
         const user = await User.findById(employee.userId);
         if (!user) {
             return res.status(404).json({ success: false, error: "User Not Found!" });
         }
-
         // Prepare user update data
         const userUpdateData = {};
         if (updateData.name) userUpdateData.name = updateData.name;
@@ -158,10 +160,10 @@ const updateEmployee = async (req, res) => {
         if (Object.keys(employeeUpdateData).length > 0) {
             await Employee.findByIdAndUpdate(id, employeeUpdateData);
         }
-
+        logger.info(`Updated employee with ID ${id} successfully.`);
         return res.status(200).json({ success: true, message: "Employee Updated" });
-
     } catch (error) {
+        logger.error(`Error updating employee with ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Update Employee server error" });
     }
 };
@@ -171,14 +173,12 @@ const fetchEmployeesByDepId = async (req, res) => {
     try {
         const employees = await Employee.find({ department: id })
         .populate('userId', { password: 0 })
-
+        logger.info(`Fetched employees for department ID ${id}.`);
         return res.status(200).json({ success: true, employees })
     } catch (error) {
+        logger.error(`Error fetching employees for department ID ${id}: ${error.message}`);
         return res.status(500).json({ success: false, error: "Fetch EmployeesByDepId server error" })
     }
 };
-
-
-
 
 export { addEmployee, upload, getEmployees, getEmployee, updateEmployee ,fetchEmployeesByDepId}
