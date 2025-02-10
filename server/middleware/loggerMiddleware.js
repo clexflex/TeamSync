@@ -1,4 +1,3 @@
-// server/middleware/loggerMiddleware.js
 import logger from '../utils/logger.js';
 
 // Middleware to log all incoming requests
