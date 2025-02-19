@@ -95,7 +95,7 @@ function App() {
           path="/employee-dashboard"
           element={
             <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["employee", "admin"]}>
+              <RoleBaseRoutes requiredRole={["employee"]}>
                 <EmployeeDashboard />
               </RoleBaseRoutes>
             </PrivateRoutes>
@@ -132,6 +132,8 @@ function App() {
           <Route path="setting" element={<ManagerSetting />} />
           <Route path="leaves/:id" element={<LeaveList />} />
           <Route path="add-leave" element={<AddLeave />} />
+          <Route path="add-leave" element={<AddLeave />} />
+          <Route path="salary/:id" element={<ViewSalary />} />
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />
