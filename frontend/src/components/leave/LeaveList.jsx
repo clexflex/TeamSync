@@ -1,125 +1,170 @@
-// Modified LeaveList.jsx
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { FaPlus, FaSearch } from 'react-icons/fa';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
+import {
+  Box,
+  Paper,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Button,
+  Chip,
+  Stack,
+  CircularProgress,
+  InputAdornment
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Search as SearchIcon
+} from '@mui/icons-material';
+import axios from 'axios';
 import config from "../../config";
 
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Approved':
+      return 'success';
+    case 'Pending':
+      return 'warning';
+    default:
+      return 'error';
+  }
+};
+
 const LeaveList = () => {
-    const [leaves, setLeaves] = useState([]);
-    const [filteredLeaves, setFilteredLeaves] = useState([]);
-    let sno = 1;
-    const { id } = useParams();
-    const { user } = useAuth();
+  const [leaves, setLeaves] = useState([]);
+  const [filteredLeaves, setFilteredLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const { id } = useParams();
+  const { user } = useAuth();
 
-    const fetchLeaves = async () => {
-        try {
-            const response = await axios.get(`${config.API_URL}/api/leave/${id}/${user.role}`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-            });
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
 
-            if (response.data.success) {
-                setLeaves(response.data.leaves);
-                setFilteredLeaves(response.data.leaves);
-            }
-        } catch (error) {
-            alert(error.message);
+  const fetchLeaves = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `${config.API_URL}/api/leave/${id}/${user.role}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
-    };
+      );
 
-    useEffect(() => {
-        fetchLeaves();
-    }, []);
-
-    const handleSearch = (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filtered = leaves.filter(leave => 
-            leave.leaveType.toLowerCase().includes(searchTerm) ||
-            leave.reason.toLowerCase().includes(searchTerm) ||
-            leave.status.toLowerCase().includes(searchTerm)
-        );
-        setFilteredLeaves(filtered);
-    };
-
-    if (!leaves) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-        );
+      if (response.data.success) {
+        setLeaves(response.data.leaves);
+        setFilteredLeaves(response.data.leaves);
+      }
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-gray-800">Manage Leaves</h3>
-                {(user.role === "employee" || user.role === "manager") && (
-                    <Link
-                        to={`/${user.role}-dashboard/add-leave`}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                    >
-                        <FaPlus className="text-sm" />
-                        <span>Add New Leave</span>
-                    </Link>
-                )}
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm">
-                <div className="p-4 border-b">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                onChange={handleSearch}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                                type="text"
-                                placeholder="Search by leave type, reason, status..."
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <table className="w-full text-sm text-left text-gray-500">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 border border-gray-200">
-                            <tr>
-                                <th className="px-6 py-3">SNO</th>
-                                <th className="px-6 py-3">Leave Type</th>
-                                <th className="px-6 py-3">From</th>
-                                <th className="px-6 py-3">To</th>
-                                <th className="px-6 py-3">Description</th>
-                                <th className="px-6 py-3">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredLeaves.map((leave) => (
-                                <tr
-                                    key={leave._id}
-                                    className="bg-white border-b hover:bg-gray-50"
-                                >
-                                    <td className="px-6 py-3">{sno++}</td>
-                                    <td className="px-6 py-3">{leave.leaveType}</td>
-                                    <td className="px-6 py-3">{new Date(leave.startDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-3">{new Date(leave.endDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-3">{leave.reason}</td>
-                                    <td className="px-6 py-3">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium
-                                            ${leave.status === 'Approved' ? 'bg-green-100 text-green-800' : 
-                                            leave.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                            'bg-red-100 text-red-800'}`}>
-                                            {leave.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+  const handleSearch = (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const filtered = leaves.filter(leave => 
+      leave.leaveType.toLowerCase().includes(searchTerm) ||
+      leave.reason.toLowerCase().includes(searchTerm) ||
+      leave.status.toLowerCase().includes(searchTerm)
     );
+    setFilteredLeaves(filtered);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+      <Stack 
+        direction="row" 
+        justifyContent="space-between" 
+        alignItems="center" 
+        sx={{ mb: 4 }}
+      >
+        <Typography variant="h5" fontWeight="bold">
+          Manage Leaves
+        </Typography>
+
+        {(user.role === "employee" || user.role === "manager") && (
+          <Button
+            component={Link}
+            to={`/${user.role}-dashboard/add-leave`}
+            variant="contained"
+            startIcon={<AddIcon />}
+          >
+            Add New Leave
+          </Button>
+        )}
+      </Stack>
+
+      <TextField
+        fullWidth
+        sx={{ mb: 3 }}
+        placeholder="Search by leave type, reason, status..."
+        onChange={handleSearch}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        }}
+      />
+
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>SNO</TableCell>
+              <TableCell>Leave Type</TableCell>
+              <TableCell>From</TableCell>
+              <TableCell>To</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredLeaves.map((leave, index) => (
+              <TableRow key={leave._id} hover>
+                <TableCell>{index + 1}</TableCell>
+                <TableCell>{leave.leaveType}</TableCell>
+                <TableCell>
+                  {new Date(leave.startDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  {new Date(leave.endDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{leave.reason}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={leave.status}
+                    color={getStatusColor(leave.status)}
+                    size="small"
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
+  );
 };
 
 export default LeaveList;

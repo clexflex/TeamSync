@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Paper, 
+  Typography, 
+  TextField, 
+  Alert, 
+  CircularProgress,
+  IconButton
+} from '@mui/material';
+import { Business as BusinessIcon } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
-import { Check, X, AlertCircle, Clock, Building } from 'lucide-react';
 import TaskDetailsModal from '../modal/TaskDetailsModal';
-import AttendanceTable from "../shared/AttendanceTable";
+import AttendanceTable from '../shared/AttendanceTable';
 
 const TeamAttendanceApproval = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -31,7 +40,6 @@ const TeamAttendanceApproval = () => {
       });
 
       if (response.data.success) {
-        // Use the pre-grouped data from the backend
         setGroupedAttendance(response.data.groupedAttendance || {});
         setAttendanceData(response.data.attendance || []);
       }
@@ -69,69 +77,70 @@ const TeamAttendanceApproval = () => {
     }
   };
 
-
-  if (loading) {
-    return (
-      <div className="w-full h-96 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full bg-white shadow-md rounded-md p-4">
-      <div className="flex flex-row items-center justify-between pb-4 border-b">
-        <h2 className="text-xl font-bold">Team Attendance Approval</h2>
-        <input
+    <Paper elevation={0} sx={{ p: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 3,
+        pb: 2,
+        borderBottom: 1,
+        borderColor: 'divider'
+      }}>
+        <Typography variant="h5" fontWeight="bold" color="text.primary">
+          Team Attendance Approval
+        </Typography>
+        <TextField
           type="date"
+          size="small"
           value={selectedDate.toISOString().split('T')[0]}
           onChange={(e) => setSelectedDate(new Date(e.target.value))}
-          className="p-2 border rounded-md"
+          sx={{ width: 200 }}
         />
-      </div>
+      </Box>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-lg flex items-center">
-          <AlertCircle className="w-5 h-5 mr-2" />
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </div>
+        </Alert>
       )}
 
       {loading ? (
-        <div className="w-full h-96 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+          <CircularProgress />
+        </Box>
       ) : (
-        Object.entries(groupedAttendance).map(([teamName, teamRecords]) => (
-          <AttendanceTable
-            key={teamName}
-            records={teamRecords.map(record => ({
-              ...record,
-              onApprove: () => handleApproval(record._id, 'Approved'),
-              onReject: () => handleApproval(record._id, 'Rejected'),
-              onViewTasks: () => {
-                setSelectedRecord(record);
-                setIsModalOpen(true);
-              },
-              // Add work location that's specific to TeamAttendanceApproval
-              workLocation: record.workLocation
-            }))}
-            title={teamName}
-            icon={Building}
-          />
-        ))
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {Object.entries(groupedAttendance).map(([teamName, teamRecords]) => (
+            <AttendanceTable
+              key={teamName}
+              records={teamRecords.map(record => ({
+                ...record,
+                onApprove: () => handleApproval(record._id, 'Approved'),
+                onReject: () => handleApproval(record._id, 'Rejected'),
+                onViewTasks: () => {
+                  setSelectedRecord(record);
+                  setIsModalOpen(true);
+                },
+                workLocation: record.workLocation
+              }))}
+              title={teamName}
+              icon={BusinessIcon}
+            />
+          ))}
+        </Box>
       )}
 
-      {/* Keep the TaskDetailsModal as is */}
       <TaskDetailsModal
-        isOpen={isModalOpen}
+        open={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setSelectedRecord(null);
         }}
         attendanceRecord={selectedRecord}
       />
-    </div>
+    </Paper>
   );
 };
 

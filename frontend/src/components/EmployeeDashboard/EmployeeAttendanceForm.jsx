@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../../config';
-import { Clock } from 'lucide-react';
 import useAttendanceTracking from '../../hooks/useAttendanceTracking';
 import AttendanceHistoryModal from './AttendanceHistoryModal';
 import AttendanceCalendar from './AttendanceCalendar';
-import { logger } from '../../utils/logger'; 
+import { logger } from '../../utils/logger';
+import {   Box,   Paper,   Typography,   Select,   MenuItem,   Button,   TextField,   Alert,   Container,   CircularProgress,   FormControl,   InputLabel }from '@mui/material';
+import { Clock } from 'lucide-react';
 
 const EmployeeAttendanceForm = () => {
   const { attendance, attendanceStatus, error, refetch } = useAttendanceTracking();
@@ -19,7 +20,7 @@ const EmployeeAttendanceForm = () => {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+  const [messageType, setMessageType] = useState('');
 
   useEffect(() => {
     logger.info('EmployeeAttendanceForm loaded');
@@ -43,7 +44,7 @@ const EmployeeAttendanceForm = () => {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
-           logger.info('Geolocation retrieved', position.coords);
+            logger.info('Geolocation retrieved', position.coords);
             resolve(position.coords);
           },
           (error) => {
@@ -65,8 +66,6 @@ const EmployeeAttendanceForm = () => {
       { lat: 18.202419, lon: 73.389729 },
       { lat: 18.202419, lon: 74.288205 }
     ];
-
-    // console.log("Checking geofence for:", lat, lon);
     return isInsideGeoFence(lat, lon, geoFencePoints);
   };
 
@@ -74,7 +73,6 @@ const EmployeeAttendanceForm = () => {
     logger.info(`Notification: ${msg}`);
     setMessage(msg);
     setMessageType(type);
-    // Clear message after 5 seconds
     setTimeout(() => {
       refetch();
       setMessage('');
@@ -98,8 +96,6 @@ const EmployeeAttendanceForm = () => {
 
       if (form.workLocation === "Onsite") {
         const isInside = checkGeoFence(location.latitude, location.longitude);
-        // console.log("Geofence check result:", isInside);
-        
         if (!isInside) {
           showNotification("You are not within the office premises. Please make sure you're at the office location to clock in for onsite work.");
           logger.warn("Clock-in failed due to geofence restriction", { location });
@@ -107,8 +103,6 @@ const EmployeeAttendanceForm = () => {
           return;
         }
       }
-
-      // console.log("Sending Clock-in request with location:", location);
 
       const response = await axios.post(
         `${config.API_URL}/api/attendance/clock-in`,
@@ -160,80 +154,98 @@ const EmployeeAttendanceForm = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-md p-6">
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Attendance Dashboard</h1>
-          <div className="flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-gray-600" />
-            <span className="text-gray-600">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h1" fontWeight="bold" color="text.primary">
+            Attendance Dashboard
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Clock size={20} />
+            <Typography variant="body1" color="text.secondary">
               {new Date().toLocaleDateString()}
-            </span>
-          </div>
-        </div>
+            </Typography>
+          </Box>
+        </Box>
 
         {/* Messages */}
         {message && (
-          <div className={`mb-4 p-4 rounded-lg ${
-            messageType === 'success' 
-              ? 'bg-green-100 text-green-800 border border-green-200' 
-              : 'bg-red-100 text-red-800 border border-red-200'
-          } transition-all duration-300 ease-in-out`}>
+          <Alert 
+            severity={messageType === 'success' ? 'success' : 'error'}
+            sx={{ mb: 3 }}
+          >
             {message}
-          </div>
+          </Alert>
         )}
 
         {/* Today's Attendance Panel */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Today's Attendance</h2>
+        <Paper variant="outlined" sx={{ p: 3, mb: 4, bgcolor: 'grey.50' }}>
+          <Typography variant="h6" gutterBottom>
+            Today's Attendance
+          </Typography>
+          
           {attendanceStatus === 'not-started' ? (
-            <div className="space-y-4">
-              <select
-                value={form.workLocation}
-                onChange={(e) => setForm(prev => ({ ...prev, workLocation: e.target.value }))}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-              >
-                <option value="Onsite">Onsite</option>
-                <option value="Remote">Remote</option>
-              </select>
-              <button
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Work Location</InputLabel>
+                <Select
+                  value={form.workLocation}
+                  onChange={(e) => setForm(prev => ({ ...prev, workLocation: e.target.value }))}
+                  label="Work Location"
+                >
+                  <MenuItem value="Onsite">Onsite</MenuItem>
+                  <MenuItem value="Remote">Remote</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Button
+                variant="outlined"
                 onClick={handleClockIn}
                 disabled={loading}
-                className={`w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50
-                         transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
-                         hover:shadow-lg flex items-center justify-center`}
+                sx={{
+                  py: 1.5,
+                  position: 'relative',
+                  '&:hover': {
+                    transform: 'scale(1.02)'
+                  },
+                  transition: 'transform 0.2s'
+                }}
               >
-                {loading ? (
-                  <span className="inline-block animate-spin mr-2">⌛</span>
-                ) : null}
-                Clock In
-              </button>
-            </div>
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Clock In'}
+              </Button>
+            </Box>
           ) : attendanceStatus === 'clocked-in' ? (
-            <div className="space-y-4">
-              <textarea
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                multiline
+                rows={4}
                 value={form.tasksDone}
                 onChange={(e) => setForm(prev => ({ ...prev, tasksDone: e.target.value }))}
                 placeholder="Enter tasks completed..."
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                rows={4}
+                variant="outlined"
+                fullWidth
               />
-              <button
+              
+              <Button
+                variant="contained"
                 onClick={handleClockOut}
                 disabled={loading}
-                className={`w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50
-                         transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
-                         hover:shadow-lg flex items-center justify-center`}
+                color="success"
+                sx={{
+                  py: 1.5,
+                  position: 'relative',
+                  '&:hover': {
+                    transform: 'scale(1.02)'
+                  },
+                  transition: 'transform 0.2s'
+                }}
               >
-                {loading ? (
-                  <span className="inline-block animate-spin mr-2">⌛</span>
-                ) : null}
-                Clock Out
-              </button>
-            </div>
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Clock Out'}
+              </Button>
+            </Box>
           ) : null}
-        </div>
+        </Paper>
 
         <AttendanceCalendar
           monthlyAttendance={monthlyAttendance}
@@ -253,8 +265,8 @@ const EmployeeAttendanceForm = () => {
             onClose={() => setShowModal(false)}
           />
         )}
-      </div>
-    </div>
+      </Paper>
+    </Container>
   );
 };
 

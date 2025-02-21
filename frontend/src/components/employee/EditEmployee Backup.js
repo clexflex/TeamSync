@@ -22,7 +22,7 @@ const EditEmployee = () => {
     const [changedFields, setChangedFields] = useState({});
     const navigate = useNavigate();
     const { id } = useParams();
-
+    
     useEffect(() => {
         const getDepartments = async () => {
             const departments = await fetchDepartments();

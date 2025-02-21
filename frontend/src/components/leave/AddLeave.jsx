@@ -1,130 +1,192 @@
-// AddLeave.jsx
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/authContext';
+import {
+  Box,
+  Paper,
+  Typography,
+  Grid,
+  MenuItem,
+  TextField,
+  Button,
+  Stack,
+  Alert,
+  IconButton
+} from '@mui/material';
+import { ArrowBack } from '@mui/icons-material';
+import axios from 'axios';
 import config from "../../config";
 
+const leaveTypes = [
+  { value: 'Sick Leave', label: 'Sick Leave' },
+  { value: 'Casual Leave', label: 'Casual Leave' },
+  { value: 'Annual Leave', label: 'Annual Leave' },
+  { value: 'Paid Leave', label: 'Paid Leave' }
+];
+
 const AddLeave = () => {
-    const { user } = useAuth();
-    const [leave, setLeave] = useState({
-        userId: user._id
-    });
-    const navigate = useNavigate();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [leave, setLeave] = useState({
+    userId: user._id,
+    leaveType: '',
+    startDate: '',
+    endDate: '',
+    reason: ''
+  });
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setLeave((prevState) => ({ ...prevState, [name]: value }));
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setLeave((prev) => ({ ...prev, [name]: value }));
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        try {
-            const response = await axios.post(
-                `${config.API_URL}/api/leave/add`,
-                leave,
-                {
-                    headers: {
-                        "Authorization": `Bearer ${localStorage.getItem('token')}`
-                    }
-                }
-            );
-            
-            if (response.data.success) {
-                navigate(`/${user.role}-dashboard/leaves/${user._id}`);
-            }
-        } catch (error) {
-            if (error.response && !error.response.data.success) {
-                alert(error.response.data.error);
-            }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await axios.post(
+        `${config.API_URL}/api/leave/add`,
+        leave,
+        {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
         }
-    };
+      );
+      
+      if (response.data.success) {
+        navigate(`/${user.role}-dashboard/leaves/${user._id}`);
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || 'Failed to submit leave request');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="bg-white rounded-lg shadow-sm max-w-4xl mx-auto">
-            <div className="p-6 border-b">
-                <h2 className="text-xl font-semibold text-gray-800">Request For Leave</h2>
-            </div>
+  return (
+    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
+      <Stack 
+        direction="row" 
+        spacing={1} 
+        alignItems="center" 
+        sx={{ 
+          mb: 4, 
+          cursor: 'pointer',
+          color: 'text.secondary',
+          '&:hover': { color: 'primary.main' }
+        }}
+        onClick={() => navigate(`/${user.role}-dashboard/leaves/${user._id}`)}
+      >
+        <IconButton size="small">
+          <ArrowBack />
+        </IconButton>
+        <Typography>Back to Leaves</Typography>
+      </Stack>
 
-            <form onSubmit={handleSubmit} className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Leave Type
-                        </label>
-                        <select
-                            name="leaveType"
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                            required
-                        >
-                            <option value="">Select Leave Type</option>
-                            <option value="Sick Leave">Sick Leave</option>
-                            <option value="Casual Leave">Casual Leave</option>
-                            <option value="Annual Leave">Annual Leave</option>
-                            <option value="Paid Leave">Paid Leave</option>
-                        </select>
-                    </div>
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        <Typography variant="h5" sx={{ mb: 4, fontWeight: 'bold' }}>
+          Request For Leave
+        </Typography>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Start Date
-                        </label>
-                        <input
-                            type="date"
-                            name="startDate"
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                            required
-                        />
-                    </div>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            End Date
-                        </label>
-                        <input
-                            type="date"
-                            name="endDate"
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                            required
-                        />
-                    </div>
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                select
+                fullWidth
+                label="Leave Type"
+                name="leaveType"
+                value={leave.leaveType}
+                onChange={handleChange}
+                required
+              >
+                <MenuItem value="" disabled>
+                  Select Leave Type
+                </MenuItem>
+                {leaveTypes.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Description
-                        </label>
-                        <textarea
-                            name="reason"
-                            placeholder="Enter reason for leave"
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                            required
-                        />
-                    </div>
-                </div>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Start Date"
+                name="startDate"
+                value={leave.startDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
 
-                <div className="flex items-center gap-4 mt-8">
-                    <button
-                        type="submit"
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        Submit Request
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => navigate(`/${user.role}-dashboard/leaves/${user._id}`)}
-                        className="px-6 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="End Date"
+                name="endDate"
+                value={leave.endDate}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                label="Description"
+                name="reason"
+                value={leave.reason}
+                onChange={handleChange}
+                placeholder="Enter reason for leave"
+                required
+              />
+            </Grid>
+          </Grid>
+
+          <Stack 
+            direction="row" 
+            spacing={2} 
+            sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}
+          >
+            <Button
+              variant="outlined"
+              onClick={() => navigate(`/${user.role}-dashboard/leaves/${user._id}`)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+            >
+              {loading ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </Stack>
+        </form>
+      </Paper>
+    </Box>
+  );
 };
 
 export default AddLeave;

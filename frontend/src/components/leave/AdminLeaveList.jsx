@@ -1,168 +1,366 @@
-// AdminLeaveList.jsx
 import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  InputAdornment,
+  Button,
+  Chip,
+  Stack,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Avatar,
+  Divider,
+  Grid
+} from '@mui/material';
+import { Search as SearchIcon, Visibility as VisibilityIcon, Check as CheckIcon, Close as CloseIcon } from '@mui/icons-material';
 import axios from 'axios';
-import { FaSearch } from 'react-icons/fa';
 import config from "../../config";
 
+const LeaveDetailItem = ({ label, value }) => (
+  <Box>
+    <Typography variant="subtitle1" fontWeight="bold" component="span">
+      {label}:
+    </Typography>
+    <Typography component="span" sx={{ ml: 1 }}>
+      {value}
+    </Typography>
+  </Box>
+);
+
 const AdminLeaveList = () => {
-    const [leaves, setLeaves] = useState([]);
-    const [filteredLeaves, setFilteredLeaves] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    let sno = 1;
+  const [leaves, setLeaves] = useState([]);
+  const [filteredLeaves, setFilteredLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedLeave, setSelectedLeave] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  let sno = 1;
 
-    const fetchLeaves = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(`${config.API_URL}/api/leave`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-            });
+  const fetchLeaves = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${config.API_URL}/api/leave`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
-            if (response.data.success) {
-                const leavesWithUserData = response.data.leaves.filter(leave => leave.userId);
-                setLeaves(leavesWithUserData);
-                setFilteredLeaves(leavesWithUserData);
-            }
-        } catch (error) {
-            setError(error.response?.data?.error || error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchLeaves();
-    }, []);
-
-    const handleSearch = (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filtered = leaves.filter(leave => 
-            leave.userId?.name?.toLowerCase().includes(searchTerm) ||
-            leave.leaveType?.toLowerCase().includes(searchTerm) ||
-            leave.reason?.toLowerCase().includes(searchTerm) ||
-            leave.status?.toLowerCase().includes(searchTerm) ||
-            leave.userId?.role?.toLowerCase().includes(searchTerm)
-        );
-        setFilteredLeaves(filtered);
-    };
-
-    const handleStatusUpdate = async (leaveId, newStatus) => {
-        try {
-            const response = await axios.put(
-                `${config.API_URL}/api/leave/${leaveId}`,
-                { status: newStatus },
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
-
-            if (response.data.success) {
-                await fetchLeaves();
-            }
-        } catch (error) {
-            setError(error.response?.data?.error || error.message);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-        );
+      if (response.data.success) {
+        const leavesWithUserData = response.data.leaves.filter(leave => leave.userId);
+        setLeaves(leavesWithUserData);
+        setFilteredLeaves(leavesWithUserData);
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || error.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (error) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="text-red-500">Error: {error}</div>
-            </div>
-        );
+  const fetchLeaveDetail = async (leaveId) => {
+    try {
+      const response = await axios.get(`${config.API_URL}/api/leave/detail/${leaveId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (response.data.success) {
+        setSelectedLeave(response.data.leave);
+        setDetailModalOpen(true);
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || error.message);
     }
+  };
 
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-gray-800">Leave Applications</h3>
-            </div>
+  useEffect(() => {
+    fetchLeaves();
+  }, []);
 
-            <div className="bg-white rounded-lg shadow-sm">
-                <div className="p-4 border-b">
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                onChange={handleSearch}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                                type="text"
-                                placeholder="Search by employee name, leave type, status..."
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-gray-500">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 border border-gray-200">
-                            <tr>
-                                <th className="px-6 py-3">SNO</th>
-                                <th className="px-6 py-3">Employee</th>
-                                <th className="px-6 py-3">Role</th>
-                                <th className="px-6 py-3">Leave Type</th>
-                                <th className="px-6 py-3">From</th>
-                                <th className="px-6 py-3">To</th>
-                                <th className="px-6 py-3">Description</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredLeaves.map((leave) => (
-                                <tr key={leave._id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-3">{sno++}</td>
-                                    <td className="px-6 py-3">{leave.userId?.name || 'N/A'}</td>
-                                    <td className="px-6 py-3 capitalize">{leave.userId?.role || 'N/A'}</td>
-                                    <td className="px-6 py-3">{leave.leaveType}</td>
-                                    <td className="px-6 py-3">{new Date(leave.startDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-3">{new Date(leave.endDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-3">{leave.reason}</td>
-                                    <td className="px-6 py-3">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium
-                                            ${leave.status === 'Approved' ? 'bg-green-100 text-green-800' : 
-                                            leave.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                            'bg-red-100 text-red-800'}`}>
-                                            {leave.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                        {leave.status === 'Pending' && (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleStatusUpdate(leave._id, 'Approved')}
-                                                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs transition-colors duration-200"
-                                                >
-                                                    Approve
-                                                </button>
-                                                <button
-                                                    onClick={() => handleStatusUpdate(leave._id, 'Rejected')}
-                                                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs transition-colors duration-200"
-                                                >
-                                                    Reject
-                                                </button>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+  const handleSearch = (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const filtered = leaves.filter(leave => 
+      leave.userId?.name?.toLowerCase().includes(searchTerm) ||
+      leave.leaveType?.toLowerCase().includes(searchTerm) ||
+      leave.reason?.toLowerCase().includes(searchTerm) ||
+      leave.status?.toLowerCase().includes(searchTerm) ||
+      leave.userId?.role?.toLowerCase().includes(searchTerm)
     );
+    setFilteredLeaves(filtered);
+  };
+
+  const handleViewDetail = (leaveId) => {
+    fetchLeaveDetail(leaveId);
+  };
+
+  const handleCloseDetailModal = () => {
+    setDetailModalOpen(false);
+    setSelectedLeave(null);
+  };
+
+  const handleStatusUpdate = async (leaveId, newStatus) => {
+    try {
+      const response = await axios.put(
+        `${config.API_URL}/api/leave/${leaveId}`,
+        { status: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        await fetchLeaves();
+        if (detailModalOpen) {
+          handleCloseDetailModal();
+        }
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || error.message);
+    }
+  };
+
+  const getStatusChipProps = (status) => {
+    const baseProps = {
+      size: "small",
+      sx: { minWidth: 80 }
+    };
+
+    switch (status) {
+      case 'Approved':
+        return {
+          ...baseProps,
+          color: "success",
+          variant: "outlined"
+        };
+      case 'Rejected':
+        return {
+          ...baseProps,
+          color: "error",
+          variant: "outlined"
+        };
+      default:
+        return {
+          ...baseProps,
+          color: "warning",
+          variant: "outlined"
+        };
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px', color: 'error.main' }}>
+        Error: {error}
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        <Stack spacing={3}>
+          <Typography variant="h5" fontWeight="bold">
+            Leave Applications
+          </Typography>
+
+          <TextField
+            fullWidth
+            placeholder="Search by employee name, leave type, status..."
+            variant="outlined"
+            onChange={handleSearch}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>SNO</TableCell>
+                  <TableCell>Employee</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Leave Type</TableCell>
+                  <TableCell>From</TableCell>
+                  <TableCell>To</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredLeaves.map((leave) => (
+                  <TableRow key={leave._id} hover>
+                    <TableCell>{sno++}</TableCell>
+                    <TableCell>{leave.userId?.name || 'N/A'}</TableCell>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>
+                      {leave.userId?.role || 'N/A'}
+                    </TableCell>
+                    <TableCell>{leave.leaveType}</TableCell>
+                    <TableCell>
+                      {new Date(leave.startDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(leave.endDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>{leave.reason}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={leave.status}
+                        {...getStatusChipProps(leave.status)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<VisibilityIcon />}
+                          onClick={() => handleViewDetail(leave._id)}
+                        >
+                          View
+                        </Button>
+                        {leave.status === 'Pending' && (
+                          <>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              onClick={() => handleStatusUpdate(leave._id, 'Approved')}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleStatusUpdate(leave._id, 'Rejected')}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </Paper>
+
+      {/* Leave Detail Modal */}
+      <Dialog
+        open={detailModalOpen}
+        onClose={handleCloseDetailModal}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h5" fontWeight="bold" textAlign="center">
+            Leave Details
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedLeave && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Grid container spacing={4}>
+                <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <Avatar
+                    src={selectedLeave.userId?.profileImage ? `${config.API_URL}/${selectedLeave.userId.profileImage}` : ''}
+                    sx={{ width: 200, height: 200 }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={8}>
+                  <Stack spacing={2}>
+                    <LeaveDetailItem label="Name" value={selectedLeave.userId?.name || 'N/A'} />
+                    <LeaveDetailItem label="Role" value={selectedLeave.userId?.role || 'N/A'} />
+                    <LeaveDetailItem label="Leave Type" value={selectedLeave.leaveType} />
+                    <LeaveDetailItem label="Reason" value={selectedLeave.reason} />
+                    <LeaveDetailItem 
+                      label="Start Date" 
+                      value={new Date(selectedLeave.startDate).toLocaleDateString()} 
+                    />
+                    <LeaveDetailItem 
+                      label="End Date" 
+                      value={new Date(selectedLeave.endDate).toLocaleDateString()} 
+                    />
+                    
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                        {selectedLeave.status === "Pending" ? "Action:" : "Status:"}
+                      </Typography>
+                      
+                      {selectedLeave.status === "Pending" ? (
+                        <Stack direction="row" spacing={2}>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            startIcon={<CheckIcon />}
+                            onClick={() => handleStatusUpdate(selectedLeave._id, "Approved")}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            startIcon={<CloseIcon />}
+                            onClick={() => handleStatusUpdate(selectedLeave._id, "Rejected")}
+                          >
+                            Reject
+                          </Button>
+                        </Stack>
+                      ) : (
+                        <Typography variant="body1" sx={{
+                          color: selectedLeave.status === 'Approved' ? 'success.main' : 'error.main',
+                          fontWeight: 'medium'
+                        }}>
+                          {selectedLeave.status}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Stack>
+                </Grid>
+              </Grid>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetailModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
 };
 
 export default AdminLeaveList;
