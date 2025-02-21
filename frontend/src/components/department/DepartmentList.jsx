@@ -1,158 +1,184 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from "react-router-dom"
-import DataTable from "react-data-table-component"
-import { columns, DepartmentButtons } from '../../utils/DepartmentHelper'
-import { FaPlus, FaSearch } from 'react-icons/fa'
-import axios from 'axios'
+import React, { useEffect, useState } from 'react';
+import { 
+  Box, Paper, Typography, TextField, Button, Table, 
+  TableBody, TableCell, TableContainer, TableHead, 
+  TableRow, TablePagination, IconButton, Stack,
+  InputAdornment, CircularProgress
+} from '@mui/material';
+import { 
+  Add as AddIcon, 
+  Search as SearchIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ArrowBack as ArrowBackIcon 
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import config from "../../config";
 
 const DepartmentList = () => {
-
   const [departments, setDepartments] = useState([]);
-  const [depLoading, setDepLoading] = useState(false);
-  const [filteredDepartments, setFilteredDepartments] = useState([])
+  const [filteredDepartments, setFilteredDepartments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const navigate = useNavigate();
 
-  const onDepartmentDelete = async (_id) => {
+  const fetchDepartments = async () => {
+    setLoading(true);
     try {
-      const response = await axios.delete(`${config.API_URL}/api/department/${_id}`, {
+      const response = await axios.get(`${config.API_URL}/api/department`, {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem('token')}`
         }
       });
-
       if (response.data.success) {
-        // Fetch departments again
-        const fetchResponse = await axios.get(`${config.API_URL}/api/department`, {
+        const data = response.data.departments.map((dep, index) => ({
+          ...dep,
+          sno: index + 1
+        }));
+        setDepartments(data);
+        setFilteredDepartments(data);
+      }
+    } catch (error) {
+      console.error(error);
+      if (error.response?.data?.error) {
+        alert(error.response.data.error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this department?')) {
+      try {
+        const response = await axios.delete(`${config.API_URL}/api/department/${id}`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }
         });
-
-        if (fetchResponse.data.success) {
-          let sno = 1;
-          const newData = fetchResponse.data.departments.map((dep) => ({
-            _id: dep._id,
-            sno: sno++,
-            dep_name: dep.dep_name,
-            action: (<DepartmentButtons _id={dep._id} onDepartmentDelete={onDepartmentDelete} />),
-          }));
-          setDepartments(newData);
-          setFilteredDepartments(newData);
-        }
-      }
-    } catch (error) {
-      if (error.response && !error.response.data.success) {
-        alert(error.response.data.error)
-      }
-    }
-  }
-
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      setDepLoading(true)
-      try {
-        const response = await axios.get(`${config.API_URL}/api/department`, {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem('token')}`
-          }
-        })
         if (response.data.success) {
-          let sno = 1;
-          const data = await response.data.departments.map((dep) => ({
-            _id: dep._id,
-            sno: sno++,
-            dep_name: dep.dep_name,
-            action: (<DepartmentButtons _id={dep._id} onDepartmentDelete={onDepartmentDelete} />),
-          }));
-          setDepartments(data);
-          setFilteredDepartments(data);
+          fetchDepartments();
         }
       } catch (error) {
-        if (error.response && !error.response.data.success) {
-          alert(error.response.data.error)
+        console.error(error);
+        if (error.response?.data?.error) {
+          alert(error.response.data.error);
         }
-      } finally {
-        setDepLoading(false)
       }
-    };
-    fetchDepartments();
-  }, [])
-
-  const filterDepartments = (e) => {
-    const records = departments.filter((dep) =>
-      dep.dep_name.toLowerCase().includes(e.target.value.toLowerCase()))
-    setFilteredDepartments(records)
-
-
-  }
-
-  const customStyles = {
-    headRow: {
-      style: {
-        backgroundColor: '#f8fafc',
-        borderBottomWidth: '1px',
-      },
-    },
-    headCells: {
-      style: {
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        color: '#1e293b',
-        paddingLeft: '1rem',
-        paddingRight: '1rem',
-      },
-    },
-    cells: {
-      style: {
-        paddingLeft: '1rem',
-        paddingRight: '1rem',
-      },
-    },
+    }
   };
+
+  const handleSearch = (event) => {
+    const searchTerm = event.target.value.toLowerCase();
+    const filtered = departments.filter(dep =>
+      dep.dep_name.toLowerCase().includes(searchTerm)
+    );
+    setFilteredDepartments(filtered);
+    setPage(0);
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   return (
-    <>{depLoading ? (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    ) : (
-      <>
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-2xl font-bold text-gray-800">Manage Departments</h3>
-          <Link 
-            to="/admin-dashboard/add-department"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-          >
-            <FaPlus className="text-sm" />
-            <span>Add Department</span>
-          </Link>
-        </div>
+    <Box sx={{ p: 3 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+        <Typography variant="h5" fontWeight="bold" color="text.primary">
+          Manage Departments
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/admin-dashboard/add-department')}
+        >
+          Add Department
+        </Button>
+      </Stack>
 
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-4 border-b">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                onChange={filterDepartments}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors duration-200"
-                type="text"
-                placeholder="Search departments..."
-              />
-            </div>
-          </div>
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Search departments..."
+          variant="outlined"
+          size="small"
+          onChange={handleSearch}
+          sx={{ mb: 3 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+          }}
+        />
 
-          <DataTable
-            columns={columns}
-            data={filteredDepartments}
-            pagination
-            customStyles={customStyles}
-            highlightOnHover
-            pointerOnHover
-            responsive
-          />
-        </div>
-      </>
-    )}</>
-  )
-}
+        {loading ? (
+          <Box display="flex" justifyContent="center" p={3}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>S.No</TableCell>
+                  <TableCell>Department Name</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredDepartments
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((department) => (
+                    <TableRow key={department._id} hover>
+                      <TableCell>{department.sno}</TableCell>
+                      <TableCell>{department.dep_name}</TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={() => navigate(`/admin-dashboard/department/${department._id}`)}
+                          sx={{ color: 'primary.main' }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(department._id)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={filteredDepartments.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </TableContainer>
+        )}
+      </Paper>
+    </Box>
+  );
+};
 
-export default DepartmentList
+export default DepartmentList;

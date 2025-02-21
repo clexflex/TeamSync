@@ -18,10 +18,7 @@ import EmployeeSummary from "./components/EmployeeDashboard/EmployeeSummary";
 import ViewProfile from "./components/EmployeeDashboard/ViewProfile";
 import LeaveList from "./components/leave/LeaveList";
 import AddLeave from "./components/leave/AddLeave";
-import EmployeeSetting from "./components/EmployeeDashboard/EmployeeSetting";
-import AdminSetting from "./components/dashboard/AdminSetting";
 import AdminLeaveList from "./components/leave/AdminLeaveList";
-import AdminLeaveDetail from "./components/leave/AdminLeaveDetail";
 import Unauthorized from "./Unauthorized";
 import NotFound from "./pages/NotFound";
 import TeamMembers from "./components/TeamManagement/TeamMembers";
@@ -34,7 +31,6 @@ import EditManager from "./components/manager/EditManager";
 import ViewManager from "./components/manager/ViewManager";
 import AddTeam from "./components/TeamManagement/AddTeam";
 import EditTeam from "./components/TeamManagement/EditTeam";
-import ManagerSetting from "./components/ManagerDashboard/ManagerSetting";
 import HolidayManagement from "./components/dashboard/HolidayManagement";
 import EmployeeAttendanceForm from "./components/EmployeeDashboard/EmployeeAttendanceForm";
 import TeamAttendanceApproval from "./components/ManagerDashboard/TeamAttendanceApproval";
@@ -70,11 +66,9 @@ function App() {
           <Route path="employees/:id" element={<ViewEmployee />} />
           <Route path="employees/edit/:id" element={<EditEmployee />} />
           <Route path="leaves" element={<AdminLeaveList />} />
-          <Route path="leaves/:id" element={<AdminLeaveDetail />} />
           <Route path="employees/leaves/:id" element={<LeaveList />} />
           <Route path="employees/salary/:id" element={<ViewSalary />} />
           <Route path="salary/add" element={<AddSalary />} />
-          <Route path="setting" element={<AdminSetting />} />
           <Route path="holidays" element={<HolidayManagement />} />
 
           <Route path="attendance-approval" element={<AdminAttendanceApproval />} />
@@ -106,7 +100,6 @@ function App() {
           <Route path="leaves/:id" element={<LeaveList />} />
           <Route path="add-leave" element={<AddLeave />} />
           <Route path="salary/:id" element={<ViewSalary />} />
-          <Route path="setting" element={<EmployeeSetting />} />
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
         </Route>
 
@@ -129,7 +122,6 @@ function App() {
           <Route path="team/members/:teamId" element={<TeamMembers />} />
           <Route path="attendance-approval" element={<TeamAttendanceApproval />} />
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
-          <Route path="setting" element={<ManagerSetting />} />
           <Route path="leaves/:id" element={<LeaveList />} />
           <Route path="add-leave" element={<AddLeave />} />
           <Route path="add-leave" element={<AddLeave />} />

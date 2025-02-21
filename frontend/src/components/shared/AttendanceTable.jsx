@@ -1,182 +1,237 @@
 import React, { useState } from 'react';
-import { Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Box,
+  Card,
+  CardHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Typography,
+  Chip,
+  Stack,
+  Avatar,
+  Tooltip,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Grid,
+  Paper
+} from '@mui/material';
+import {
+  Check as CheckIcon,
+  Close as CloseIcon,
+  Task as TaskIcon,
+  LocationOn as LocationIcon,
+  AccessTime as TimeIcon,
+  WorkOutline as WorkIcon
+} from '@mui/icons-material';
 
 const AttendanceTable = ({ records, title, icon: Icon }) => {
-  const [expandedRows, setExpandedRows] = useState(new Set());
-
-  const toggleRow = (id) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const formatTime = (time) =>
     time
-      ? new Date(time).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "-";
+      ? new Date(time).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      : '-';
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Approved':
+        return {
+          bg: 'success.light',
+          text: 'success.dark',
+          border: 'success.main'
+        };
+      case 'Rejected':
+        return {
+          bg: 'error.light',
+          text: 'error.dark',
+          border: 'error.main'
+        };
+      default:
+        return {
+          bg: 'warning.light',
+          text: 'warning.dark',
+          border: 'warning.main'
+        };
+    }
+  };
+
+  const handleViewDetails = (record) => {
+    setSelectedRecord(record);
+  };
 
   return (
-    <div className="mt-6">
-      <div className="flex items-center mb-4">
-        {Icon && <Icon className="w-6 h-6 text-gray-700 mr-2" />}
-        <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-3 text-left text-gray-600 font-medium border">Employee</th>
-              <th className="p-3 text-left text-gray-600 font-medium border">Time</th>
-              <th className="p-3 text-left text-gray-600 font-medium border">Status</th>
-              <th className="p-3 text-left text-gray-600 font-medium border">Actions</th>
-              <th className="p-3 text-left text-gray-600 font-medium border w-8"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((record) => (
-              <React.Fragment key={record._id}>
-                <tr className="border-b text-gray-700 hover:bg-gray-50">
-                  <td className="p-3 border">
-                    <div className="font-medium">{record.userId.name}</div>
-                    <div className="text-sm text-gray-500">{record.workLocation}</div>
-                    {record.workLocation === "Remote" && record.location && (
-                      <div className="text-xs text-gray-500">
-                        Location: Lat {record.location.latitude}, Lon {record.location.longitude}
-                      </div>
-                    )}
-                  </td>
-                  <td className="p-3 border">
-                    <div className="space-y-1">
-                      <div className="text-sm">
-                        In: {formatTime(record.clockIn)}
-                      </div>
-                      <div className="text-sm">
-                        Out: {formatTime(record.clockOut)}
-                      </div>
-                      <div className="text-sm font-medium">
-                        Hours: {record.hoursWorked?.toFixed(2) || "-"}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3 border">
-                    <div className="space-y-2">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs ${
-                          record.approvalStatus === "Approved"
-                            ? "bg-green-100 text-green-700"
-                            : record.approvalStatus === "Rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
+    <Box sx={{ mb: 4 }}>
+      <Card elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
+        <CardHeader
+          avatar={Icon && <Icon color="primary" />}
+          title={
+            <Typography variant="h6" color="text.primary" fontWeight="medium">
+              {title}
+            </Typography>
+          }
+          sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'grey.50' }}
+        />
+        <TableContainer>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Employee</TableCell>
+                <TableCell>Schedule</TableCell>
+                <TableCell>Location</TableCell>
+                <TableCell width="15%">Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {records.map((record) => (
+                <TableRow
+                  key={record._id}
+                  hover
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                >
+                  <TableCell>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        alt={record.userId.name}
+                        src={record.userId.profileImage}
+                        sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}
                       >
-                        {record.approvalStatus}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-3 border">
-                    <div className="flex space-x-2">
-                      <button
-                        className="p-2 bg-green-50 rounded-full hover:bg-green-100"
-                        onClick={() => record.onApprove?.(record._id, "Approved")}
-                        disabled={record.approvalStatus === "Approved"}
-                      >
-                        <Check className="w-5 h-5 text-green-700" />
-                      </button>
-                      <button
-                        className="p-2 bg-red-50 rounded-full hover:bg-red-100"
-                        onClick={() => record.onReject?.(record._id, "Rejected")}
-                        disabled={record.approvalStatus === "Rejected"}
-                      >
-                        <X className="w-5 h-5 text-red-700" />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="p-3 border">
-                    <button
-                      onClick={() => toggleRow(record._id)}
-                      className="p-1 hover:bg-gray-100 rounded"
-                    >
-                      {expandedRows.has(record._id) ? (
-                        <ChevronUp className="w-5 h-5" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5" />
-                      )}
-                    </button>
-                  </td>
-                </tr>
-                {expandedRows.has(record._id) && (
-                  <tr className="bg-gray-50">
-                    <td colSpan="5" className="p-4 border">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Approval Status</h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs ${
-                                  record.managerApproval
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-yellow-100 text-yellow-700"
-                                }`}
-                              >
-                                {record.managerApproval
-                                  ? "Approved by Manager"
-                                  : "Pending Manager"}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs ${
-                                  record.adminApproval
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-yellow-100 text-yellow-700"
-                                }`}
-                              >
-                                {record.adminApproval
-                                  ? "Approved by Admin"
-                                  : "Pending Admin"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-medium mb-2">Additional Info</h4>
-                          <div className="space-y-2">
-                            <div>
-                              <span className="text-sm font-medium">Comments:</span>
-                              <p className="text-sm text-gray-600">
-                                {record.comments || "No comments"}
-                              </p>
-                            </div>
-                            <div>
-                              <button
-                                onClick={() => record.onViewTasks?.(record)}
-                                className="text-blue-600 hover:underline text-sm"
-                              >
-                                View Tasks
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                        {record.userId.name.charAt(0)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle2">
+                          {record.userId.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {record.userId.employeeId || record.userId.email}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Stack spacing={1}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TimeIcon fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          In: {formatTime(record.clockIn)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TimeIcon fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          Out: {formatTime(record.clockOut)}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Duration: {record.hoursWorked?.toFixed(2) || '-'} hrs
+                      </Typography>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <LocationIcon fontSize="small" color="action" />
+                      <Box>
+                        <Typography variant="body2">
+                          {record.workLocation}
+                        </Typography>
+                        {record.workLocation === 'Remote' && record.location && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            <a
+                              href={`https://www.google.com/maps?q=${record.location.latitude},${record.location.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#2563EB', textDecoration: 'none' }}
+                            >
+                              Lat: {record.location.latitude},
+                              Lon: {record.location.longitude}
+                            </a>
+                          </Typography>
+                        )}
+                      </Box>
+                    </Stack>
+                  </TableCell>
+
+                  <TableCell>
+                    <Chip
+                      label={record.approvalStatus}
+                      size="small"
+                      sx={{
+                        bgcolor: getStatusColor(record.approvalStatus).bg,
+                        color: getStatusColor(record.approvalStatus).text,
+                        borderColor: getStatusColor(record.approvalStatus).border,
+                        borderWidth: 1,
+                        borderStyle: 'solid'
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Tooltip title="View Details">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            record.onViewTasks?.(record);
+                            handleViewDetails(record);
+                          }}
+                          sx={{
+                            color: 'primary.main',
+                            bgcolor: 'primary.light',
+                            '&:hover': { bgcolor: 'primary.main', color: 'white' }
+                          }}
+                        >
+                          <TaskIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Approve">
+                        <IconButton
+                          size="small"
+                          onClick={() => record.onApprove?.(record._id, 'Approved')}
+                          disabled={record.approvalStatus === 'Approved'}
+                          sx={{
+                            color: 'success.main',
+                            bgcolor: 'success.light',
+                            '&:hover': { bgcolor: 'success.main', color: 'white' },
+                            '&.Mui-disabled': { opacity: 0.5 }
+                          }}
+                        >
+                          <CheckIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Reject">
+                        <IconButton
+                          size="small"
+                          onClick={() => record.onReject?.(record._id, 'Rejected')}
+                          disabled={record.approvalStatus === 'Rejected'}
+                          sx={{
+                            color: 'error.main',
+                            bgcolor: 'error.light',
+                            '&:hover': { bgcolor: 'error.main', color: 'white' },
+                            '&.Mui-disabled': { opacity: 0.5 }
+                          }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+    </Box>
   );
 };
-
 
 export default AttendanceTable;

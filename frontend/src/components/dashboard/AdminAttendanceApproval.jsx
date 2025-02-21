@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import config from "../../config";
-import { Check, X, AlertCircle, User, Users } from "lucide-react";
-import TaskDetailsModal from "../modal/TaskDetailsModal";
-import AttendanceTable from "../shared/AttendanceTable";
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Paper, TextField, Alert, CircularProgress } from '@mui/material';
+import { PersonOutline, Groups } from '@mui/icons-material';
+import axios from 'axios';
+import config from '../../config';
+import TaskDetailsModal from '../modal/TaskDetailsModal';
+import AttendanceTable from '../shared/AttendanceTable';
 
 const AdminAttendanceApproval = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -26,17 +27,17 @@ const AdminAttendanceApproval = () => {
       setLoading(true);
       const response = await axios.get(`${config.API_URL}/api/attendance/all`, {
         params: { date: selectedDate.toISOString() },
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
 
       if (response.data.success) {
         setAttendanceData(response.data.attendance || []);
         const grouped = { managers: [], teams: {} };
         response.data.attendance.forEach((record) => {
-          if (record.role === "manager") {
+          if (record.role === 'manager') {
             grouped.managers.push(record);
           } else {
-            const teamName = record.teamId?.name || "Unassigned";
+            const teamName = record.teamId?.name || 'Unassigned';
             if (!grouped.teams[teamName]) {
               grouped.teams[teamName] = [];
             }
@@ -46,7 +47,7 @@ const AdminAttendanceApproval = () => {
         setGroupedAttendance(grouped);
       }
     } catch (err) {
-      setError("Failed to fetch attendance data");
+      setError('Failed to fetch attendance data');
     } finally {
       setLoading(false);
     }
@@ -57,38 +58,41 @@ const AdminAttendanceApproval = () => {
       await axios.put(
         `${config.API_URL}/api/attendance/approve`,
         { attendanceId, approvalStatus: status },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       fetchAllAttendance();
     } catch {
-      setError("Failed to update approval status");
+      setError('Failed to update approval status');
     }
   };
 
-
   return (
-    <div className="w-full p-6 bg-white rounded-lg shadow">
-      <div className="flex justify-between items-center border-b pb-4 mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Attendance Approval</h2>
-        <input
+    <Paper elevation={0} sx={{ p: 3, height: '100%' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="h5" fontWeight="bold" color="text.primary">
+          Attendance Approval
+        </Typography>
+        <TextField
           type="date"
-          className="p-2 border rounded-md text-gray-600"
-          value={selectedDate.toISOString().split("T")[0]}
+          size="small"
+          value={selectedDate.toISOString().split('T')[0]}
           onChange={(e) => setSelectedDate(new Date(e.target.value))}
+          sx={{ width: 200 }}
         />
-      </div>
+      </Box>
+
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-md mb-4 flex items-center">
-          <AlertCircle className="w-6 h-6 mr-2" />
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </div>
+        </Alert>
       )}
+
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-700"></div>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+          <CircularProgress />
+        </Box>
       ) : (
-        <>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {groupedAttendance.managers.length > 0 && (
             <AttendanceTable
               records={groupedAttendance.managers.map(record => ({
@@ -101,9 +105,10 @@ const AdminAttendanceApproval = () => {
                 }
               }))}
               title="Manager Attendance"
-              icon={User}
+              icon={PersonOutline}
             />
           )}
+
           {Object.entries(groupedAttendance.teams).map(([teamName, records]) => (
             <AttendanceTable
               key={teamName}
@@ -117,17 +122,18 @@ const AdminAttendanceApproval = () => {
                 }
               }))}
               title={`${teamName} Team Attendance`}
-              icon={Users}
+              icon={Groups}
             />
           ))}
-        </>
+        </Box>
       )}
+
       <TaskDetailsModal
-        isOpen={isModalOpen}
+        open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         attendanceRecord={selectedRecord}
       />
-    </div>
+    </Paper>
   );
 };
 

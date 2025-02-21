@@ -1,139 +1,227 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
+import {
+  Box,
+  Paper,
+  Typography,
+  Grid,
+  Avatar,
+  Button,
+  CircularProgress,
+  Alert,
+  Divider,
+  Card,
+  CardContent,
+  Stack,
+  Chip
+} from '@mui/material';
+import {
+  ArrowBack,
+  Email,
+  Badge,
+  Business,
+  Person,
+  Group
+} from '@mui/icons-material';
 import config from "../../config";
 
 const ViewManager = () => {
-    const { id } = useParams();
-    const [manager, setManager] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
+  const { id } = useParams();
+  const [manager, setManager] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchManager = async () => {
-            try {
-                const response = await axios.get(`${config.API_URL}/api/manager/${id}`, {
-                    headers: {
-                        "Authorization": `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                
-                if (response.data.success) {
-                    setManager(response.data.manager);
-                }
-            } catch (error) {
-                if (error.response && !error.response.data.success) {
-                    alert(error.response.data.error);
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    const fetchManager = async () => {
+      try {
+        const response = await axios.get(`${config.API_URL}/api/manager/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.data.success) {
+          setManager(response.data.manager);
+        }
+      } catch (error) {
+        setError(error.response?.data?.error || 'Failed to load manager data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        fetchManager();
-    }, [id]);
+    fetchManager();
+  }, [id]);
 
-    if (loading) {
-        return <div className="flex items-center justify-center min-h-screen">
-            <div className="text-xl">Loading...</div>
-        </div>;
-    }
-
-    if (!manager) {
-        return <div className="flex items-center justify-center min-h-screen">
-            <div className="text-xl text-red-500">Manager not found</div>
-        </div>;
-    }
-
+  if (loading) {
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-                <div className="bg-blue-600 text-white px-6 py-4">
-                    <h1 className="text-2xl font-bold">Manager Details</h1>
-                </div>
-
-                <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Basic Information */}
-                        <div className="space-y-4">
-                            <div className="flex flex-col">
-                                <span className="text-gray-600 font-semibold">Name:</span>
-                                <span className="text-gray-900">{manager.userId.name}</span>
-                            </div>
-
-                            <div className="flex flex-col">
-                                <span className="text-gray-600 font-semibold">Manager ID:</span>
-                                <span className="text-gray-900">{manager.managerId}</span>
-                            </div>
-
-                            <div className="flex flex-col">
-                                <span className="text-gray-600 font-semibold">Email:</span>
-                                <span className="text-gray-900">{manager.userId.email}</span>
-                            </div>
-
-                            <div className="flex flex-col">
-                                <span className="text-gray-600 font-semibold">Department:</span>
-                                <span className="text-gray-900">{manager.department.dep_name}</span>
-                            </div>
-
-                            <div className="flex flex-col">
-                                <span className="text-gray-600 font-semibold">Designation:</span>
-                                <span className="text-gray-900">{manager.designation}</span>
-                            </div>
-                        </div>
-
-                        {/* Profile Image */}
-                        <div className="flex justify-center md:justify-end">
-                            {manager.userId.profileImage ? (
-                                <img 
-                                    src={`${config.API_URL}/uploads/${manager.userId.profileImage}`}
-                                    alt="Profile"
-                                    className="w-48 h-48 rounded-full object-cover border-4 border-blue-600"
-                                />
-                            ) : (
-                                <div className="w-48 h-48 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <span className="text-gray-500 text-xl">No Image</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Teams Section */}
-                    {manager.teams && manager.teams.length > 0 && (
-                        <div className="mt-8">
-                            <h2 className="text-xl font-semibold mb-4">Teams Under Management</h2>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {manager.teams.map((team) => (
-                                        <div key={team._id} className="bg-white p-4 rounded shadow">
-                                            <h3 className="font-semibold">{team.name}</h3>
-                                            <p className="text-sm text-gray-600">Members: {team.members?.length || 0}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="mt-8 flex justify-end space-x-4">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={() => navigate(`/manager/edit/${manager._id}`)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        >
-                            Edit Manager
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
+  }
+
+  if (error) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  if (!manager) {
+    return (
+      <Box p={3}>
+        <Alert severity="info">Manager not found</Alert>
+      </Box>
+    );
+  }
+
+  const InfoItem = ({ icon, label, value }) => (
+    <Stack direction="row" spacing={2} alignItems="center" sx={{ py: 1.5 }}>
+      <Box sx={{ color: 'primary.main' }}>
+        {icon}
+      </Box>
+      <Box flex={1}>
+        <Typography variant="body2" color="text.secondary">
+          {label}
+        </Typography>
+        <Typography variant="body1">
+          {value}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+
+  return (
+    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+      <Button
+        startIcon={<ArrowBack />}
+        onClick={() => navigate('/admin-dashboard/managers')}
+        sx={{ mb: 3 }}
+      >
+        Back to Managers
+      </Button>
+
+      <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+        <Box sx={{ bgcolor: 'primary.main', p: 4, color: 'white' }}>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item>
+              <Avatar
+                src={manager.userId.profileImage ? 
+                  `${config.API_URL}/uploads/${manager.userId.profileImage}` : 
+                  undefined}
+                sx={{ 
+                  width: 100, 
+                  height: 100,
+                  border: '4px solid white'
+                }}
+              >
+                {!manager.userId.profileImage && manager.userId.name.charAt(0)}
+              </Avatar>
+            </Grid>
+            <Grid item xs>
+              <Typography variant="h4" component="h1" fontWeight="bold">
+                {manager.userId.name}
+              </Typography>
+              <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                {manager.designation}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Box>
+
+        <Box sx={{ p: 4 }}>
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Basic Information
+                </Typography>
+                <Stack divider={<Divider />}>
+                  <InfoItem
+                    icon={<Badge />}
+                    label="Manager ID"
+                    value={manager.managerId}
+                  />
+                  <InfoItem
+                    icon={<Email />}
+                    label="Email"
+                    value={manager.userId.email}
+                  />
+                  <InfoItem
+                    icon={<Business />}
+                    label="Department"
+                    value={manager.department.dep_name}
+                  />
+                  <InfoItem
+                    icon={<Person />}
+                    label="Designation"
+                    value={manager.designation}
+                  />
+                </Stack>
+              </Paper>
+            </Grid>
+
+            {manager.teams && manager.teams.length > 0 && (
+              <Grid item xs={12} md={6}>
+                <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Teams Under Management
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {manager.teams.map((team) => (
+                      <Grid item xs={12} key={team._id}>
+                        <Card variant="outlined">
+                          <CardContent>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Box>
+                                <Typography variant="subtitle1" fontWeight="medium">
+                                  {team.name}
+                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Group fontSize="small" color="action" />
+                                  <Typography variant="body2" color="text.secondary">
+                                    {team.members?.length || 0} members
+                                  </Typography>
+                                </Stack>
+                              </Box>
+                              <Chip 
+                                label="Active"
+                                color="success"
+                                size="small"
+                              />
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
+              </Grid>
+            )}
+          </Grid>
+
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(-1)}
+            >
+              Back
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate(`/manager/edit/${manager._id}`)}
+            >
+              Edit Manager
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
+  );
 };
 
 export default ViewManager;

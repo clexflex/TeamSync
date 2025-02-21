@@ -1,13 +1,35 @@
-// This component will display a list of managers and allow adding, editing, and deleting them.
-
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import DataTable from "../shared/DataTable";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  Stack,
+  Alert
+} from '@mui/material';
+import { 
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon 
+} from '@mui/icons-material';
+import axios from 'axios';
 import config from "../../config";
 
 const ManagersList = () => {
   const [managers, setManagers] = useState([]);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,15 +40,25 @@ const ManagersList = () => {
         });
         setManagers(response.data.managers);
       } catch (error) {
-        alert("Failed to fetch managers.");
+        setError('Failed to fetch managers.');
       }
     };
     fetchManagers();
   }, []);
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const handleEdit = (id) => {
     navigate(`/admin-dashboard/managers/edit/${id}`);
   };
+
   const handleView = (id) => {
     navigate(`/admin-dashboard/manager/${id}`);
   };
@@ -39,44 +71,91 @@ const ManagersList = () => {
         });
         setManagers((prev) => prev.filter((manager) => manager._id !== id));
       } catch (error) {
-        alert("Failed to delete manager.");
+        setError('Failed to delete manager.');
       }
     }
   };
 
-  const columns = [
-    { name: "Name", selector: (row) => row.userId.name, sortable: true },
-    { name: "Department", selector: (row) => row.department?.dep_name || "N/A", sortable: true },
-    { name: "Designation", selector: (row) => row.designation || "N/A" },
-    {
-      name: "Actions",
-      cell: (row) => (
-        <div className="flex gap-2">
-          <button onClick={() => handleView(row._id)} className="bg-blue-500 text-white px-2 py-1 rounded">
-            View
-          </button>
-          <button onClick={() => handleEdit(row._id)} className="bg-blue-500 text-white px-2 py-1 rounded">
-            Edit
-          </button>
-          <button onClick={() => handleDelete(row._id)} className="bg-red-500 text-white px-2 py-1 rounded">
-            Delete
-          </button>
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <div className="p-6 bg-white rounded-md shadow-md">
-      <h2 className="text-xl font-bold mb-6">Managers List</h2>
-      <button
-        onClick={() => navigate("/admin-dashboard/add-manager")}
-        className="bg-blue-600 text-white px-4 py-2 rounded-md mb-4"
-      >
-        Add Manager
-      </button>
-      <DataTable columns={columns} data={managers} pagination />
-    </div>
+    <Box sx={{ p: 3 }}>
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+          <Typography variant="h5" fontWeight="bold">
+            Managers List
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/admin-dashboard/add-manager")}
+          >
+            Add Manager
+          </Button>
+        </Stack>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Department</TableCell>
+                <TableCell>Designation</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {managers
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((manager) => (
+                  <TableRow key={manager._id}>
+                    <TableCell>{manager.userId.name}</TableCell>
+                    <TableCell>{manager.department?.dep_name || "N/A"}</TableCell>
+                    <TableCell>{manager.designation || "N/A"}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleView(manager._id)}
+                        size="small"
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleEdit(manager._id)}
+                        size="small"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDelete(manager._id)}
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={managers.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Paper>
+    </Box>
   );
 };
 

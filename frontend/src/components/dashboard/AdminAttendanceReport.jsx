@@ -1,4 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Grid,
+  Select,
+  MenuItem,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress,
+  Card,
+  CardContent,
+  Stack,
+  FormControl
+} from '@mui/material';
+import {
+  CalendarToday as CalendarIcon,
+  GetApp as DownloadIcon
+} from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
 
@@ -30,11 +54,9 @@ const AdminAttendanceReport = () => {
       setLoading(true);
       const [year, month] = selectedMonth.split('-').map(Number);
       
-      // Create dates in the user's local timezone
       const startDate = new Date(year, month - 1, 26);
       const endDate = new Date(year, month, 25);
   
-      // Format dates in ISO format but preserve the local date
       const formatDate = (date) => {
         const offset = date.getTimezoneOffset();
         const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
@@ -52,7 +74,6 @@ const AdminAttendanceReport = () => {
       });
   
       if (response.data.success) {
-        // Convert UTC dates back to local timezone for display
         const processedData = {
           ...response.data.data,
           dateRange: response.data.data.dateRange.map(date => ({
@@ -117,166 +138,234 @@ const AdminAttendanceReport = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const renderMonthSelector = () => (
-    <div className="flex items-center space-x-4">
-      <select
-        value={selectedMonth}
-        onChange={(e) => setSelectedMonth(e.target.value)}
-        className="border rounded-md p-2"
-      >
-        {Array.from({ length: 12 }, (_, i) => {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        }).map((month) => (
-          <option key={month} value={month}>
-            {new Date(month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </option>
-        ))}
-      </select>
-      <button
-        onClick={exportToCSV}
-        className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-      >
-        Export Report
-      </button>
-    </div>
-  );
-
-  const renderSummaryCard = () => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-700">Total Days</h3>
-        <p className="text-2xl font-bold text-blue-600">{reportData.periodInfo.totalDays}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-700">Working Days</h3>
-        <p className="text-2xl font-bold text-green-600">{reportData.periodInfo.workingDays}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-700">Holidays</h3>
-        <p className="text-2xl font-bold text-purple-600">{reportData.periodInfo.totalHolidays}</p>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-700">Period</h3>
-        <p className="text-sm font-medium text-gray-600">
-          {reportData.periodInfo.startDate} - {reportData.periodInfo.endDate}
-        </p>
-      </div>
-    </div>
-  );
-
   const AttendanceStatus = ({ data }) => {
-    const getStatusColor = () => {
-      if (data.isHoliday) return 'bg-purple-100 text-purple-800';
-      switch (data.status) {
-        case 'Present': return 'bg-green-100 text-green-800';
-        case 'Absent': return 'bg-red-100 text-red-800';
-        case 'Half-Day': return 'bg-yellow-100 text-yellow-800';
-        case 'Pending': return 'bg-gray-100 text-gray-800';
-        default: return 'bg-gray-100 text-gray-800';
-      }
+    const getStatusColor = (status, isHoliday) => {
+      if (isHoliday) return {
+        bgcolor: '#F3E5F5',
+        color: '#6A1B9A'
+      };
+      
+      const statusColors = {
+        Present: {
+          bgcolor: '#E8F5E9',
+          color: '#2E7D32'
+        },
+        Absent: {
+          bgcolor: '#FFEBEE',
+          color: '#C62828'
+        },
+        'Half-Day': {
+          bgcolor: '#FFF3E0',
+          color: '#EF6C00'
+        },
+        Pending: {
+          bgcolor: '#F5F5F5',
+          color: '#424242'
+        }
+      };
+
+      return statusColors[status] || statusColors.Pending;
     };
 
+    const colors = getStatusColor(data.status, data.isHoliday);
+
     return (
-      <div className={`p-2 rounded ${getStatusColor()}`}>
-        <div className="text-xs font-medium">{data.status}</div>
+      <Box sx={{ ...colors, p: 1, borderRadius: 1, minWidth: 80 }}>
+        <Typography variant="caption" display="block" align="center" fontWeight="medium">
+          {data.status}
+        </Typography>
         {data.hoursWorked > 0 && (
-          <div className="text-xs">{data.hoursWorked.toFixed(1)}h</div>
+          <Typography variant="caption" display="block" align="center">
+            {data.hoursWorked.toFixed(1)}h
+          </Typography>
         )}
-      </div>
+      </Box>
     );
   };
 
-  const renderRoleSection = (role, users) => (
-    <div key={role} className="mb-8">
-      <h2 className="text-xl font-bold mb-4 text-gray-800 capitalize">{role}s</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider  bg-gray-50 ">
-                Employee
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Team
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Department
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stats
-              </th>
-              {reportData.dateRange.map((date) => (
-                <th key={date.date} className="px-3 py-3 text-center">
-                  <div className="flex flex-col items-center text-xs">
-                    <span className={`font-medium ${date.dayName === 'Sun' || date.dayName === 'Sat' ? 'text-red-500' : ''}`}>
-                      {date.dayName}
-                    </span>
-                    <span>{new Date(date.date).getDate()}</span>
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user, idx) => (
-              <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-4 py-4 whitespace-nowrap  bg-inherit">
-                  <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.team}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.department}
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm">
-                  <div className="text-xs space-y-1">
-                    <div>Present: {user.stats.totalPresent}</div>
-                    <div>Absent: {user.stats.totalAbsent}</div>
-                    <div>Attendance: {user.stats.attendancePercentage}%</div>
-                    <div>Avg Hours: {user.stats.avgHoursPerDay}h</div>
-                  </div>
-                </td>
-                {reportData.dateRange.map((date) => (
-                  <td key={date.date} className="px-3 py-4 whitespace-nowrap text-sm text-center">
-                    <AttendanceStatus data={{
-                      status: user.attendance[date.date]?.status || 'Absent',
-                      hoursWorked: user.attendance[date.date]?.hoursWorked || 0,
-                      isHoliday: date.isHoliday
-                    }} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
   if (loading) {
     return (
-      <div className="w-full h-96 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <div className="p-6 w-full bg-gray-50">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
-        <h1 className="text-2xl font-bold text-gray-900">Attendance Report</h1>
-        {renderMonthSelector()}
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Paper elevation={0} sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5" fontWeight="bold">
+            Attendance Report
+          </Typography>
+          
+          <Stack direction="row" spacing={2}>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              >
+                {Array.from({ length: 12 }, (_, i) => {
+                  const date = new Date();
+                  date.setMonth(date.getMonth() - i);
+                  const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                  return (
+                    <MenuItem key={value} value={value}>
+                      {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+            
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              onClick={exportToCSV}
+            >
+              Export Report
+            </Button>
+          </Stack>
+        </Box>
 
-      {renderSummaryCard()}
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} sx={{ bgcolor: 'grey.50' }}>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Days
+                </Typography>
+                <Typography variant="h4" component="div">
+                  {reportData.periodInfo.totalDays}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} sx={{ bgcolor: 'grey.50' }}>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Working Days
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ color: 'success.main' }}>
+                  {reportData.periodInfo.workingDays}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} sx={{ bgcolor: 'grey.50' }}>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Holidays
+                </Typography>
+                <Typography variant="h4" component="div" sx={{ color: '#9C27B0' }}>
+                  {reportData.periodInfo.totalHolidays}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card elevation={0} sx={{ bgcolor: 'grey.50' }}>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Period
+                </Typography>
+                <Typography variant="body1" component="div">
+                  {reportData.periodInfo.startDate} - {reportData.periodInfo.endDate}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Paper>
 
-      {Object.entries(reportData.usersByRole).map(([role, users]) => 
-        renderRoleSection(role, users)
-      )}
-    </div>
+      {Object.entries(reportData.usersByRole).map(([role, users]) => (
+        <Paper key={role} elevation={0} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, textTransform: 'capitalize' }}>
+            {role}s
+          </Typography>
+          
+          <TableContainer sx={{ maxHeight: 440 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Employee</TableCell>
+                  <TableCell>Team</TableCell>
+                  <TableCell>Department</TableCell>
+                  <TableCell>Stats</TableCell>
+                  {reportData.dateRange.map((date) => (
+                    <TableCell key={date.date} align="center">
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: date.dayName === 'Sun' || date.dayName === 'Sat'
+                              ? 'error.main'
+                              : 'inherit'
+                          }}
+                        >
+                          {date.dayName}
+                        </Typography>
+                        <Typography variant="caption">
+                          {new Date(date.date).getDate()}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((user, idx) => (
+                  <TableRow key={idx} hover>
+                    <TableCell>
+                      <Typography variant="body2">{user.name}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="textSecondary">
+                        {user.team}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="textSecondary">
+                        {user.department}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Stack spacing={0.5}>
+                        <Typography variant="caption">
+                          Present: {user.stats.totalPresent}
+                        </Typography>
+                        <Typography variant="caption">
+                          Absent: {user.stats.totalAbsent}
+                        </Typography>
+                        <Typography variant="caption">
+                          Attendance: {user.stats.attendancePercentage}%
+                        </Typography>
+                        <Typography variant="caption">
+                          Avg Hours: {user.stats.avgHoursPerDay}h
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                    {reportData.dateRange.map((date) => (
+                      <TableCell key={date.date} align="center">
+                        <AttendanceStatus
+                          data={{
+                            status: user.attendance[date.date]?.status || 'Absent',
+                            hoursWorked: user.attendance[date.date]?.hoursWorked || 0,
+                            isHoliday: date.isHoliday
+                          }}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      ))}
+    </Box>
   );
 };
 

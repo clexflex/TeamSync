@@ -1,23 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import DataTable from "../shared/DataTable";
-import { useAuth } from "../../context/authContext";
-import config from "../../config";
-import { getBasePath } from '../../utils/RoleHelper';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Box, Paper, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Select, MenuItem, FormControl, InputLabel, IconButton, Stack, Alert, CircularProgress, Divider, Grid, Chip } from '@mui/material';
+import {
+  ArrowBack as ArrowBackIcon,
+  Delete as DeleteIcon
+} from '@mui/icons-material';
+import axios from 'axios';
+import { useAuth } from '../../context/authContext';
+import config from '../../config';
 
 const TeamMembers = () => {
   const { teamId } = useParams();
   const [members, setMembers] = useState([]);
   const [team, setTeam] = useState(null);
   const [availableEmployees, setAvailableEmployees] = useState([]);
-  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const basePath = getBasePath();
+  const getBasePath = (user) => {
+    return user.role === "admin" ? "/admin-dashboard" : "/manager-dashboard";
+  };
+
+  const basePath = getBasePath(user);
 
   useEffect(() => {
     fetchTeamData();
@@ -26,15 +35,14 @@ const TeamMembers = () => {
   const fetchTeamData = async () => {
     try {
       setIsLoading(true);
-      setError("");
+      setError('');
 
-      // Fetch team and member data in parallel
       const [teamResponse, membersResponse] = await Promise.all([
         axios.get(`${config.API_URL}/api/team/${teamId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }),
         axios.get(`${config.API_URL}/api/team/${teamId}/members`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         })
       ]);
 
@@ -42,22 +50,19 @@ const TeamMembers = () => {
       setTeam(teamData);
       setMembers(membersResponse.data.employees);
 
-      // Only fetch available employees if user has permission to add members
-      if (user.role === 'admin' || (user.role === 'manager' )) {
+      if (user.role === 'admin' || user.role === 'manager') {
         const availableResponse = await axios.get(
           `${config.API_URL}/api/employee/department/${teamData.department._id}`,
-          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
 
-        // Filter out employees who are already in a team
         const availableEmps = availableResponse.data.employees.filter(
           emp => !emp.teamId || emp.teamId === teamId
         );
         setAvailableEmployees(availableEmps);
       }
     } catch (error) {
-      console.error('Error fetching team data:', error);
-      setError(error.response?.data?.error || "Failed to fetch team data");
+      setError(error.response?.data?.error || 'Failed to fetch team data');
     } finally {
       setIsLoading(false);
     }
@@ -65,195 +70,224 @@ const TeamMembers = () => {
 
   const handleAddMember = async () => {
     if (!selectedEmployee) {
-      setError("Please select an employee to add");
+      setError('Please select an employee to add');
       return;
     }
 
     try {
       setIsLoading(true);
-      setError("");
+      setError('');
 
       await axios.post(
         `${config.API_URL}/api/team/${teamId}/members`,
         { employeeId: selectedEmployee },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
 
-      setSuccess("Team member added successfully");
-      setSelectedEmployee("");
-      await fetchTeamData(); // Refresh data
+      setSuccess('Team member added successfully');
+      setSelectedEmployee('');
+      await fetchTeamData();
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to add team member");
+      setError(error.response?.data?.error || 'Failed to add team member');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!window.confirm("Are you sure you want to remove this member from the team?")) return;
+    if (!window.confirm('Are you sure you want to remove this member from the team?')) return;
 
     try {
       setIsLoading(true);
-      setError("");
+      setError('');
 
       await axios.delete(
         `${config.API_URL}/api/team/${teamId}/members/${memberId}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
 
-      setSuccess("Team member removed successfully");
-      await fetchTeamData(); // Refresh data
+      setSuccess('Team member removed successfully');
+      await fetchTeamData();
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to remove team member");
+      setError(error.response?.data?.error || 'Failed to remove team member');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const columns = [
-    {
-      name: "Employee ID",
-      selector: row => row.employeeId,
-      sortable: true
-    },
-    {
-      name: "Name",
-      selector: row => row.userId?.name,
-      sortable: true
-    },
-    {
-      name: "Email",
-      selector: row => row.userId?.email
-    },
-    {
-      name: "Department",
-      selector: row => row.department?.dep_name
-    },
-    {
-      name: "Actions",
-      cell: row => {
-        const canModifyTeam = user.role === 'admin' ||
-          (user.role === 'manager' );
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
 
-        // Show Remove button only if the user is allowed to modify
-        return canModifyTeam ? (
-          <button
-            onClick={() => handleRemoveMember(row._id)}
-            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-          >
-            Remove
-          </button>
-        ) : null;
-      },
-    },
-  ];
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   if (isLoading && !team) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">{team?.name}</h2>
-          <button
-            onClick={() => navigate(`${basePath}/team`)}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-          >
-            Back to Teams
-          </button>
-        </div>
-
-        {/* Team Info */}
-        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-          <div>
-            <p className="text-sm text-gray-600">Department</p>
-            <p className="font-medium">{team?.department?.dep_name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Manager</p>
-            <p className="font-medium">{team.managerId?.userId?.name}</p>
-          </div>
-          {team?.description && (
-            <div className="col-span-2">
-              <p className="text-sm text-gray-600">Description</p>
-              <p className="font-medium">{team.description}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-          {success}
-        </div>
-      )}
-
-      {/* Add Member Section */}
-      {(user.role === 'admin' || (user.role === 'manager' )) && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="text-lg font-semibold mb-4">Add Team Member</h3>
-        <div className="flex gap-4">
-          <select
-            value={selectedEmployee}
-            onChange={(e) => setSelectedEmployee(e.target.value)}
-            className="flex-1 p-2 border rounded focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Select Employee</option>
-            {availableEmployees.map(emp => (
-              <option key={emp._id} value={emp._id}>
-                {emp.userId?.name} - {emp.employeeId}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={handleAddMember}
-            disabled={!selectedEmployee || isLoading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 
-                       disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? 'Adding...' : 'Add Member'}
-          </button>
-        </div>
-      </div>
-      )}
-
-      {/* Members Table */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Team Members ({members.length})</h3>
-        <DataTable
-          columns={columns}
-          data={members}
-          pagination
-          paginationRowsPerPageOptions={[10, 20, 30]}
-          responsive
-          striped
-          highlightOnHover
-          progressPending={isLoading}
-          progressComponent={
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-            </div>
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Stack direction="row" alignItems="center" spacing={1}
+        onClick={() => navigate(`${basePath}/team`)}
+        sx={{
+          mb: 4,
+          cursor: 'pointer',
+          color: 'text.secondary',
+          '&:hover': {
+            color: 'primary.main',
+            '& .MuiSvgIcon-root': {
+              transform: 'translateX(-4px)'
+            }
           }
-        />
-      </div>
-    </div>
+        }}>
+        <ArrowBackIcon sx={{ transition: 'transform 0.2s' }} />
+        <Typography>Back to Teams</Typography>
+      </Stack>
+
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        {/* Header Section */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" fontWeight="bold" gutterBottom>
+            {team?.name}
+          </Typography>
+
+          <Grid container spacing={3} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">Department</Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {team?.department?.dep_name}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="subtitle2" color="text.secondary">Manager</Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {team?.managerId?.userId?.name}
+              </Typography>
+            </Grid>
+            {team?.description && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="text.secondary">Description</Typography>
+                <Typography variant="body1">
+                  {team.description}
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* Messages */}
+        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
+
+        {/* Add Member Section */}
+        {(user.role === 'admin' || user.role === 'manager') && (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Add Team Member
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormControl fullWidth>
+                <InputLabel>Select Employee</InputLabel>
+                <Select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  label="Select Employee"
+                >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {availableEmployees.map(emp => (
+                    <MenuItem key={emp._id} value={emp._id}>
+                      {emp.userId?.name} - {emp.employeeId}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                onClick={handleAddMember}
+                disabled={!selectedEmployee || isLoading}
+                sx={{ minWidth: 120, height: { xs: 40, sm: 56 } }}
+              >
+                {isLoading ? 'Adding...' : 'Add Member'}
+              </Button>
+            </Stack>
+          </Box>
+        )}
+
+        {/* Members Table */}
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Team Members ({members.length})
+          </Typography>
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Employee ID</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Department</TableCell>
+                  {(user.role === 'admin' || user.role === 'manager') && (
+                    <TableCell align="right">Actions</TableCell>
+                  )}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {members
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((member) => (
+                    <TableRow key={member._id} hover>
+                      <TableCell>
+                        <Chip
+                          label={member.employeeId}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>{member.userId?.name}</TableCell>
+                      <TableCell>{member.userId?.email}</TableCell>
+                      <TableCell>{member.department?.dep_name}</TableCell>
+                      {(user.role === 'admin' || user.role === 'manager') && (
+                        <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemoveMember(member._id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <TablePagination
+            component="div"
+            count={members.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[10, 20, 30]}
+          />
+        </Box>
+      </Paper>
+    </Box>
   );
 };
-
 
 export default TeamMembers;

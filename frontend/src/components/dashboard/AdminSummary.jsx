@@ -1,60 +1,137 @@
-import React, { useEffect, useState } from 'react'
-import SummaryCard from './SummaryCard'
-import { FaBuilding, FaCheckCircle, FaFileAlt, FaHourglassHalf, FaMoneyBillWave, FaTimesCircle, FaUsers } from 'react-icons/fa'
-import axios from 'axios'
+import React, { useState, useEffect } from 'react';
+import { Box, Grid2, Paper, Typography, CircularProgress } from '@mui/material';
+import { People as PeopleIcon, Business as BusinessIcon,
+         MonetizationOn as MoneyIcon, Description as FileIcon,
+         CheckCircle as CheckIcon, HourglassEmpty as PendingIcon,
+         Cancel as RejectIcon } from '@mui/icons-material';
+import axios from 'axios';
 import config from "../../config";
 
+const SummaryCard = ({ icon, text, number, color }) => (
+  <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ 
+        p: 1.5, 
+        borderRadius: 2, 
+        backgroundColor: `${color}.light`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {React.cloneElement(icon, { sx: { color: `${color}.main`, fontSize: 28 } })}
+      </Box>
+      <Box>
+        <Typography color="text.secondary" fontWeight="medium" gutterBottom>
+          {text}
+        </Typography>
+        <Typography variant="h5" fontWeight="bold">
+          {number}
+        </Typography>
+      </Box>
+    </Box>
+  </Paper>
+);
+
 const AdminSummary = () => {
+  const [summary, setSummary] = useState(null);
 
-    const [summary, setSummary] = useState(null)
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const response = await axios.get(`${config.API_URL}/api/dashboard/summary`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setSummary(response.data);
+      } catch (error) {
+        console.error('Error fetching summary:', error);
+      }
+    };
+    fetchSummary();
+  }, []);
 
-    useEffect(() => {
-        const fetchSummary = async () => {
-            try {
-                const summary = await axios.get(`${config.API_URL}/api/dashboard/summary`, {
-                    headers: {
-                        "Authorization": `Bearer ${localStorage.getItem('token')}`
-                    }
-                })
-
-                setSummary(summary.data)
-            } catch (error) {
-                if (error.response && !error.response.data.success) {
-                    alert(error.response.data.error)
-                }
-            }
-        }
-        fetchSummary()
-    }, [])
-
-    if (!summary) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>)
-    }
-
+  if (!summary) {
     return (
-        <div>
-            <h3 className='text-2xl font-bold text-gray-800 mb-8'>Dashboard Overview</h3>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <SummaryCard icon={<FaUsers />} text="Total Employees" number={summary.totalEmployees} color="bg-blue-600" />
-                <SummaryCard icon={<FaBuilding />} text="Total Departments" number={summary.totalDepartments} color="bg-yellow-600" />
-                <SummaryCard icon={<FaMoneyBillWave />} text="Monthly Salary" number={summary.totalSalary} color="bg-green-600" />
-            </div>
-            <div className="mt-12">
-                <h4 className='text-2xl font-bold text-gray-800 mb-8'>Leave Details</h4>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                    <SummaryCard icon={<FaFileAlt />} text="Leave Applied" number={summary.leaveSummary.appliedFor} color="bg-purple-600" />
-                    <SummaryCard icon={<FaCheckCircle />} text="Leave Approved" number={summary.leaveSummary.approved} color="bg-green-600" />
-                    <SummaryCard icon={<FaHourglassHalf />} text="Leave Pending" number={summary.leaveSummary.pending} color="bg-yellow-600" />
-                    <SummaryCard icon={<FaTimesCircle />} text="Leave Rejected" number={summary.leaveSummary.rejected} color="bg-red-600" />
-                </div>
-            </div>
-        </div>
+  return (
+    <Box>
+      <Typography variant="h4" fontWeight="bold" color="text.primary" mb={4}>
+        Dashboard Overview
+      </Typography>
+      
+      <Grid2 container spacing={3}>
+        <Grid2 item xs={12} md={4}>
+          <SummaryCard
+            icon={<PeopleIcon />}
+            text="Total Employees"
+            number={summary.totalEmployees}
+            color="primary"
+          />
+        </Grid2>
+        <Grid2 item xs={12} md={4}>
+          <SummaryCard
+            icon={<BusinessIcon />}
+            text="Total Departments"
+            number={summary.totalDepartments}
+            color="warning"
+          />
+        </Grid2>
+        <Grid2 item xs={12} md={4}>
+          <SummaryCard
+            icon={<MoneyIcon />}
+            text="Monthly Salary"
+            number={summary.totalSalary}
+            color="success"
+          />
+        </Grid2>
+      </Grid2>
 
-    )
-}
+      <Typography variant="h4" fontWeight="bold" color="text.primary" my={4}>
+        Leave Details
+      </Typography>
+      
+      <Grid2 container spacing={3}>
+        <Grid2 item xs={12} sm={6} md={3}>
+          <SummaryCard
+            icon={<FileIcon />}
+            text="Leave Applied"
+            number={summary.leaveSummary.appliedFor}
+            color="secondary"
+          />
+        </Grid2>
+        <Grid2 item xs={12} sm={6} md={3}>
+          <SummaryCard
+            icon={<CheckIcon />}
+            text="Leave Approved"
+            number={summary.leaveSummary.approved}
+            color="success"
+          />
+        </Grid2>
+        <Grid2 item xs={12} sm={6} md={3}>
+          <SummaryCard
+            icon={<PendingIcon />}
+            text="Leave Pending"
+            number={summary.leaveSummary.pending}
+            color="warning"
+          />
+        </Grid2>
+        <Grid2 item xs={12} sm={6} md={3}>
+          <SummaryCard
+            icon={<RejectIcon />}
+            text="Leave Rejected"
+            number={summary.leaveSummary.rejected}
+            color="error"
+          />
+        </Grid2>
+      </Grid2>
+    </Box>
+  );
+};
 
-export default AdminSummary
+export default AdminSummary;

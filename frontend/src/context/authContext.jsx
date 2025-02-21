@@ -1,4 +1,3 @@
-// frontend/src/context/authContext.jsx
 import axios from 'axios';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import config from '../config';
