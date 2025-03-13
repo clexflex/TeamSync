@@ -36,6 +36,11 @@ import EmployeeAttendanceForm from "./components/EmployeeDashboard/EmployeeAtten
 import TeamAttendanceApproval from "./components/ManagerDashboard/TeamAttendanceApproval";
 import AdminAttendanceApproval from "./components/dashboard/AdminAttendanceApproval";
 import AdminAttendanceReport from "./components/dashboard/AdminAttendanceReport";
+import CreateUserProfile from "./components/userProfile/CreateUserProfile";
+import UserProfileList from "./components/userProfile/UserProfileList";
+import ViewUserProfile from "./components/userProfile/ViewUserProfile";
+import EditUserProfile from "./components/userProfile/EditUserProfile";
+
 
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
@@ -82,6 +87,11 @@ function App() {
           <Route path="team/create" element={<AddTeam />} />
           <Route path="team/edit/:teamId" element={<EditTeam />} />
           <Route path="team/members/:teamId" element={<TeamMembers />} />
+
+          <Route path="user-profiles" element={<UserProfileList />} />
+          <Route path="user-profile/create" element={<CreateUserProfile />} />
+          <Route path="user-profile/:id" element={<ViewUserProfile />} />
+          <Route path="user-profile/edit/:id" element={<EditUserProfile />} />
         </Route>
 
         {/* Employee Dashboard */}
@@ -101,6 +111,7 @@ function App() {
           <Route path="add-leave" element={<AddLeave />} />
           <Route path="salary/:id" element={<ViewSalary />} />
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
+          <Route path="user-profile/:id" element={<ViewUserProfile />} />
         </Route>
 
         {/* Manager Dashboard */}
@@ -123,7 +134,6 @@ function App() {
           <Route path="attendance-approval" element={<TeamAttendanceApproval />} />
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
           <Route path="leaves/:id" element={<LeaveList />} />
-          <Route path="add-leave" element={<AddLeave />} />
           <Route path="add-leave" element={<AddLeave />} />
           <Route path="salary/:id" element={<ViewSalary />} />
         </Route>

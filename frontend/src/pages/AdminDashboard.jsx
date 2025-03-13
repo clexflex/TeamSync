@@ -21,6 +21,7 @@ const AdminDashboard = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin-dashboard' },
+    { text: 'Users', icon: <GroupIcon />, path: '/admin-dashboard/user-profiles' },
     { text: 'Employee', icon: <GroupIcon />, path: '/admin-dashboard/employees' },
     { text: 'Department', icon: <BusinessIcon />, path: '/admin-dashboard/departments' },
     { text: 'Manager', icon: <ManagerIcon />, path: '/admin-dashboard/managers' },

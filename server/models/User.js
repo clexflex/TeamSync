@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     role: {type: String, enum: ["admin", "employee", "manager"], required: true},
     profileImage: {type: String},
     status: { type: String, enum: ['active', 'inactive'], default: 'active' }, 
+    // userProfileId: { type: Schema.Types.ObjectId, ref: "UserProfile", unique: true },
     createAt: {type: Date, default: Date.now},
     updatedAt: {type: Date, default: Date.now},
 });
