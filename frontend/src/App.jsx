@@ -40,6 +40,11 @@ import CreateUserProfile from "./components/userProfile/CreateUserProfile";
 import UserProfileList from "./components/userProfile/UserProfileList";
 import ViewUserProfile from "./components/userProfile/ViewUserProfile";
 import EditUserProfile from "./components/userProfile/EditUserProfile";
+import LeavePolicyList from "./components/leavePolicy/LeavePolicyList";
+import ViewLeavePolicy from "./components/leavePolicy/ViewLeavePolicy";
+import CreateLeavePolicy from "./components/leavePolicy/CreateLeavePolicy";
+import EditLeavePolicy from "./components/leavePolicy/EditLeavePolicy";
+import AssignLeavePolicy from "./components/leavePolicy/AssignLeavePolicy";
 
 
 const DEFAULT_REDIRECT = "/admin-dashboard";
@@ -92,6 +97,12 @@ function App() {
           <Route path="user-profile/create" element={<CreateUserProfile />} />
           <Route path="user-profile/:id" element={<ViewUserProfile />} />
           <Route path="user-profile/edit/:id" element={<EditUserProfile />} />
+
+          <Route path="leave-policies" element={<LeavePolicyList />} />
+          <Route path="leave-policy/:id" element={<ViewLeavePolicy />} />
+          <Route path="leave-policy/create" element={<CreateLeavePolicy />} />
+          <Route path="leave-policy/edit/:id" element={<EditLeavePolicy />} />
+          <Route path="leave-policy/assign/:id" element={<AssignLeavePolicy />} />
         </Route>
 
         {/* Employee Dashboard */}
@@ -136,6 +147,7 @@ function App() {
           <Route path="leaves/:id" element={<LeaveList />} />
           <Route path="add-leave" element={<AddLeave />} />
           <Route path="salary/:id" element={<ViewSalary />} />
+          <Route path="user-profile/:id" element={<ViewUserProfile />} />
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />

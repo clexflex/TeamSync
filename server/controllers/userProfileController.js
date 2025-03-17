@@ -146,7 +146,8 @@ const getUserProfiles = async (req, res) => {
             .populate({
                 path: 'userId',
                 select: 'name email role status profileImage'
-            });
+            })
+            .populate('leavePolicy', 'name'); // Add this line to populate leave policy details
 
         // Enhance user profiles with employee or manager data
         const enhancedProfiles = await Promise.all(userProfiles.map(async (profile) => {
@@ -188,6 +189,9 @@ const getUserProfiles = async (req, res) => {
                     profileImage: user.profileImage
                 },
                 ...additionalData,
+                hasLeavePolicy: !!profile.leavePolicy, // Add boolean flag to indicate if user has a policy
+                leavePolicyId: profile.leavePolicy?._id || null, // Include the policy ID if available
+                leavePolicyName: profile.leavePolicy?.name || null, // Include the policy name if available
                 joiningDate: profile.joiningDate,
                 leaveBalances: profile.leaveBalances,
                 createdAt: profile.createdAt
@@ -212,23 +216,34 @@ const getUserProfileById = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // First, determine if we're looking for a UserProfile ID or a User ID
+        let userProfile;
+        
+        // Try to find by UserProfile ID first
+        userProfile = await UserProfile.findById(id);
+        
+        // If not found, try to find by User ID
+        if (!userProfile) {
+            userProfile = await UserProfile.findOne({ userId: id });
+        }
+
+        // Still not found, return 404
+        if (!userProfile) {
+            return res.status(404).json({ success: false, error: "User profile not found" });
+        }
+
         // Check access rights - admin can view any profile, users can only view their own
         if (req.user.role !== 'admin') {
-            const userProfile = await UserProfile.findOne({ userId: req.user._id });
-            if (!userProfile || userProfile._id.toString() !== id) {
+            if (userProfile.userId.toString() !== req.user._id.toString()) {
                 return res.status(403).json({ success: false, error: "Access denied. You can only view your own profile" });
             }
         }
 
-        const userProfile = await UserProfile.findById(id)
-            .populate({
-                path: 'userId',
-                select: 'name email role status profileImage'
-            });
-
-        if (!userProfile) {
-            return res.status(404).json({ success: false, error: "User profile not found" });
-        }
+        // Populate user details
+        await userProfile.populate({
+            path: 'userId',
+            select: 'name email role status profileImage'
+        });
 
         const user = userProfile.userId;
         let additionalData = {};
@@ -308,7 +323,8 @@ const updateUserProfile = async (req, res) => {
             dob,
             maritalStatus,
             leavePolicy,
-            status
+            status,
+            leaveBalances
         } = req.body;
 
         // First verify the profile exists
@@ -348,7 +364,7 @@ const updateUserProfile = async (req, res) => {
         // Update UserProfile
         if (joiningDate) userProfile.joiningDate = joiningDate;
         if (leavePolicy) userProfile.leavePolicy = leavePolicy;
-        
+        if (leaveBalances) {userProfile.leaveBalances = leaveBalances;}
         await userProfile.save();
 
         // Update Employee or Manager based on role

@@ -12,7 +12,10 @@ import {
   CircularProgress,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Card,
+  CardContent,
+  Divider
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import config from "../../config";
@@ -31,7 +34,8 @@ const EditUserProfile = () => {
     salary: 0,
     joiningDate: '',
     password: '',
-    userType: ''
+    userType: '',
+    leaveBalances: [] // Added for leave balances
   });
   
   const [departments, setDepartments] = useState([]);
@@ -92,7 +96,8 @@ const EditUserProfile = () => {
             status: userData.status,
             userType: userData.role,
             joiningDate: profileData.joiningDate?.split('T')[0] || '',
-            password: ''
+            password: '',
+            leaveBalances: profileData.leaveBalances || [] // Added leave balances
           };
 
           if (userData.role === 'employee') {
@@ -146,6 +151,20 @@ const EditUserProfile = () => {
         return newFields;
       });
     }
+  };
+
+  // Handle leave balance changes
+  const handleLeaveBalanceChange = (index, field, value) => {
+    const updatedLeaveBalances = [...userProfile.leaveBalances];
+    updatedLeaveBalances[index][field] = value;
+    
+    setUserProfile(prev => ({
+      ...prev,
+      leaveBalances: updatedLeaveBalances
+    }));
+    
+    // Mark leaveBalances as changed
+    setChangedFields(prev => ({ ...prev, leaveBalances: true }));
   };
 
   const handleTabChange = (event, newValue) => {
@@ -244,6 +263,7 @@ const EditUserProfile = () => {
           <Tab label="Basic Information" />
           <Tab label="Role-specific Information" />
           {userProfile.userType === 'employee' && <Tab label="Employment Details" />}
+          <Tab label="Leave Balances" /> {/* New tab for leave balances */}
         </Tabs>
 
         <Box component="form" onSubmit={handleSubmit} sx={{ p: 3 }}>
@@ -448,6 +468,81 @@ const EditUserProfile = () => {
             </Grid>
           )}
 
+          {/* Leave Balances tab - New addition */}
+          {activeTab === (userProfile.userType === 'employee' ? 3 : 2) && (
+            <Box>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2, mb: 3 }}>
+                Leave Balance Management
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {userProfile.leaveBalances?.map((leave, index) => (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Card variant="outlined" sx={{ height: '100%' }}>
+                      <CardContent>
+                        <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
+                          {leave.leaveType}
+                        </Typography>
+                        <Divider sx={{ my: 1.5 }} />
+                        
+                        <Grid container spacing={2}>
+                          <Grid item xs={4}>
+                            <TextField
+                              fullWidth
+                              label="Available Balance"
+                              type="number"
+                              value={leave.balance}
+                              onChange={(e) => handleLeaveBalanceChange(index, 'balance', parseInt(e.target.value) || 0)}
+                              InputProps={{ inputProps: { min: 0 } }}
+                              variant="outlined"
+                              size="small"
+                              sx={{ mb: 2 }}
+                            />
+                          </Grid>
+                          
+                          <Grid item xs={4}>
+                            <TextField
+                              fullWidth
+                              label="Used"
+                              type="number"
+                              value={leave.used}
+                              onChange={(e) => handleLeaveBalanceChange(index, 'used', parseInt(e.target.value) || 0)}
+                              InputProps={{ inputProps: { min: 0 } }}
+                              variant="outlined"
+                              size="small"
+                              sx={{ mb: 2 }}
+                            />
+                          </Grid>
+                          
+                          <Grid item xs={4}>
+                            <TextField
+                              fullWidth
+                              label="Carry Forward"
+                              type="number"
+                              value={leave.carryForward}
+                              onChange={(e) => handleLeaveBalanceChange(index, 'carryForward', parseInt(e.target.value) || 0)}
+                              InputProps={{ inputProps: { min: 0 } }}
+                              variant="outlined"
+                              size="small"
+                            />
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+                
+                {(!userProfile.leaveBalances || userProfile.leaveBalances.length === 0) && (
+                  <Grid item xs={12}>
+                    <Alert severity="info">
+                      No leave balances found for this user.
+                    </Alert>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
+
           <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
             {activeTab > 0 && (
               <Button
@@ -458,7 +553,7 @@ const EditUserProfile = () => {
               </Button>
             )}
             
-            {activeTab < (userProfile.userType === 'employee' ? 2 : 1) && (
+            {activeTab < (userProfile.userType === 'employee' ? 3 : 2) && (
               <Button
                 variant="outlined"
                 onClick={() => setActiveTab(activeTab + 1)}

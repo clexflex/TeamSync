@@ -118,6 +118,9 @@ export const updateLeavePolicy = async (req, res) => {
             });
         }
 
+        // Store original leave types before updating for comparison
+        const originalLeaveTypes = [...policy.leaveTypes];
+
         // Parse leaveTypes if it's a string (from form data)
         const parsedLeaveTypes = Array.isArray(leaveTypes) 
             ? leaveTypes 
@@ -147,13 +150,105 @@ export const updateLeavePolicy = async (req, res) => {
         policy.active = active !== undefined ? active : policy.active;
         policy.updatedAt = Date.now();
 
+        // Save the updated policy
         await policy.save();
         
-        logger.info(`Leave policy "${policy.name}" updated successfully`);
+        // Now update all user profiles that use this policy
+        const userProfiles = await UserProfile.find({ leavePolicy: id });
+        
+        // Track update statistics
+        let updatedProfiles = 0;
+        let failedUpdates = 0;
+        
+        // Create map of original leave types by type for easy lookup
+        const originalLeaveTypesMap = {};
+        originalLeaveTypes.forEach(lt => {
+            originalLeaveTypesMap[lt.type] = lt;
+        });
+        
+        // Create map of new leave types by type for easy lookup
+        const newLeaveTypesMap = {};
+        formattedLeaveTypes.forEach(lt => {
+            newLeaveTypesMap[lt.type] = lt;
+        });
+        
+        // Get sets of leave types for determining added/removed types
+        const originalLeaveTypeSet = new Set(originalLeaveTypes.map(lt => lt.type));
+        const newLeaveTypeSet = new Set(formattedLeaveTypes.map(lt => lt.type));
+        
+        // Find added and removed leave types
+        const addedLeaveTypes = formattedLeaveTypes.filter(lt => !originalLeaveTypeSet.has(lt.type));
+        const removedLeaveTypes = originalLeaveTypes.filter(lt => !newLeaveTypeSet.has(lt.type));
+        
+        // Update each user profile
+        for (const profile of userProfiles) {
+            try {
+                let modified = false;
+                
+                // Create a map of user's current leave balances by type for easy lookup
+                const userLeaveBalanceMap = {};
+                profile.leaveBalances.forEach(lb => {
+                    userLeaveBalanceMap[lb.leaveType] = lb;
+                });
+                
+                // Handle updated leave types - check for daysAllowed changes
+                for (const leaveType of formattedLeaveTypes) {
+                    if (originalLeaveTypesMap[leaveType.type] && 
+                        originalLeaveTypesMap[leaveType.type].daysAllowed !== leaveType.daysAllowed) {
+                        
+                        // This leave type's daysAllowed was changed
+                        const userBalance = userLeaveBalanceMap[leaveType.type];
+                        
+                        if (userBalance) {
+                            // Calculate the difference in allowed days
+                            const difference = leaveType.daysAllowed - originalLeaveTypesMap[leaveType.type].daysAllowed;
+                            
+                            // Update the user's balance
+                            userBalance.balance += difference;
+                            modified = true;
+                        }
+                    }
+                }
+                
+                // Handle added leave types
+                for (const newLeaveType of addedLeaveTypes) {
+                    // Add the new leave type to the user's balances
+                    profile.leaveBalances.push({
+                        leaveType: newLeaveType.type,
+                        balance: newLeaveType.daysAllowed,
+                        used: 0,
+                        carryForward: 0
+                    });
+                    modified = true;
+                }
+                
+                // Handle removed leave types
+                if (removedLeaveTypes.length > 0) {
+                    profile.leaveBalances = profile.leaveBalances.filter(
+                        lb => !removedLeaveTypes.some(rlt => rlt.type === lb.leaveType)
+                    );
+                    modified = true;
+                }
+                
+                // Save the profile if it was modified
+                if (modified) {
+                    profile.updatedAt = Date.now();
+                    await profile.save();
+                    updatedProfiles++;
+                }
+            } catch (error) {
+                logger.error(`Error updating user profile ${profile.userId}: ${error.message}`);
+                failedUpdates++;
+            }
+        }
+        
+        logger.info(`Leave policy "${policy.name}" updated successfully. Updated ${updatedProfiles} user profiles, ${failedUpdates} failures.`);
         return res.status(200).json({
             success: true,
             message: "Leave policy updated successfully",
-            policy
+            policy,
+            profilesUpdated: updatedProfiles,
+            profileUpdatesFailed: failedUpdates
         });
     } catch (error) {
         logger.error(`Error updating leave policy: ${error.message}`);
@@ -305,6 +400,49 @@ export const assignLeavePolicy = async (req, res) => {
         return res.status(500).json({
             success: false,
             error: "Server error in assigning leave policy"
+        });
+    }
+};
+
+// Delete a leave policy
+export const deleteLeavePolicy = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // First check if the policy exists
+        const policy = await LeavePolicy.findById(id);
+        if (!policy) {
+            return res.status(404).json({
+                success: false,
+                error: "Leave policy not found"
+            });
+        }
+        
+        // Check if any user profiles are using this policy
+        const userProfilesUsingPolicy = await UserProfile.find({ leavePolicy: id });
+        
+        if (userProfilesUsingPolicy.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `Cannot delete policy: It is assigned to ${userProfilesUsingPolicy.length} users. Please reassign these users to a different policy first.`,
+                affectedUsers: userProfilesUsingPolicy.length
+            });
+        }
+        
+        // If no users are using the policy, proceed with deletion
+        await LeavePolicy.findByIdAndDelete(id);
+        
+        logger.info(`Leave policy "${policy.name}" deleted successfully`);
+        
+        return res.status(200).json({
+            success: true,
+            message: "Leave policy deleted successfully"
+        });
+    } catch (error) {
+        logger.error(`Error deleting leave policy: ${error.message}`);
+        return res.status(500).json({
+            success: false,
+            error: "Server error in deleting leave policy"
         });
     }
 };

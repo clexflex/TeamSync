@@ -27,7 +27,7 @@ const EmployeeDashboard = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/employee-dashboard' },
     { text: 'Attendance Form', icon: <AttendanceIcon />, path: '/employee-dashboard/attendance-form' },
-    { text: 'My Profile', icon: <ProfileIcon />, path: `/employee-dashboard/profile/${user?._id}` },
+    { text: 'My Profile', icon: <ProfileIcon />, path: `/employee-dashboard/user-profile/${user?._id}` },
     { text: 'Leaves', icon: <LeaveIcon />, path: `/employee-dashboard/leaves/${user?._id}` },
     { text: 'Salary', icon: <SalaryIcon />, path: `/employee-dashboard/salary/${user?._id}` },
   ];

@@ -7,7 +7,8 @@ import { Menu as MenuIcon, Dashboard as DashboardIcon, Group as GroupIcon,
          Layers as LayersIcon, AssignmentTurnedIn as AttendanceIcon,
          Assessment as AnalyticsIcon, EventNote as LeaveIcon,
          AttachMoney as SalaryIcon, Settings as SettingsIcon, 
-         Celebration} from '@mui/icons-material';
+         Celebration,
+         Rule as PolicyIcon} from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
@@ -28,6 +29,7 @@ const AdminDashboard = () => {
     { text: 'Teams', icon: <LayersIcon />, path: '/admin-dashboard/team' },
     { text: 'Attendance', icon: <AttendanceIcon />, path: '/admin-dashboard/attendance-approval' },
     { text: 'Analytics', icon: <AnalyticsIcon />, path: '/admin-dashboard/attendance/reports' },
+    { text: 'Leave Policy', icon: <PolicyIcon />, path: '/admin-dashboard/leave-policies' },
     { text: 'Leave', icon: <LeaveIcon />, path: '/admin-dashboard/leaves' },
     { text: 'Salary', icon: <SalaryIcon />, path: '/admin-dashboard/salary/add' },
     { text: 'Holidays', icon: <Celebration />, path: '/admin-dashboard/holidays' },

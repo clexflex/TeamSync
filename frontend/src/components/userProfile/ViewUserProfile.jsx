@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import config from '../../config';
 import {
@@ -31,6 +31,7 @@ import {
   Group as GroupIcon,
   AttachMoney as AttachMoneyIcon
 } from '@mui/icons-material';
+import { useAuth } from '../../context/authContext';
 
 const ViewUserProfile = () => {
   const { id } = useParams();
@@ -39,6 +40,19 @@ const ViewUserProfile = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const theme = useTheme();
+  const location = useLocation();
+  const { user } = useAuth();
+
+  // Determine if the current user is an admin
+  const isAdmin = user?.role === 'admin';
+  
+  // Determine if the user is viewing their own profile
+  const isOwnProfile = user?._id === id;
+
+  // Determine which dashboard we're in based on URL path
+  const isAdminDashboard = location.pathname.includes('/admin-dashboard');
+  const isEmployeeDashboard = location.pathname.includes('/employee-dashboard');
+  const isManagerDashboard = location.pathname.includes('/manager-dashboard');
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -86,16 +100,18 @@ const ViewUserProfile = () => {
     );
   }
 
-  const { user, joiningDate, leaveBalances } = userProfile;
-  const isEmployee = user.role === 'employee';
-  const isManager = user.role === 'manager';
+  const { user: profileUser, joiningDate, leaveBalances } = userProfile;
+  const isEmployee = profileUser.role === 'employee';
+  const isManager = profileUser.role === 'manager';
 
-  // Navigate back based on role
+  // Navigate back based on role and current dashboard
   const navigateBack = () => {
-    if (isEmployee) {
-      navigate('/admin-dashboard/employees');
-    } else if (isManager) {
-      navigate('/admin-dashboard/managers');
+    if (isAdminDashboard) {
+      navigate('/admin-dashboard/user-profiles');
+    } else if (isEmployeeDashboard) {
+      navigate('/employee-dashboard');
+    } else if (isManagerDashboard) {
+      navigate('/manager-dashboard');
     } else {
       navigate(-1);
     }
@@ -133,13 +149,18 @@ const ViewUserProfile = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={navigateBack}
-        sx={{ mb: 3 }}
-      >
-        Back to {isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}
-      </Button>
+      {/* Only show back button if user is admin or viewing own profile */}
+     
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={navigateBack}
+          sx={{ mb: 3 }}
+        >
+          {isAdminDashboard 
+            ? `Back to ${isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}`
+            : 'Back to Dashboard'}
+        </Button>
+    
 
       <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         {/* Header Section */}
@@ -171,10 +192,10 @@ const ViewUserProfile = () => {
             sx={{ position: 'relative', zIndex: 1 }}
           >
             <Avatar
-              src={user.profileImage 
-                ? `${config.API_URL}/uploads/${user.profileImage}`
-                : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-              alt={user.name}
+              src={profileUser.profileImage 
+                ? `${config.API_URL}/uploads/${profileUser.profileImage}`
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(profileUser.name)}&background=random`}
+              alt={profileUser.name}
               sx={{ 
                 width: 100, 
                 height: 100,
@@ -183,13 +204,13 @@ const ViewUserProfile = () => {
             />
             <Box>
               <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
-                {user.name}
+                {profileUser.name}
               </Typography>
               <Typography variant="h6" sx={{ opacity: 0.9 }}>
                 {userProfile.designation || (isManager ? 'Team Manager' : 'Employee')}
               </Typography>
               <Chip 
-                label={user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                label={profileUser.role.charAt(0).toUpperCase() + profileUser.role.slice(1)}
                 color="secondary"
                 size="small"
                 sx={{ mt: 1 }}
@@ -224,7 +245,7 @@ const ViewUserProfile = () => {
                 <InfoItem
                   icon={<EmailIcon />}
                   label="Email"
-                  value={user.email}
+                  value={profileUser.email}
                 />
                 <InfoItem
                   icon={<BusinessIcon />}
@@ -239,7 +260,7 @@ const ViewUserProfile = () => {
                 <InfoItem
                   icon={<PersonIcon />}
                   label="Status"
-                  value={user.status === 'active' ? 'Active' : 'Inactive'}
+                  value={profileUser.status === 'active' ? 'Active' : 'Inactive'}
                   chipValue={true}
                 />
               </Stack>
@@ -397,21 +418,23 @@ const ViewUserProfile = () => {
           )}
         </Grid>
 
-        {/* Action Buttons */}
-        <Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={navigateBack}
-          >
-            Back
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => navigate(`/admin-dashboard/user-profile/edit/${id}`)}
-          >
-            Edit Profile
-          </Button>
-        </Box>
+        {/* Action Buttons - Only show for admin users */}
+        {isAdmin && isAdminDashboard && (
+          <Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={navigateBack}
+            >
+              Back
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate(`/admin-dashboard/user-profile/edit/${id}`)}
+            >
+              Edit Profile
+            </Button>
+          </Box>
+        )}
       </Paper>
     </Box>
   );

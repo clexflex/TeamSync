@@ -10,6 +10,7 @@ import {
   AssignmentTurnedIn as ApprovalIcon,
   CalendarToday as LeaveIcon,
   AttachMoney as SalaryIcon,
+  Person as ProfileIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
@@ -27,6 +28,7 @@ const ManagerDashboard = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/manager-dashboard' },
+    { text: 'My Profile', icon: <ProfileIcon />, path: `/manager-dashboard/user-profile/${user?._id}` },
     { text: 'Manage Teams', icon: <TeamIcon />, path: '/manager-dashboard/team' },
     { text: 'Attendance', icon: <AttendanceIcon />, path: '/manager-dashboard/attendance-form' },
     { text: 'Employee Attendance', icon: <ApprovalIcon />, path: '/manager-dashboard/attendance-approval' },
