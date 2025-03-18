@@ -7,7 +7,6 @@ import {
     getLeavePolicies,
     getLeavePolicyById,
     assignLeavePolicy,
-    deleteLeavePolicy,
     
     // Leave Balance Controllers
     getUserLeaveBalance,
@@ -34,8 +33,6 @@ router.put('/policy/:id', verifyUser, verifyRole(['admin']), updateLeavePolicy);
 router.get('/policy', verifyUser, verifyRole(['admin']), getLeavePolicies);
 router.get('/policy/:id', verifyUser, verifyRole(['admin']), getLeavePolicyById);
 router.post('/policy/assign', verifyUser, verifyRole(['admin']), assignLeavePolicy);
-router.delete('/policy/:id', verifyUser, verifyRole(['admin']), deleteLeavePolicy); // Add this route
-
 
 // Leave Balance Routes
 router.get('/balance/:userId', verifyUser, verifyRole(['admin', 'employee', 'manager']), getUserLeaveBalance);

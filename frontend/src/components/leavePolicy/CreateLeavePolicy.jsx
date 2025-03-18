@@ -1,24 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Checkbox,
-  IconButton,
-  Alert,
-  Stack,
-  Divider,
-  Chip
-} from '@mui/material';
+import {   Box,   Paper,   Typography,   TextField,   Button,   Grid,   FormControl,   InputLabel,   Select,   MenuItem,   FormControlLabel,   Checkbox,   IconButton,   Alert,   Stack,   Divider,   Chip } from '@mui/material';
 import { ArrowBack, Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';

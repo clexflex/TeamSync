@@ -1,41 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
-  FormHelperText,
-  CircularProgress,
-  Stack,
-  Divider,
-  Alert,
-  Card,
-  CardContent,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemButton,
-  FormControlLabel,
-  Switch
-} from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  Save as SaveIcon,
-  Person as PersonIcon,
-  PersonOutline as PersonOutlineIcon,
-  DateRange as DateRangeIcon,
-  Check as CheckIcon,
-  Cancel as CancelIcon
-} from '@mui/icons-material';
+import {   Box,   Paper,   Typography,   Button,   FormControl,   InputLabel,   Select,   MenuItem,   Chip,   Checkbox,   ListItemText,   OutlinedInput,   FormHelperText,   CircularProgress,   Stack,   Divider,   Alert,   Card,   CardContent,   List,   ListItem,   ListItemIcon,   ListItemButton,   FormControlLabel,   Switch } from '@mui/material';
+import {   ArrowBack as ArrowBackIcon,   Save as SaveIcon,   Person as PersonIcon,   PersonOutline as PersonOutlineIcon,   DateRange as DateRangeIcon,   Check as CheckIcon,   Cancel as CancelIcon } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
 

@@ -542,15 +542,20 @@ export const updateLeaveBalance = async (req, res) => {
 // Reset leave balances for all users (usually a yearly operation)
 export const resetLeaveBalances = async (req, res) => {
     try {
-        const { carryForward = true } = req.body;
+        const { 
+            carryForward = true, 
+            resetDate = new Date(),
+            userIds = [] // Optional: specific users to reset
+        } = req.body;
         
-        // Find all user profiles
-        const userProfiles = await UserProfile.find().populate('leavePolicy');
+        // Find user profiles - either all or specified ones
+        const query = userIds.length > 0 ? { userId: { $in: userIds } } : {};
+        const userProfiles = await UserProfile.find(query).populate('leavePolicy');
         
         if (userProfiles.length === 0) {
             return res.status(404).json({
                 success: false,
-                error: "No user profiles found"
+                error: "No user profiles found matching the criteria"
             });
         }
         
@@ -587,7 +592,8 @@ export const resetLeaveBalances = async (req, res) => {
                     }
                 });
                 
-                profile.lastLeaveBalanceReset = new Date();
+                // Update the reset date to track when it was last reset
+                profile.lastLeaveBalanceReset = resetDate;
                 profile.updatedAt = new Date();
                 await profile.save();
                 
@@ -608,11 +614,14 @@ export const resetLeaveBalances = async (req, res) => {
         const successful = results.filter(r => r.success).length;
         const failed = results.filter(r => !r.success);
         
-        logger.info(`Leave balances reset for ${successful} users, ${failed.length} failed`);
+        // Log detailed information about the reset operation
+        logger.info(`Leave balances reset operation completed: ${successful} successful, ${failed.length} failed`);
+        failed.forEach(f => logger.warn(`Failed to reset leave balance for user ${f.userId}: ${f.error}`));
         
         return res.status(200).json({
             success: true,
             message: `Leave balances reset for ${successful} users`,
+            resetDate: resetDate,
             failedResets: failed.length > 0 ? failed : undefined,
             totalReset: successful,
             totalFailed: failed.length

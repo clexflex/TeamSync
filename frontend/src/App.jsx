@@ -45,6 +45,7 @@ import ViewLeavePolicy from "./components/leavePolicy/ViewLeavePolicy";
 import CreateLeavePolicy from "./components/leavePolicy/CreateLeavePolicy";
 import EditLeavePolicy from "./components/leavePolicy/EditLeavePolicy";
 import AssignLeavePolicy from "./components/leavePolicy/AssignLeavePolicy";
+import LeaveBalanceReset from "./components/leavePolicy/LeaveBalanceReset";
 
 
 const DEFAULT_REDIRECT = "/admin-dashboard";
@@ -103,6 +104,7 @@ function App() {
           <Route path="leave-policy/create" element={<CreateLeavePolicy />} />
           <Route path="leave-policy/edit/:id" element={<EditLeavePolicy />} />
           <Route path="leave-policy/assign/:id" element={<AssignLeavePolicy />} />
+          <Route path="leave-balance-reset" element={<LeaveBalanceReset />} />
         </Route>
 
         {/* Employee Dashboard */}

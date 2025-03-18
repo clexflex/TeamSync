@@ -1,37 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Stack,
-  Alert,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  Divider,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  Switch,
-  FormControlLabel,
-  Avatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow
-} from '@mui/material';
-import { 
-  ArrowBack as ArrowBackIcon,
-  Edit as EditIcon, 
-  PersonAdd as AssignIcon,
-  People as PeopleIcon
-} from '@mui/icons-material';
+import {   Box,   Paper,   Typography,   Button,   Stack,   Alert,   Grid,   Card,   CardContent,   CardHeader,   Divider,   Chip,   List,   ListItem,   ListItemText,   Switch,   FormControlLabel,   Avatar,   Table,   TableBody,   TableCell,   TableContainer,   TableHead,   TableRow } from '@mui/material';
+import {    ArrowBack as ArrowBackIcon,   Edit as EditIcon,    PersonAdd as AssignIcon,   People as PeopleIcon } from '@mui/icons-material';
 import axios from 'axios';
 import config from "../../config";
 

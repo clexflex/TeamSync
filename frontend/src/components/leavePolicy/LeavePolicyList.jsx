@@ -1,34 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Stack,
-  Alert,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle
-} from '@mui/material';
-import { 
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  PersonAdd as AssignIcon
-} from '@mui/icons-material';
+import {   Box,   Paper,   Typography,   Button,   IconButton,   Table,   TableBody,   TableCell,   TableContainer,   TableHead,   TableRow,   TablePagination,   Stack,   Alert,   Chip,   Dialog,   DialogActions,   DialogContent,   DialogContentText,   DialogTitle } from '@mui/material';
+import {   Restore as ResetIcon ,Add as AddIcon,   Edit as EditIcon,   Delete as DeleteIcon,   Visibility as VisibilityIcon,   PersonAdd as AssignIcon }from '@mui/icons-material';
 import axios from 'axios';
 import config from "../../config";
 
@@ -131,13 +104,22 @@ const LeavePolicyList = () => {
           <Typography variant="h5" fontWeight="bold">
             Leave Policies
           </Typography>
-          <Button
+          <Box >
+          <Button sx={{ m: 3 }}
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate("/admin-dashboard/leave-policy/create")}
           >
             Create Policy
           </Button>
+          <Button sx={{ m: 3 }}
+            variant="outlined"
+            startIcon={<ResetIcon />}
+            onClick={() => navigate("/admin-dashboard/leave-balance-reset")}
+          >
+          Reset Leave Balances
+          </Button>
+          </Box>
         </Stack>
 
         {error && (
