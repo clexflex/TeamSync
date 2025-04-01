@@ -2,6 +2,9 @@ import LeavePolicy from '../models/LeavePolicy.js';
 import UserProfile from '../models/UserProfile.js';
 import Leave from '../models/Leave.js';
 import User from '../models/User.js';
+import Employee from '../models/Employee.js';
+import Attendance from '../models/Attendance.js';
+import Holiday from '../models/Holiday.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -636,13 +639,206 @@ export const resetLeaveBalances = async (req, res) => {
 };
 
 // LEAVE MANAGEMENT CONTROLLERS
+// Helper functions
+const isWeekend = (date) => {
+    const day = date.getUTCDay();
+    return day === 0 || day === 6; // Sunday (0) or Saturday (6)
+};
+
+// Helper function to check if a date is a holiday
+const isHoliday = async (date) => {
+    const holidayDate = new Date(Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate()
+    ));
+    
+    const holiday = await Holiday.findOne({ 
+        date: { 
+            $gte: holidayDate, 
+            $lt: new Date(holidayDate.getTime() + 24 * 60 * 60 * 1000)
+        } 
+    });
+    
+    return !!holiday;
+};
+
+// Calculate working days (excluding weekends and holidays)
+const calculateWorkingDays = async (startDate, endDate) => {
+    let workingDays = 0;
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+        if (!isWeekend(currentDate) && !(await isHoliday(currentDate))) {
+            workingDays++;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return workingDays;
+};
+
+// Count weekends and holidays in a date range
+const countWeekendAndHolidayDays = async (startDate, endDate) => {
+    let weekendHolidayCount = 0;
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+        if (isWeekend(currentDate) || await isHoliday(currentDate)) {
+            weekendHolidayCount++;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return weekendHolidayCount;
+};
+
+// Create attendance records for approved leaves
+const createAttendanceRecordsForLeave = async (leave) => {
+    try {
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        
+        // Get employee info
+        const employee = await Employee.findOne({ userId: leave.userId });
+        const user = await User.findById(leave.userId);
+        
+        if (!user) {
+            throw new Error(`User not found for ID: ${leave.userId}`);
+        }
+        
+        // Loop through each day in the leave period
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            const dateUTC = new Date(Date.UTC(
+                currentDate.getUTCFullYear(),
+                currentDate.getUTCMonth(),
+                currentDate.getUTCDate()
+            ));
+            
+            // Check if attendance record already exists for this day
+            const existingAttendance = await Attendance.findOne({
+                userId: leave.userId,
+                date: {
+                    $gte: dateUTC,
+                    $lt: new Date(dateUTC.getTime() + 24 * 60 * 60 * 1000)
+                }
+            });
+            
+            // Determine if date is weekend or holiday
+            const isWeekendDay = isWeekend(dateUTC);
+            const isHolidayDay = await isHoliday(dateUTC);
+            
+            // Define default office hours for attendance records
+            const clockInTime = new Date(dateUTC);
+            clockInTime.setUTCHours(10, 0, 0, 0); // 10:00 AM IST
+            
+            const clockOutTime = new Date(dateUTC);
+            clockOutTime.setUTCHours(19, 0, 0, 0); // 7:00 PM IST
+            
+            if (!existingAttendance) {
+                // Determine status and credits based on leave type and date
+                let status, credits;
+                
+                // Handle sandwich leave case for unpaid leaves
+                if (!leave.useLeaveBalance && (isWeekendDay || isHolidayDay)) {
+                    // If unpaid leave spans a weekend/holiday, mark as Absent (sandwich rule)
+                    status = "Absent";
+                    credits = 0;
+                } else if (isWeekendDay || isHolidayDay) {
+                    // If it's a weekend/holiday within a paid leave, mark as Weekly Off
+                    status = "Weekly Off";
+                    credits = 1;
+                } else {
+                    // Regular leave day
+                    if (leave.leaveType === "Half Leave") {
+                        if (leave.useLeaveBalance) {
+                            status = "Paid Half Leave";
+                            credits = 0.5;
+                        } else {
+                            status = "Unpaid Half Leave";
+                            credits = 0;
+                        }
+                    } else {
+                        if (leave.useLeaveBalance) {
+                            status = "Paid Leave";
+                            credits = 1;
+                        } else {
+                            status = "Unpaid Leave";
+                            credits = 0;
+                        }
+                    }
+                }
+                
+                // Create new attendance record
+                const newAttendance = new Attendance({
+                    userId: leave.userId,
+                    teamId: employee?.teamId || null,
+                    date: dateUTC,
+                    clockIn: clockInTime,
+                    clockOut: leave.leaveType !== "Half Leave" ? clockOutTime : null,
+                    status: status,
+                    credits: credits,
+                    approvalStatus: "Approved",
+                    role: user.role || "employee",
+                    isWeekend: isWeekendDay,
+                    isHoliday: isHolidayDay,
+                    leaveId: leave._id,
+                    approvedBy: leave.approvedBy,
+                    adminApproval: true,
+                    isHalfDay: leave.leaveType === "Half Leave",
+                    useLeaveBalance: leave.useLeaveBalance,
+                    comments: `Attendance record created for approved leave ID: ${leave._id}`
+                });
+                
+                await newAttendance.save();
+                logger.info(`Created attendance record for leave ID ${leave._id} on ${dateUTC.toISOString()}`);
+            } else if (leave.leaveType === "Half Leave") {
+                // If existing attendance and half-day leave
+                existingAttendance.isHalfDay = true;
+                existingAttendance.leaveId = leave._id;
+                
+                if (leave.useLeaveBalance) {
+                    existingAttendance.status = "Paid Half Leave";
+                    existingAttendance.credits = existingAttendance.clockIn ? 1 : 0.5;
+                } else {
+                    existingAttendance.status = "Unpaid Half Leave";
+                    existingAttendance.credits = existingAttendance.clockIn ? 0.5 : 0;
+                }
+                
+                existingAttendance.useLeaveBalance = leave.useLeaveBalance;
+                await existingAttendance.save();
+                logger.info(`Updated attendance record for half-day leave ID ${leave._id} on ${dateUTC.toISOString()}`);
+            }
+            
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        return true;
+    } catch (error) {
+        logger.error(`Failed to create attendance records for leave: ${error.message}`);
+        console.error("Error creating attendance for leave:", error);
+        throw error;
+    }
+};
+
 // Add a new leave request
 export const addLeave = async (req, res) => {
     try {
         const { 
-            userId, leaveType, startDate, endDate, 
-            reason, isPaid, useLeaveBalance 
+            startDate, endDate, leaveType, reason, 
+            useLeaveBalance = true
         } = req.body;
+        
+        const userId = req.user?._id;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: "User ID is missing"
+            });
+        }
         
         // Check if user exists
         const user = await User.findById(userId);
@@ -653,23 +849,91 @@ export const addLeave = async (req, res) => {
             });
         }
         
-        // Create documents array if files are uploaded
-        const documents = req.files ? req.files.map(file => file.filename) : [];
+        // Parse dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
         
-        // Create new leave request
-        const newLeave = new Leave({
+        // For Half Leave, ensure start and end dates are the same
+        if (leaveType === "Half Leave" && start.getTime() !== end.getTime()) {
+            return res.status(400).json({
+                success: false,
+                error: "Half Leave must be for a single day only"
+            });
+        }
+        
+        // Validate date range
+        if (end < start) {
+            return res.status(400).json({
+                success: false,
+                error: "End date cannot be before start date"
+            });
+        }
+        
+        // Calculate total days and working days
+        const diffTime = Math.abs(end - start);
+        const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        // Calculate working days (excluding weekends and holidays)
+        const workingDays = await calculateWorkingDays(start, end);
+        
+        // For sandwich leave (unpaid): Check weekends/holidays in between
+        const weekendHolidayCount = !useLeaveBalance ? 
+            await countWeekendAndHolidayDays(start, end) : 0;
+        
+        // Calculate total leave days to deduct from balance
+        let leaveBalanceToDeduct = workingDays;
+        
+        // For half-day leave, only deduct 0.5 day
+        if (leaveType === "Half Leave") {
+            leaveBalanceToDeduct = 0.5;
+        }
+        
+        // Check for overlapping leave requests
+        const existingLeaves = await Leave.find({
             userId,
-            leaveType,
-            startDate,
-            endDate,
-            reason,
-            isPaid: isPaid === 'true' || isPaid === true,
-            useLeaveBalance: useLeaveBalance === 'true' || useLeaveBalance === true,
-            documents
+            status: { $in: ["Pending", "Approved"] },
+            $or: [
+                // Leave overlaps with start date
+                { startDate: { $lte: start }, endDate: { $gte: start } },
+                // Leave overlaps with end date
+                { startDate: { $lte: end }, endDate: { $gte: end } },
+                // Leave is contained within new request
+                { startDate: { $gte: start }, endDate: { $lte: end } }
+            ]
         });
         
-        // If using leave balance, check if user has enough balance
-        if (newLeave.useLeaveBalance) {
+        if (existingLeaves.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: "Leave request overlaps with existing leave requests",
+                conflictingLeaves: existingLeaves.map(leave => ({
+                    id: leave._id,
+                    status: leave.status,
+                    startDate: leave.startDate,
+                    endDate: leave.endDate
+                }))
+            });
+        }
+        
+        // Check for approved attendance records within the date range
+        if (leaveType !== "Half Leave") {
+            const approvedAttendance = await Attendance.find({
+                userId,
+                approvalStatus: "Approved",
+                date: { $gte: start, $lte: end }
+            });
+            
+            if (approvedAttendance.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Cannot request leave for days with approved attendance",
+                    conflictingDates: approvedAttendance.map(att => att.date)
+                });
+            }
+        }
+        
+        // Check leave balance if using leave balance
+        if (useLeaveBalance) {
             const userProfile = await UserProfile.findOne({ userId });
             
             if (!userProfile) {
@@ -686,27 +950,38 @@ export const addLeave = async (req, res) => {
             if (!leaveBalance) {
                 return res.status(400).json({
                     success: false,
-                    error: `No balance for leave type: ${leaveType}`
+                    error: `No balance found for leave type: ${leaveType}`
                 });
             }
             
-            // Calculate total days
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const diffTime = Math.abs(end - start);
-            const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            
-            if (leaveBalance.balance < totalDays) {
+            if (leaveBalance.balance < leaveBalanceToDeduct) {
                 return res.status(400).json({
                     success: false,
-                    error: `Insufficient leave balance. Available: ${leaveBalance.balance}, Required: ${totalDays}`
+                    error: `Insufficient leave balance. Available: ${leaveBalance.balance.toFixed(1)}, Required: ${leaveBalanceToDeduct.toFixed(1)}`
                 });
             }
         }
         
+        // Process uploaded documents if any
+        const documents = req.files ? req.files.map(file => file.filename) : [];
+        
+        // Create new leave request
+        const newLeave = new Leave({
+            userId,
+            leaveType,
+            startDate: start,
+            endDate: end,
+            totalDays: leaveType === "Half Leave" ? 0.5 : totalDays,
+            reason,
+            isPaid: useLeaveBalance,
+            useLeaveBalance,
+            documents,
+            appliedAt: Date.now()
+        });
+        
         await newLeave.save();
         
-        logger.info(`Leave request created for user ${userId}`);
+        logger.info(`New leave request created for user ${userId} from ${start.toISOString()} to ${end.toISOString()}`);
         
         return res.status(201).json({
             success: true,
@@ -714,7 +989,6 @@ export const addLeave = async (req, res) => {
             leave: newLeave
         });
     } catch (error) {
-        console.log(error)
         logger.error(`Error adding leave: ${error.message}`);
         return res.status(500).json({
             success: false,
@@ -723,7 +997,301 @@ export const addLeave = async (req, res) => {
     }
 };
 
-// Update leave details
+// Approve a leave request
+export const approveLeave = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { comment } = req.body;
+        const approverId = req.user?._id;
+        
+        if (!approverId) {
+            return res.status(400).json({
+                success: false,
+                error: "Approver ID is missing"
+            });
+        }
+        
+        // Check if user has appropriate role
+        const approver = await User.findById(approverId);
+        if (!approver || !["admin", "manager"].includes(approver.role)) {
+            return res.status(403).json({
+                success: false,
+                error: "Unauthorized. Only managers and admins can approve leaves"
+            });
+        }
+        
+        const leave = await Leave.findById(id);
+        
+        if (!leave) {
+            return res.status(404).json({
+                success: false,
+                error: "Leave request not found"
+            });
+        }
+        
+        if (leave.status === "Approved") {
+            return res.status(400).json({
+                success: false,
+                error: "Leave request is already approved"
+            });
+        }
+        
+        if (leave.status === "Rejected") {
+            return res.status(400).json({
+                success: false,
+                error: "Cannot approve a rejected leave request"
+            });
+        }
+        
+        // Update leave status
+        leave.status = "Approved";
+        leave.approvedBy = approverId;
+        leave.approvalComment = comment || "";
+        leave.updatedAt = Date.now();
+        
+        // Check leave balance again before approval
+        if (leave.useLeaveBalance) {
+            const userProfile = await UserProfile.findOne({ userId: leave.userId });
+            
+            if (!userProfile) {
+                return res.status(404).json({
+                    success: false,
+                    error: "User profile not found"
+                });
+            }
+            
+            const leaveBalance = userProfile.leaveBalances.find(
+                lb => lb.leaveType === leave.leaveType
+            );
+            
+            if (!leaveBalance) {
+                return res.status(400).json({
+                    success: false,
+                    error: `No balance for leave type: ${leave.leaveType}`
+                });
+            }
+            
+            // Calculate actual leave days to deduct
+            let daysToDeduct = leave.totalDays;
+            if (leave.leaveType === "Half Leave") {
+                daysToDeduct = 0.5;
+            }
+            
+            if (leaveBalance.balance < daysToDeduct) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Insufficient leave balance. Available: ${leaveBalance.balance.toFixed(1)}, Required: ${daysToDeduct.toFixed(1)}`
+                });
+            }
+            
+            // Deduct leave balance
+            leaveBalance.balance -= daysToDeduct;
+            leaveBalance.used += daysToDeduct;
+            
+            // Ensure balance doesn't go below 0
+            if (leaveBalance.balance < 0) {
+                leaveBalance.balance = 0;
+            }
+            
+            userProfile.updatedAt = Date.now();
+            await userProfile.save();
+            
+            logger.info(`Deducted ${daysToDeduct} days from ${leave.leaveType} balance for user ${leave.userId}`);
+        }
+        
+        await leave.save();
+        
+        // Create attendance records for the approved leave
+        try {
+            await createAttendanceRecordsForLeave(leave);
+            logger.info(`Successfully created attendance records for leave ID ${leave._id}`);
+        } catch (error) {
+            logger.error(`Failed to create attendance records for leave: ${error.message}`);
+            // Continue with leave approval even if attendance creation fails
+        }
+        
+        return res.status(200).json({
+            success: true,
+            message: "Leave request approved successfully",
+            leave
+        });
+    } catch (error) {
+        logger.error(`Error approving leave: ${error.message}`);
+        return res.status(500).json({
+            success: false,
+            error: `Server error in approving leave: ${error.message}`
+        });
+    }
+};
+
+// Reject a leave request
+export const rejectLeave = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { comment } = req.body;
+        const rejecterId = req.user?._id;
+        
+        if (!rejecterId) {
+            return res.status(400).json({
+                success: false,
+                error: "Rejecter ID is missing"
+            });
+        }
+        
+        // Check if user has appropriate role
+        const rejecter = await User.findById(rejecterId);
+        if (!rejecter || !["admin", "manager"].includes(rejecter.role)) {
+            return res.status(403).json({
+                success: false,
+                error: "Unauthorized. Only managers and admins can reject leaves"
+            });
+        }
+        
+        const leave = await Leave.findById(id);
+        
+        if (!leave) {
+            return res.status(404).json({
+                success: false,
+                error: "Leave request not found"
+            });
+        }
+        
+        if (leave.status !== "Pending") {
+            return res.status(400).json({
+                success: false,
+                error: `Cannot reject a leave that is already ${leave.status.toLowerCase()}`
+            });
+        }
+        
+        // Update leave status
+        leave.status = "Rejected";
+        leave.approvedBy = rejecterId;
+        leave.approvalComment = comment || "Leave request rejected";
+        leave.updatedAt = Date.now();
+        
+        await leave.save();
+        
+        logger.info(`Leave request ${id} rejected by user ${rejecterId}`);
+        
+        return res.status(200).json({
+            success: true,
+            message: "Leave request rejected successfully",
+            leave
+        });
+    } catch (error) {
+        logger.error(`Error rejecting leave: ${error.message}`);
+        return res.status(500).json({
+            success: false,
+            error: `Server error in rejecting leave: ${error.message}`
+        });
+    }
+};
+
+// Cancel a leave request
+export const cancelLeave = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?._id;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                error: "User ID is missing"
+            });
+        }
+        
+        const leave = await Leave.findById(id);
+        
+        if (!leave) {
+            return res.status(404).json({
+                success: false,
+                error: "Leave request not found"
+            });
+        }
+        
+        // Ensure the user is canceling their own leave
+        if (leave.userId.toString() !== userId.toString()) {
+            const user = await User.findById(userId);
+            
+            // Allow admins to cancel others' leaves
+            if (!user || user.role !== "admin") {
+                return res.status(403).json({
+                    success: false,
+                    error: "You can only cancel your own leave requests"
+                });
+            }
+        }
+        
+        // Only pending or approved leaves that haven't started yet can be canceled
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (leave.status === "Rejected") {
+            return res.status(400).json({
+                success: false,
+                error: "Cannot cancel a rejected leave request"
+            });
+        }
+        
+        if (leave.status === "Approved" && new Date(leave.startDate) < today) {
+            return res.status(400).json({
+                success: false,
+                error: "Cannot cancel a leave that has already started or ended"
+            });
+        }
+        
+        // If leave was approved and used leave balance, restore the balance
+        if (leave.status === "Approved" && leave.useLeaveBalance) {
+            const userProfile = await UserProfile.findOne({ userId: leave.userId });
+            
+            if (userProfile) {
+                const leaveBalance = userProfile.leaveBalances.find(
+                    lb => lb.leaveType === leave.leaveType
+                );
+                
+                if (leaveBalance) {
+                    // Calculate days to restore
+                    let daysToRestore = leave.totalDays;
+                    if (leave.leaveType === "Half Leave") {
+                        daysToRestore = 0.5;
+                    }
+                    
+                    // Restore leave balance
+                    leaveBalance.balance += daysToRestore;
+                    leaveBalance.used -= daysToRestore;
+                    
+                    userProfile.updatedAt = Date.now();
+                    await userProfile.save();
+                    
+                    logger.info(`Restored ${daysToRestore} days to ${leave.leaveType} balance for user ${leave.userId}`);
+                }
+            }
+            
+            // Delete any attendance records created for this leave
+            await Attendance.deleteMany({ leaveId: leave._id });
+            logger.info(`Deleted attendance records for canceled leave ID ${leave._id}`);
+        }
+        
+        // Remove the leave request
+        await Leave.findByIdAndDelete(id);
+        
+        logger.info(`Leave request ${id} canceled by user ${userId}`);
+        
+        return res.status(200).json({
+            success: true,
+            message: "Leave request canceled successfully"
+        });
+    } catch (error) {
+        logger.error(`Error canceling leave: ${error.message}`);
+        return res.status(500).json({
+            success: false,
+            error: `Server error in canceling leave: ${error.message}`
+        });
+    }
+};
+
+// NOT USED ANYWHERE : FOR EDITING LEAVE APPLICATION
+// Updated Leave function to handle leave balance when status changes to Approved
 export const updateLeave = async (req, res) => {
     try {
         const { id } = req.params;
@@ -741,12 +1309,73 @@ export const updateLeave = async (req, res) => {
                 error: "Leave request not found"
             });
         }
+
+        // Keep original values for comparison
+        const originalStartDate = new Date(leave.startDate);
+        const originalEndDate = new Date(leave.endDate);
+        const originalStatus = leave.status;
         
         // Update fields
-        if (startDate) leave.startDate = startDate;
-        if (endDate) leave.endDate = endDate;
+        let dateChanged = false;
+        if (startDate) {
+            leave.startDate = startDate;
+            dateChanged = true;
+        }
+        if (endDate) {
+            leave.endDate = endDate;
+            dateChanged = true;
+        }
+        
+        // If dates changed, check for overlaps
+        if (dateChanged) {
+            const start = new Date(leave.startDate);
+            const end = new Date(leave.endDate);
+            
+            // Validate date range
+            if (end < start) {
+                return res.status(400).json({
+                    success: false,
+                    error: "End date cannot be before start date"
+                });
+            }
+            
+            // Calculate new total days
+            const diffTime = Math.abs(end - start);
+            leave.totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            
+            // Check for overlapping leaves (excluding the current leave)
+            const existingLeaves = await Leave.find({
+                userId: leave.userId,
+                _id: { $ne: id },  // Exclude the current leave
+                $or: [
+                    { status: "Pending" },
+                    { status: "Approved" }
+                ],
+                $or: [
+                    // Case 1: New leave start date falls within an existing leave
+                    { startDate: { $lte: start }, endDate: { $gte: start } },
+                    // Case 2: New leave end date falls within an existing leave
+                    { startDate: { $lte: end }, endDate: { $gte: end } },
+                    // Case 3: New leave completely contains an existing leave
+                    { startDate: { $gte: start }, endDate: { $lte: end } }
+                ]
+            });
+            
+            if (existingLeaves.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Updated leave request overlaps with existing leave requests",
+                    conflictingLeaves: existingLeaves.map(leave => ({
+                        id: leave._id,
+                        status: leave.status,
+                        startDate: leave.startDate,
+                        endDate: leave.endDate
+                    }))
+                });
+            }
+        }
+        
         if (reason) leave.reason = reason;
-        if (status) leave.status = status;
         if (isPaid !== undefined) leave.isPaid = isPaid === 'true' || isPaid === true;
         if (useLeaveBalance !== undefined) leave.useLeaveBalance = useLeaveBalance === 'true' || useLeaveBalance === true;
         if (approvalComment) leave.approvalComment = approvalComment;
@@ -754,8 +1383,35 @@ export const updateLeave = async (req, res) => {
         leave.updatedAt = Date.now();
         
         // If status changed to approved, update approver
-        if (status === "Approved" && leave.status !== "Approved") {
-            leave.approvedBy = req.user._id;
+        if (status && status !== leave.status) {
+            leave.status = status;
+            
+            if (status === "Approved" && originalStatus !== "Approved") {
+                leave.approvedBy = req.user._id;
+                
+                // Handle leave balance deduction
+                if (leave.useLeaveBalance) {
+                    const userProfile = await UserProfile.findOne({ userId: leave.userId });
+                    
+                    if (userProfile) {
+                        const leaveBalance = userProfile.leaveBalances.find(
+                            lb => lb.leaveType === leave.leaveType
+                        );
+                        
+                        if (leaveBalance) {
+                            // Deduct leave days
+                            leaveBalance.balance -= leave.totalDays;
+                            leaveBalance.used += leave.totalDays;
+                            
+                            // Ensure balance doesn't go below 0
+                            if (leaveBalance.balance < 0) leaveBalance.balance = 0;
+                            
+                            userProfile.updatedAt = Date.now();
+                            await userProfile.save();
+                        }
+                    }
+                }
+            }
         }
         
         await leave.save();
@@ -911,190 +1567,3 @@ export const getLeaveDetail = async (req, res) => {
     }
   };
 
-// Approve a leave request
-export const approveLeave = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { comment } = req.body;
-        
-        const leave = await Leave.findById(id);
-        
-        if (!leave) {
-            return res.status(404).json({
-                success: false,
-                error: "Leave request not found"
-            });
-        }
-        
-        if (leave.status === "Approved") {
-            return res.status(400).json({
-                success: false,
-                error: "Leave is already approved"
-            });
-        }
-        
-        // Update leave status
-        leave.status = "Approved";
-        leave.approvedBy = req.user._id;
-        leave.approvalComment = comment || "";
-        leave.updatedAt = Date.now();
-        
-        await leave.save();
-        
-        // If using leave balance, deduct from balance
-        if (leave.useLeaveBalance) {
-            const userProfile = await UserProfile.findOne({ userId: leave.userId });
-            
-            if (userProfile) {
-                const leaveBalance = userProfile.leaveBalances.find(
-                    lb => lb.leaveType === leave.leaveType
-                );
-                
-                if (leaveBalance) {
-                    // Deduct leave days
-                    leaveBalance.balance -= leave.totalDays;
-                    leaveBalance.used += leave.totalDays;
-                    
-                    // Ensure balance doesn't go below 0
-                    if (leaveBalance.balance < 0) leaveBalance.balance = 0;
-                    
-                    userProfile.updatedAt = Date.now();
-                    await userProfile.save();
-                }
-            }
-        }
-        
-        // TODO: Update attendance records based on approved leave
-        
-        logger.info(`Leave request approved: ${id}`);
-        
-        return res.status(200).json({
-            success: true,
-            message: "Leave request approved successfully",
-            leave
-        });
-    } catch (error) {
-        logger.error(`Error approving leave: ${error.message}`);
-        return res.status(500).json({
-            success: false,
-            error: "Server error in approving leave"
-        });
-    }
-};
-
-// Reject a leave request
-export const rejectLeave = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { comment } = req.body;
-        
-        const leave = await Leave.findById(id);
-        
-        if (!leave) {
-            return res.status(404).json({
-                success: false,
-                error: "Leave request not found"
-            });
-        }
-        
-        if (leave.status === "Rejected") {
-            return res.status(400).json({
-                success: false,
-                error: "Leave is already rejected"
-            });
-        }
-        
-        // Update leave status
-        leave.status = "Rejected";
-        leave.approvedBy = req.user._id;
-        leave.approvalComment = comment || "Leave request rejected";
-        leave.updatedAt = Date.now();
-        
-        await leave.save();
-        
-        logger.info(`Leave request rejected: ${id}`);
-        
-        return res.status(200).json({
-            success: true,
-            message: "Leave request rejected successfully",
-            leave
-        });
-    } catch (error) {
-        logger.error(`Error rejecting leave: ${error.message}`);
-        return res.status(500).json({
-            success: false,
-            error: "Server error in rejecting leave"
-        });
-    }
-};
-
-// Cancel a leave request
-export const cancelLeave = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { comment } = req.body;
-        
-        const leave = await Leave.findById(id);
-        
-        if (!leave) {
-            return res.status(404).json({
-                success: false,
-                error: "Leave request not found"
-            });
-        }
-        
-        // Verify user has permission to cancel this leave
-        const isAdmin = req.user.role === 'admin';
-        const isOwner = leave.userId.toString() === req.user._id.toString();
-        
-        if (!isAdmin && !isOwner) {
-            return res.status(403).json({
-                success: false,
-                error: "You don't have permission to cancel this leave"
-            });
-        }
-        
-        // If leave was already approved and using leave balance, restore the balance
-        if (leave.status === "Approved" && leave.useLeaveBalance) {
-            const userProfile = await UserProfile.findOne({ userId: leave.userId });
-            
-            if (userProfile) {
-                const leaveBalance = userProfile.leaveBalances.find(
-                    lb => lb.leaveType === leave.leaveType
-                );
-                
-                if (leaveBalance) {
-                    // Restore leave days
-                    leaveBalance.balance += leave.totalDays;
-                    leaveBalance.used -= leave.totalDays;
-                    
-                    // Ensure used doesn't go below 0
-                    if (leaveBalance.used < 0) leaveBalance.used = 0;
-                    
-                    userProfile.updatedAt = Date.now();
-                    await userProfile.save();
-                }
-            }
-        }
-        
-        // Instead of deleting, mark as rejected with a cancellation comment
-        leave.status = "Rejected";
-        leave.approvalComment = comment || "Leave request cancelled";
-        leave.updatedAt = Date.now();
-        
-        await leave.save();
-        
-        logger.info(`Leave request cancelled: ${id}`);
-        
-        return res.status(200).json({
-            success: true,
-            message: "Leave request cancelled successfully"
-        });
-    } catch (error) {
-        logger.error(`Error cancelling leave: ${error.message}`);
-        return res.status(500).json({
-            success: false,
-            error: "Server error in cancelling leave"
-        });
-    }
-};

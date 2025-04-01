@@ -127,7 +127,6 @@ TeamSync
    │  ├─ Holiday.js
    │  ├─ Leave.js
    │  ├─ LeavePolicy.js
-   │  ├─ LeaveResetHistory.js
    │  ├─ Manager.js
    │  ├─ Salary.js
    │  ├─ Team.js
@@ -179,8 +178,7 @@ TeamSync
    │  └─ userProfile.js
    ├─ userSeed.js
    ├─ utils
-   │  ├─ logger.js
-   │  └─ scheduler.js
+   │  └─ logger.js
    └─ vercel.json
 
 ```

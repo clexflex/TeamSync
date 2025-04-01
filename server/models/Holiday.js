@@ -1,6 +1,4 @@
-// server/models/Holiday.js
 import mongoose from "mongoose";
-
 const { Schema } = mongoose;
 
 const holidaySchema = new Schema(

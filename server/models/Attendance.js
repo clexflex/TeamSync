@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
-
 const { Schema } = mongoose;
-
 const attendanceSchema = new Schema(
     {
         userId: { type: Schema.Types.ObjectId, ref: "User", required: true }, // Employee or Manager
@@ -12,7 +10,7 @@ const attendanceSchema = new Schema(
         tasksDone: { type: String }, // Details of tasks completed
         status: {
             type: String,
-            enum: ["Present", "Absent", "Half-Day", "Leave", "Extra-Work"],
+            enum: ["Present", "Absent", "Paid Leave", "Unpaid Leave", "Paid Half Leave","Unpaid Half Leave", 'Extra Work', 'Incomplete Attendance', 'Weekly Off'],
             default: "Absent", // Default status until clock-in
         },
         approvalStatus: {
@@ -30,7 +28,10 @@ const attendanceSchema = new Schema(
         workLocation: { type: String, enum: ["Onsite", "Remote"], default: "Onsite" }, // Location of work
         location: { type: Object }, // Store location as an object { lat, lon }
         leaveId: { type: Schema.Types.ObjectId, ref: "Leave" }, // Linked leave record if applicable
-        comments: { type: String }, // Additional comments
+        comments: { type: String }, 
+        isHalfDay: { type: Boolean, default: false },
+        useLeaveBalance: { type: Boolean, default: false },
+        credits: { type: Number, default: 0 }, 
     },
     { timestamps: true }
 );

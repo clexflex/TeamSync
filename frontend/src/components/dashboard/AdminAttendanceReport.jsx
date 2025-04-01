@@ -1,24 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  Grid,
-  Select,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Card,
-  CardContent,
-  Stack,
-  FormControl
-} from '@mui/material';
+import {   Box,   Paper,   Typography,   Grid,   Select,   MenuItem,   Button,   Table,   TableBody,   TableCell,   TableContainer,   TableHead,   TableRow,   CircularProgress,   Card,   CardContent,   Stack,   FormControl } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
   GetApp as DownloadIcon
@@ -53,16 +34,20 @@ const AdminAttendanceReport = () => {
     try {
       setLoading(true);
       const [year, month] = selectedMonth.split('-').map(Number);
-      
-      const startDate = new Date(year, month - 1, 26);
-      const endDate = new Date(year, month, 25);
-  
+
+      const currentMonth = month - 1; // Convert to 0-based
+      const prevMonthDate = new Date(year, currentMonth - 1, 1); // Previous month's 1st day
+      const startYear = prevMonthDate.getFullYear();
+      const startMonth = prevMonthDate.getMonth();
+      const startDate = new Date(startYear, startMonth, 26);
+      const endDate = new Date(year, currentMonth, 25);
+
       const formatDate = (date) => {
         const offset = date.getTimezoneOffset();
         const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
         return adjustedDate.toISOString().split('T')[0];
       };
-  
+
       const response = await axios.get(`${config.API_URL}/api/attendance/reports`, {
         params: {
           startDate: formatDate(startDate),
@@ -72,7 +57,7 @@ const AdminAttendanceReport = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-  
+
       if (response.data.success) {
         const processedData = {
           ...response.data.data,
@@ -144,7 +129,7 @@ const AdminAttendanceReport = () => {
         bgcolor: '#F3E5F5',
         color: '#6A1B9A'
       };
-      
+
       const statusColors = {
         Present: {
           bgcolor: '#E8F5E9',
@@ -198,26 +183,29 @@ const AdminAttendanceReport = () => {
           <Typography variant="h5" fontWeight="bold">
             Attendance Report
           </Typography>
-          
+
           <Stack direction="row" spacing={2}>
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <Select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
               >
-                {Array.from({ length: 12 }, (_, i) => {
-                  const date = new Date();
-                  date.setMonth(date.getMonth() - i);
-                  const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                  return (
-                    <MenuItem key={value} value={value}>
-                      {date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </MenuItem>
-                  );
-                })}
+                {
+                  Array.from({ length: 12 }, (_, i) => {
+                    const baseDate = new Date(); // Current date
+                    baseDate.setDate(1); // Avoid day overflow issues
+                    baseDate.setMonth(baseDate.getMonth() - i);
+                    const periodEndDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0); // Last day of the current month
+                    const value = `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}`;
+                    return (
+                      <MenuItem key={value} value={value}>
+                        {periodEndDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </MenuItem>
+                    );
+                  })}
               </Select>
             </FormControl>
-            
+
             <Button
               variant="contained"
               startIcon={<DownloadIcon />}
@@ -271,8 +259,10 @@ const AdminAttendanceReport = () => {
                 <Typography color="textSecondary" gutterBottom>
                   Period
                 </Typography>
+
                 <Typography variant="body1" component="div">
-                  {reportData.periodInfo.startDate} - {reportData.periodInfo.endDate}
+                  {new Date(reportData.periodInfo.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} -{' '}
+                  {new Date(reportData.periodInfo.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </Typography>
               </CardContent>
             </Card>
@@ -285,7 +275,7 @@ const AdminAttendanceReport = () => {
           <Typography variant="h6" sx={{ mb: 3, textTransform: 'capitalize' }}>
             {role}s
           </Typography>
-          
+
           <TableContainer sx={{ maxHeight: 440 }}>
             <Table stickyHeader>
               <TableHead>
