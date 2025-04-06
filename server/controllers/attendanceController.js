@@ -371,121 +371,6 @@ export const approveAttendance = async (req, res) => {
     }
 };
 
-// Function to create attendance records for approved leaves
-export const createAttendanceForLeave = async (leave) => {
-    try {
-        const startDate = new Date(leave.startDate);
-        const endDate = new Date(leave.endDate);
-        
-        // Loop through each day in the leave period
-        let currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-            const dateUTC = new Date(Date.UTC(
-                currentDate.getUTCFullYear(),
-                currentDate.getUTCMonth(),
-                currentDate.getUTCDate()
-            ));
-            
-            // Check if attendance record already exists for this day
-            const existingAttendance = await Attendance.findOne({
-                userId: leave.userId,
-                date: {
-                    $gte: dateUTC,
-                    $lt: new Date(dateUTC.getTime() + 24 * 60 * 60 * 1000)
-                }
-            });
-            
-            if (!existingAttendance) {
-                // Get employee info for team assignment
-                const employee = await Employee.findOne({ userId: leave.userId });
-                
-                // Check if the day is a weekend or holiday
-                const isWeekendDay = isWeekend(dateUTC);
-                const isHolidayDay = await isHoliday(dateUTC);
-                
-                let leaveStatus, leaveCredits;
-                
-                // Handle sandwich leave case for unpaid leaves
-                if (!leave.useLeaveBalance && (isWeekendDay || isHolidayDay)) {
-                    // If unpaid leave covers a weekend/holiday, mark as Absent (sandwich rule)
-                    leaveStatus = "Absent";
-                    leaveCredits = 0;
-                } else if (isWeekendDay || isHolidayDay) {
-                    // If it's a weekend/holiday, mark as Weekly Off
-                    leaveStatus = "Weekly Off";
-                    leaveCredits = 1;
-                } else {
-                    // Normal leave day
-                    if (leave.leaveType === "Half Leave") {
-                        if (leave.useLeaveBalance) {
-                            leaveStatus = "Paid Half Leave";
-                            leaveCredits = 0.5;
-                        } else {
-                            leaveStatus = "Unpaid Half Leave";
-                            leaveCredits = 0;
-                        }
-                    } else {
-                        if (leave.useLeaveBalance) {
-                            leaveStatus = "Paid Leave";
-                            leaveCredits = 1;
-                        } else {
-                            leaveStatus = "Unpaid Leave";
-                            leaveCredits = 0;
-                        }
-                    }
-                }
-                
-                // Create attendance record for the leave day
-                const newAttendance = new Attendance({
-                    userId: leave.userId,
-                    teamId: employee?.teamId || null,
-                    date: dateUTC,
-                    status: leaveStatus,
-                    credits: leaveCredits,
-                    approvalStatus: "Approved", // Auto-approved since leave is approved
-                    role: "employee", // Assuming leaves are for employees
-                    isWeekend: isWeekendDay,
-                    isHoliday: isHolidayDay,
-                    leaveId: leave._id,
-                    isHalfDay: leave.leaveType === "Half Leave",
-                    useLeaveBalance: leave.useLeaveBalance,
-                    approvedBy: leave.approvedBy,
-                    adminApproval: true, // Auto-approved
-                    comments: `Automatically created for approved leave: ${leave._id}`
-                });
-                
-                await newAttendance.save();
-                logger.info(`Attendance record created for leave ID ${leave._id} on date ${dateUTC.toISOString()}`);
-            } else if (leave.leaveType === "Half Leave") {
-                // If it's a half-day leave and attendance already exists, update it
-                existingAttendance.isHalfDay = true;
-                existingAttendance.leaveId = leave._id;
-                
-                if (leave.useLeaveBalance) {
-                    // For paid half-day leave with attendance, award full credit
-                    existingAttendance.status = "Paid Half Leave";
-                    existingAttendance.credits = 1; // Full credit for half-day + attendance
-                } else {
-                    // For unpaid half-day leave with attendance, award half credit
-                    existingAttendance.status = "Unpaid Half Leave";
-                    existingAttendance.credits = 0.5; // Half credit for attendance only
-                }
-                
-                await existingAttendance.save();
-                logger.info(`Attendance record updated for half-day leave ID ${leave._id} on date ${dateUTC.toISOString()}`);
-            }
-            
-            // Move to next day
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-        
-        return true;
-    } catch (error) {
-        logger.error(`Error creating attendance records for leave: ${error.message}`);
-        console.error("Error creating attendance for leave:", error);
-        return false;
-    }
-};
 
 export const getAttendanceReports = async (req, res) => {
     try {
@@ -801,9 +686,6 @@ export const getCurrentStatus = async (req, res) => {
 };
 
 
-
-
-
 export const getMonthlyAttendance = async (req, res) => {
     try {
         const userId = req.user?._id;
@@ -898,7 +780,6 @@ export const getMonthlyAttendance = async (req, res) => {
         });
     }
 };
-
 
 // Fetch Attendance for a User
 export const getMyAttendance = async (req, res) => {
@@ -1059,3 +940,259 @@ export const getAllAttendance = async (req, res) => {
     }
 };
 
+// Function to manually add an attendance record
+export const addAttendanceRecord = async (req, res) => {
+    try {
+        const {
+            userId,
+            date,
+            clockIn,
+            clockOut,
+            tasksDone,
+            status,
+            approvalStatus,
+            workLocation,
+            isWeekend,
+            isHoliday,
+            isHalfDay,
+            useLeaveBalance,
+            role,
+            credits,
+            location,
+            timezone
+        } = req.body;
+
+        // Validate required fields
+        if (!userId || !date || !clockIn || !status || !role) {
+            return res.status(400).json({
+                success: false,
+                error: "Required fields missing. User ID, date, clock-in time, status, and role are required."
+            });
+        }
+
+        // Parse date correctly to ensure midnight UTC
+        const dateArray = date.split('-');
+        const year = parseInt(dateArray[0]);
+        const month = parseInt(dateArray[1]) - 1; // Month is 0-indexed in JavaScript Date
+        const day = parseInt(dateArray[2]);
+        
+        // Create a UTC date at midnight
+        const attendanceDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+        
+        // Get user details to verify existence and retrieve team info if applicable
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: "User not found"
+            });
+        }
+
+        // Get team ID if the user is an employee
+        let teamId = null;
+        if (role === "employee") {
+            const employee = await Employee.findOne({ userId }).populate("teamId");
+            teamId = employee?.teamId?._id || null;
+        }
+
+        // Check for existing attendance record on the same date
+        const existingAttendance = await Attendance.findOne({
+            userId,
+            date: {
+                $gte: attendanceDate,
+                $lt: new Date(attendanceDate.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+
+        if (existingAttendance) {
+            return res.status(400).json({
+                success: false,
+                error: "An attendance record already exists for this user on the selected date."
+            });
+        }
+
+        // Check for associated leave (if any)
+        const existingLeave = await Leave.findOne({
+            userId,
+            status: "Approved",
+            startDate: { $lte: attendanceDate },
+            endDate: { $gte: attendanceDate }
+        });
+
+        // Parse clock-in time
+        const [clockInHours, clockInMinutes] = clockIn.split(':').map(Number);
+        
+        // Create a local date object representing the attendance date at the specified clock-in time
+        // This properly accounts for timezone differences as the Date constructor uses local time
+        const clockInDate = new Date(year, month, day, clockInHours, clockInMinutes, 0, 0);
+        
+        // Create new attendance record
+        const newAttendance = new Attendance({
+            userId,
+            teamId,
+            date: attendanceDate, // UTC midnight
+            clockIn: clockInDate, // Local date will be automatically converted to UTC when saved
+            status,
+            role,
+            approvalStatus: approvalStatus || "Approved", // Default to approved for admin-created records
+            adminApproval: true, // Auto-approve admin-created records
+            workLocation: workLocation || "Onsite",
+            isWeekend: isWeekend || false,
+            isHoliday: isHoliday || false,
+            isHalfDay: isHalfDay || false,
+            useLeaveBalance: useLeaveBalance || false,
+            leaveId: existingLeave?._id || null,
+            approvedBy: req.user._id, // Admin who created the record
+            comments: `Manually added by admin ${req.user.name} on ${new Date().toLocaleString()}`,
+            credits: credits !== undefined ? parseFloat(credits) : undefined 
+        });
+
+        // Add clock-out time if provided
+        if (clockOut) {
+            const [clockOutHours, clockOutMinutes] = clockOut.split(':').map(Number);
+            // Similarly create a local date for clock-out
+            const clockOutDate = new Date(year, month, day, clockOutHours, clockOutMinutes, 0, 0);
+            newAttendance.clockOut = clockOutDate;
+        }
+
+        if (tasksDone) {
+            newAttendance.tasksDone = tasksDone;
+        }
+
+        if (location) {
+            newAttendance.location = location;
+        }
+
+
+        await newAttendance.save();
+        logger.info(`Admin ${req.user._id} manually added attendance record for user ${userId} on ${date}`);
+
+        return res.status(201).json({
+            success: true,
+            message: "Attendance record added successfully",
+            attendance: newAttendance
+        });
+
+    } catch (error) {
+        logger.error(`Error adding attendance record: ${error.message}`);
+        console.error("Error adding attendance record:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to add attendance record"
+        });
+    }
+};
+
+// Function to delete an attendance record
+export const deleteAttendanceRecord = async (req, res) => {
+    try {
+        const { attendanceId } = req.params;
+
+        if (!attendanceId) {
+            return res.status(400).json({
+                success: false,
+                error: "Attendance ID is required"
+            });
+        }
+
+        // Find and delete the attendance record
+        const deletedAttendance = await Attendance.findByIdAndDelete(attendanceId);
+
+        if (!deletedAttendance) {
+            return res.status(404).json({
+                success: false,
+                error: "Attendance record not found"
+            });
+        }
+
+        logger.info(`Admin ${req.user._id} deleted attendance record ${attendanceId}`);
+
+        return res.status(200).json({
+            success: true,
+            message: "Attendance record deleted successfully",
+            deletedAttendance
+        });
+
+    } catch (error) {
+        logger.error(`Error deleting attendance record: ${error.message}`);
+        console.error("Error deleting attendance record:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to delete attendance record"
+        });
+    }
+};
+
+// Function to get all attendance records with filtering options
+export const getAllAttendanceRecords = async (req, res) => {
+    try {
+        // Extract query parameters for filtering
+        const { 
+            userId, 
+            dateFrom, 
+            dateTo, 
+            status, 
+            role,
+            limit = 50,  // Default limit to 50 records
+            page = 1     // Default to first page
+        } = req.query;
+
+        // Build query object
+        const query = {};
+
+        // Add filters if provided
+        if (userId) query.userId = userId;
+        if (status) query.status = status;
+        if (role) query.role = role;
+        
+        // Date range filter
+        if (dateFrom || dateTo) {
+            query.date = {};
+            if (dateFrom) query.date.$gte = new Date(dateFrom);
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                toDate.setHours(23, 59, 59, 999); // End of the day
+                query.date.$lte = toDate;
+            }
+        }
+
+        // Calculate pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Execute query with pagination
+        const attendanceRecords = await Attendance.find(query)
+            .sort({ date: -1 }) // Sort by date, newest first
+            .skip(skip)
+            .limit(parseInt(limit))
+            .populate({
+                path: 'userId',
+                select: 'name email'
+            })
+            .populate({
+                path: 'teamId',
+                select: 'name'
+            });
+        
+        // Get total count for pagination
+        const totalRecords = await Attendance.countDocuments(query);
+        
+        return res.status(200).json({
+            success: true,
+            attendanceRecords,
+            pagination: {
+                total: totalRecords,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(totalRecords / parseInt(limit))
+            }
+        });
+        
+    } catch (error) {
+        logger.error(`Error fetching attendance records: ${error.message}`);
+        console.error("Error fetching attendance records:", error);
+        return res.status(500).json({
+            success: false, 
+            error: "Failed to fetch attendance records"
+        });
+    }
+};

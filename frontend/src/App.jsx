@@ -46,6 +46,8 @@ import CreateLeavePolicy from "./components/leavePolicy/CreateLeavePolicy";
 import EditLeavePolicy from "./components/leavePolicy/EditLeavePolicy";
 import AssignLeavePolicy from "./components/leavePolicy/AssignLeavePolicy";
 import LeaveBalanceReset from "./components/leavePolicy/LeaveBalanceReset";
+import AdminAttendanceManagement from "./components/dashboard/AdminAttendanceManagement";
+import AddAttendanceForm from "./components/dashboard/AddAttendanceForm";
 
 
 const DEFAULT_REDIRECT = "/admin-dashboard";
@@ -88,6 +90,8 @@ function App() {
           <Route path="add-manager" element={<AddManager />} />
           <Route path="managers/edit/:id" element={<EditManager />} />
           <Route path="manager/:id" element={<ViewManager />} />
+          <Route path="attendance-management" element={<AdminAttendanceManagement />} />
+          <Route path="attendance/add" element={<AddAttendanceForm />} />
 
           <Route path="team" element={<TeamList />} />
           <Route path="team/create" element={<AddTeam />} />

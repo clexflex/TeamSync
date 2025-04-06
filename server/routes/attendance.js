@@ -10,7 +10,10 @@ import {
     getCurrentStatus,
     getMonthlyAttendance,
     getAllAttendance,
-    getAttendanceReports
+    getAttendanceReports,
+    addAttendanceRecord,
+    deleteAttendanceRecord,
+    getAllAttendanceRecords
 } from "../controllers/attendanceController.js";
 const router = express.Router();
 // Employee routes
@@ -25,5 +28,9 @@ router.get("/summary", verifyUser, verifyRole(["admin"]), getAttendanceSummary);
 router.get("/monthly", verifyUser, verifyRole(["employee", "manager"]), getMonthlyAttendance);
 router.get("/all", verifyUser, verifyRole(["admin"]), getAllAttendance);
 router.get("/reports", verifyUser, verifyRole(["admin"]), getAttendanceReports);
+
+router.post("/add-record", verifyUser, verifyRole(["admin"]), addAttendanceRecord);
+router.delete("/delete-record/:attendanceId", verifyUser, verifyRole(["admin"]), deleteAttendanceRecord);
+router.get("/records", verifyUser, verifyRole(["admin"]), getAllAttendanceRecords);
 
 export default router;

@@ -34,7 +34,9 @@ TeamSync
 │  │  │  │  ├─ TeamList.jsx
 │  │  │  │  └─ TeamMembers.jsx
 │  │  │  ├─ dashboard
+│  │  │  │  ├─ AddAttendanceForm.jsx
 │  │  │  │  ├─ AdminAttendanceApproval.jsx
+│  │  │  │  ├─ AdminAttendanceManagement.jsx
 │  │  │  │  ├─ AdminAttendanceReport.jsx
 │  │  │  │  ├─ AdminSummary.jsx
 │  │  │  │  └─ HolidayManagement.jsx
