@@ -12,7 +12,8 @@ import {
   AttachMoney as SalaryIcon,
   Person as ProfileIcon,
   Settings as SettingsIcon,
-  FolderSpecial
+  FolderSpecial,
+  ConfirmationNumber
 } from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
@@ -36,7 +37,7 @@ const ManagerDashboard = () => {
     { text: 'Leave', icon: <LeaveIcon />, path: `/manager-dashboard/leaves/${user?._id}` },
     { text: 'Salary', icon: <SalaryIcon />, path: `/manager-dashboard/salary/history` },
     { text: 'Document Center', icon: <FolderSpecial />, path: '/manager-dashboard/document-center' },
-
+    { text: 'Tickets', icon: <ConfirmationNumber />, path: '/manager-dashboard/tickets' },
       ];
 
   const drawer = (

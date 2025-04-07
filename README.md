@@ -44,6 +44,9 @@ TeamSync
 │  │  │  │  ├─ AddDepartment.jsx
 │  │  │  │  ├─ DepartmentList.jsx
 │  │  │  │  └─ EditDepartment.jsx
+│  │  │  ├─ document
+│  │  │  │  ├─ DocumentCenter.jsx
+│  │  │  │  └─ UserDocumentCenter.jsx
 │  │  │  ├─ employee
 │  │  │  │  ├─ .DS_Store
 │  │  │  │  ├─ AddEmployee.jsx
@@ -70,13 +73,11 @@ TeamSync
 │  │  │  ├─ modal
 │  │  │  │  └─ TaskDetailsModal.jsx
 │  │  │  ├─ salary
-│  │  │  │  ├─ AddSalary.jsx
 │  │  │  │  ├─ AdminSalaryDashboard.jsx
 │  │  │  │  ├─ SalaryDetail.jsx
 │  │  │  │  ├─ SalaryGeneration.jsx
 │  │  │  │  ├─ SalaryList.jsx
-│  │  │  │  ├─ UserSalaryHistory.jsx
-│  │  │  │  └─ ViewSalary.jsx
+│  │  │  │  └─ UserSalaryHistory.jsx
 │  │  │  ├─ shared
 │  │  │  │  └─ AttendanceTable.jsx
 │  │  │  └─ userProfile
@@ -112,6 +113,7 @@ TeamSync
    │  ├─ authController.js
    │  ├─ dashboardController.js
    │  ├─ departmentController.js
+   │  ├─ documentController.js
    │  ├─ employeeController.js
    │  ├─ holidayController.js
    │  ├─ leaveController.js
@@ -130,6 +132,7 @@ TeamSync
    ├─ models
    │  ├─ Attendance.js
    │  ├─ Department.js
+   │  ├─ Document.js
    │  ├─ Employee.js
    │  ├─ Holiday.js
    │  ├─ Leave.js
@@ -164,17 +167,64 @@ TeamSync
    │     ├─ 1738229686735.jpeg
    │     ├─ 1738229839505.jpeg
    │     ├─ 1738318197007.jpeg
-   │     └─ leave-documents
-   │        ├─ 1735902074948.jpeg
-   │        ├─ leave-1741773189991-18241470.jpeg
-   │        ├─ leave-1741856751401-449084875.png
-   │        ├─ leave-1741856751402-559934109.pdf
-   │        └─ leave-1741856751403-778803972.docx
+   │     ├─ documents
+   │     │  ├─ doc-1744012265062-549387387.pdf
+   │     │  └─ doc-1744012439609-77932150.pdf
+   │     ├─ leave-documents
+   │     │  ├─ 1735902074948.jpeg
+   │     │  ├─ leave-1741773189991-18241470.jpeg
+   │     │  ├─ leave-1741856751401-449084875.png
+   │     │  ├─ leave-1741856751402-559934109.pdf
+   │     │  └─ leave-1741856751403-778803972.docx
+   │     └─ payslips
+   │        ├─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743970094431.pdf
+   │        ├─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743970890828.pdf
+   │        ├─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743970890858.pdf
+   │        ├─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743970895351.pdf
+   │        ├─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743970895366.pdf
+   │        ├─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743972459187.pdf
+   │        └─ payslip_{
+  _id: new ObjectId('67ce8d9a738340c12972ae38'),
+  name: 'Vishwas Dhoga',
+  email: 'dhoga@gmail.com',
+  role: 'employee'
+}_March_2025_1743972459217.pdf
    ├─ routes
    │  ├─ attendance.js
    │  ├─ auth.js
    │  ├─ dashboard.js
    │  ├─ department.js
+   │  ├─ document.js
    │  ├─ employee.js
    │  ├─ holiday.js
    │  ├─ leave.js

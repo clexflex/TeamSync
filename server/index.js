@@ -17,6 +17,7 @@ import attendanceRouter from './routes/attendance.js';
 import holidayRouter from "./routes/holiday.js";
 import userProfileRouter from './routes/userProfile.js';
 import documentRouter from './routes/document.js';
+import ticketRouter from './routes/ticket.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -29,8 +30,8 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
 }));
 
 // Basic middleware
@@ -39,21 +40,25 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
-    setHeaders: (res) => {
-      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    }
-  }));
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 app.use('/uploads/leave-documents', express.static(path.join(__dirname, 'public/uploads/leave-documents'), {
-    setHeaders: (res) => {
-      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    }
-  }));
-
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 app.use('/uploads/payslips', express.static(path.join(__dirname, 'public/uploads/payslips'), {
-    setHeaders: (res) => {
-      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    }
-  }));
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+app.use('/uploads/tickets', express.static(path.join(__dirname, 'public/uploads/tickets'), {
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/department', departmentRouter);
@@ -68,43 +73,44 @@ app.use('/api/attendance', attendanceRouter);
 app.use("/api/holidays", holidayRouter);
 app.use('/api/user-profile', userProfileRouter);
 app.use('/api/documents', documentRouter);
+app.use('/api/tickets', ticketRouter);
 // Root directory route
 app.get('/', (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'API is working! Welcome to the server.',
-    });
+  res.status(200).json({
+    success: true,
+    message: 'API is working! Welcome to the server.',
+  });
 });
 // Error handling for undefined routes
 app.use((req, res) => {
-    res.status(404).json({
-        success: false,
-        error: `Route ${req.originalUrl} not found`
-    });
+  res.status(404).json({
+    success: false,
+    error: `Route ${req.originalUrl} not found`
+  });
 });
 // Middleware to log all requests
 app.use((req, res, next) => {
-    logger.info(`📢 ${req.method} ${req.url}`);
-    next();
+  logger.info(`📢 ${req.method} ${req.url}`);
+  next();
 });
 // Global error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    logger.error(`❌ Error: ${err.message}`, { stack: err.stack });
-    res.status(err.status || 500).json({
-        success: false,
-        error: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred'
-    });
+  console.error(err.stack);
+  logger.error(`❌ Error: ${err.message}`, { stack: err.stack });
+  res.status(err.status || 500).json({
+    success: false,
+    error: process.env.NODE_ENV === 'development' ? err.message : 'An error occurred'
+  });
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    logger.info(`🌍 Server running on port ${PORT}`);
+  logger.info(`🌍 Server running on port ${PORT}`);
 });
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
-    console.error('Unhandled Rejection:', err);
-    // Don't crash the server, but log the error
+  console.error('Unhandled Rejection:', err);
+  // Don't crash the server, but log the error
 });

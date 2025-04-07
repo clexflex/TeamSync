@@ -53,6 +53,10 @@ import SalaryDetail from "./components/salary/SalaryDetail";
 import UserSalaryHistory from "./components/salary/UserSalaryHistory";
 import DocumentCenter from "./components/document/DocumentCenter";
 import UserDocumentCenter from "./components/document/UserDocumentCenter";
+import TicketList from "./components/ticket/TicketList";
+import AddTicket from "./components/ticket/AddTicket";
+import ViewTicket from "./components/ticket/ViewTicket";
+import AdminTicketDashboard from "./components/ticket/AdminTicketDashboard";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -117,6 +121,8 @@ function App() {
           <Route path="salary/detail/:id" element={<SalaryDetail />} />
 
           <Route path="document-center" element={<DocumentCenter />} />
+          <Route path="tickets" element={<AdminTicketDashboard />} />
+          <Route path="tickets/:id" element={<ViewTicket />} />
 
         </Route>
 
@@ -139,6 +145,9 @@ function App() {
           <Route path="user-profile/:id" element={<ViewUserProfile />} />
           <Route path="salary/history" element={<UserSalaryHistory />} />
           <Route path="document-center" element={<UserDocumentCenter />} />
+          <Route path="tickets" element={<TicketList />} />
+          <Route path="add-ticket" element={<AddTicket />} />
+          <Route path="tickets/:id" element={<ViewTicket />} />
 
         </Route>
 
@@ -166,7 +175,9 @@ function App() {
           <Route path="user-profile/:id" element={<ViewUserProfile />} />
           <Route path="salary/history" element={<UserSalaryHistory />} />
           <Route path="document-center" element={<UserDocumentCenter />} />
-
+          <Route path="tickets" element={<TicketList />} />
+          <Route path="add-ticket" element={<AddTicket />} />
+          <Route path="tickets/:id" element={<ViewTicket />} />
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />
