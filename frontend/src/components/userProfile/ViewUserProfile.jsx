@@ -16,7 +16,18 @@ import {
   Chip,
   Card,
   CardContent,
-  useTheme
+  useTheme,
+  Tabs,
+  Tab,
+  List,
+  ListItem,
+  ListItemText,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -29,15 +40,46 @@ import {
   CalendarMonth as CalendarMonthIcon,
   Update as UpdateIcon,
   Group as GroupIcon,
-  AttachMoney as AttachMoneyIcon
+  AttachMoney as AttachMoneyIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationOnIcon,
+  Home as HomeIcon,
+  School as SchoolIcon,
+  Work as WorkIcon,
+  Bloodtype as BloodtypeIcon,
+  Flag as FlagIcon,
+  Apartment as ApartmentIcon,
+  AccountBalance as AccountBalanceIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/authContext';
+
+// Tab panel component
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`profile-tabpanel-${index}`}
+      aria-labelledby={`profile-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ py: 2 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 const ViewUserProfile = () => {
   const { id } = useParams();
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
   const navigate = useNavigate();
   const theme = useTheme();
   const location = useLocation();
@@ -75,6 +117,10 @@ const ViewUserProfile = () => {
     
     fetchUserProfile();
   }, [id]);
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
   if (loading) {
     return (
@@ -117,6 +163,11 @@ const ViewUserProfile = () => {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not specified';
+    return new Date(dateString).toLocaleDateString();
+  };
+
   const InfoItem = ({ icon, label, value, chipValue }) => (
     <Stack
       direction="row"
@@ -149,18 +200,15 @@ const ViewUserProfile = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      {/* Only show back button if user is admin or viewing own profile */}
-     
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={navigateBack}
-          sx={{ mb: 3 }}
-        >
-          {isAdminDashboard 
-            ? `Back to ${isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}`
-            : 'Back to Dashboard'}
-        </Button>
-    
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={navigateBack}
+        sx={{ mb: 3 }}
+      >
+        {isAdminDashboard 
+          ? `Back to ${isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}`
+          : 'Back to Dashboard'}
+      </Button>
 
       <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         {/* Header Section */}
@@ -219,204 +267,775 @@ const ViewUserProfile = () => {
           </Stack>
         </Box>
 
-        {/* Information Grid */}
-        <Grid container spacing={3} sx={{ p: 3 }}>
-          {/* Basic Information */}
-          <Grid item xs={12} md={6}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 3,
-                height: '100%',
-                bgcolor: 'grey.50',
-                borderRadius: 2
-              }}
-            >
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-                Basic Information
-              </Typography>
-              
-              <Stack divider={<Divider />}>
-                <InfoItem
-                  icon={<BadgeIcon />}
-                  label={isEmployee ? "Employee ID" : "Manager ID"}
-                  value={isEmployee ? userProfile.employeeId : userProfile.managerId}
-                />
-                <InfoItem
-                  icon={<EmailIcon />}
-                  label="Email"
-                  value={profileUser.email}
-                />
-                <InfoItem
-                  icon={<BusinessIcon />}
-                  label="Department"
-                  value={userProfile.department?.dep_name}
-                />
-                <InfoItem
-                  icon={<PersonIcon />}
-                  label="Designation"
-                  value={userProfile.designation}
-                />
-                <InfoItem
-                  icon={<PersonIcon />}
-                  label="Status"
-                  value={profileUser.status === 'active' ? 'Active' : 'Inactive'}
-                  chipValue={true}
-                />
-              </Stack>
-            </Paper>
-          </Grid>
+        {/* Tabs for different sections */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+            <Tab label="Basic Info" />
+            <Tab label="Contact & Address" />
+            <Tab label="Employment" />
+            <Tab label="Education" />
+            <Tab label="Previous Work" />
+            <Tab label="Salary & Bank" />
+            <Tab label="Leave Balances" />
+          </Tabs>
+        </Box>
 
-          {/* Personal/Additional Details */}
-          <Grid item xs={12} md={6}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 3,
-                height: '100%',
-                bgcolor: 'grey.50',
-                borderRadius: 2
-              }}
-            >
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-                {isEmployee ? 'Personal Information' : 'Professional Details'}
-              </Typography>
-              
-              <Stack divider={<Divider />}>
-                <InfoItem
-                  icon={<CalendarMonthIcon />}
-                  label="Joining Date"
-                  value={new Date(joiningDate).toLocaleDateString()}
-                />
-                
-                {isEmployee && (
-                  <>
-                    {userProfile.dob && (
-                      <InfoItem
-                        icon={<CakeIcon />}
-                        label="Date of Birth"
-                        value={new Date(userProfile.dob).toLocaleDateString()}
-                      />
-                    )}
-                    <InfoItem
-                      icon={<PersonIcon />}
-                      label="Gender"
-                      value={userProfile.gender}
-                    />
-                    <InfoItem
-                      icon={<FavoriteIcon />}
-                      label="Marital Status"
-                      value={userProfile.maritalStatus}
-                    />
-                    <InfoItem
-                      icon={<AttachMoneyIcon />}
-                      label="Salary"
-                      value={userProfile.salary ? `$${userProfile.salary.toLocaleString()}` : 'Not specified'}
-                    />
-                  </>
-                )}
-                
-                <InfoItem
-                  icon={<UpdateIcon />}
-                  label="Last Updated"
-                  value={new Date(userProfile.updatedAt).toLocaleDateString()}
-                />
-              </Stack>
-            </Paper>
-          </Grid>
-
-          {/* Leave Balances */}
-          <Grid item xs={12} md={6}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 3,
-                bgcolor: 'grey.50',
-                borderRadius: 2
-              }}
-            >
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-                Leave Balances
-              </Typography>
-              
-              <Grid container spacing={2}>
-                {leaveBalances && leaveBalances.map((leave, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          {leave.leaveType}
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                          <Typography variant="body2">
-                            Available:
-                          </Typography>
-                          <Typography variant="body1" fontWeight="medium">
-                            {leave.balance} days
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="body2">
-                            Used:
-                          </Typography>
-                          <Typography variant="body1">
-                            {leave.used} days
-                          </Typography>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Paper>
-          </Grid>
-
-          {/* Teams Section for Managers */}
-          {isManager && userProfile.teams && userProfile.teams.length > 0 && (
+        {/* Basic Information Tab */}
+        <TabPanel value={activeTab} index={0}>
+          <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <Paper
                 elevation={0}
                 sx={{
                   p: 3,
+                  height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
                 }}
               >
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-                  Teams Under Management
+                  Basic Information
                 </Typography>
-                <Grid container spacing={2}>
-                  {userProfile.teams.map((team) => (
-                    <Grid item xs={12} key={team._id}>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                              <Typography variant="subtitle1" fontWeight="medium">
-                                {team.name}
-                              </Typography>
-                              <Stack direction="row" spacing={1} alignItems="center">
-                                <GroupIcon fontSize="small" color="action" />
-                                <Typography variant="body2" color="text.secondary">
-                                  {team.members?.length || 0} members
-                                </Typography>
-                              </Stack>
-                            </Box>
-                            <Chip 
-                              label="Active"
-                              color="success"
-                              size="small"
-                            />
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                
+                <Stack divider={<Divider />}>
+                  <InfoItem
+                    icon={<BadgeIcon />}
+                    label={isEmployee ? "Employee ID" : "Manager ID"}
+                    value={isEmployee ? userProfile.employeeId : userProfile.managerId}
+                  />
+                  <InfoItem
+                    icon={<EmailIcon />}
+                    label="Email"
+                    value={profileUser.email}
+                  />
+                  <InfoItem
+                    icon={<BusinessIcon />}
+                    label="Department"
+                    value={userProfile.department?.dep_name}
+                  />
+                  <InfoItem
+                    icon={<PersonIcon />}
+                    label="Designation"
+                    value={userProfile.designation}
+                  />
+                  <InfoItem
+                    icon={<PersonIcon />}
+                    label="Status"
+                    value={profileUser.status === 'active' ? 'Active' : 'Inactive'}
+                    chipValue={true}
+                  />
+                  <InfoItem
+                    icon={<CalendarMonthIcon />}
+                    label="Joining Date"
+                    value={formatDate(joiningDate)}
+                  />
+                </Stack>
               </Paper>
             </Grid>
-          )}
-        </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Personal Information
+                </Typography>
+                
+                <Stack divider={<Divider />}>
+                  {userProfile.dob && (
+                    <InfoItem
+                      icon={<CakeIcon />}
+                      label="Date of Birth"
+                      value={formatDate(userProfile.dob)}
+                    />
+                  )}
+                  <InfoItem
+                    icon={<PersonIcon />}
+                    label="Gender"
+                    value={userProfile.gender}
+                  />
+                  <InfoItem
+                    icon={<FavoriteIcon />}
+                    label="Marital Status"
+                    value={userProfile.maritalStatus}
+                  />
+                  {userProfile.bloodGroup && (
+                    <InfoItem
+                      icon={<BloodtypeIcon />}
+                      label="Blood Group"
+                      value={userProfile.bloodGroup}
+                    />
+                  )}
+                  {userProfile.nationality && (
+                    <InfoItem
+                      icon={<FlagIcon />}
+                      label="Nationality"
+                      value={userProfile.nationality}
+                    />
+                  )}
+                  {userProfile.fatherName && (
+                    <InfoItem
+                      icon={<PersonIcon />}
+                      label="Father's Name"
+                      value={userProfile.fatherName}
+                    />
+                  )}
+                  {userProfile.religion && (
+                    <InfoItem
+                      icon={<PersonIcon />}
+                      label="Religion"
+                      value={userProfile.religion}
+                    />
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Contact & Address Tab */}
+        <TabPanel value={activeTab} index={1}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Contact Information
+                </Typography>
+                
+                <Stack divider={<Divider />}>
+                  <InfoItem
+                    icon={<EmailIcon />}
+                    label="Personal Email"
+                    value={profileUser.email}
+                  />
+                  {userProfile.companyEmail && (
+                    <InfoItem
+                      icon={<EmailIcon />}
+                      label="Company Email"
+                      value={userProfile.companyEmail}
+                    />
+                  )}
+                  {userProfile.primaryContactNo && (
+                    <InfoItem
+                      icon={<PhoneIcon />}
+                      label="Primary Contact Number"
+                      value={userProfile.primaryContactNo}
+                    />
+                  )}
+                  {userProfile.location && (
+                    <InfoItem
+                      icon={<LocationOnIcon />}
+                      label="Location"
+                      value={userProfile.location}
+                    />
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Address Information
+                </Typography>
+                
+                {userProfile.address ? (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Stack spacing={1}>
+                        {userProfile.address.street && (
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <HomeIcon color="action" fontSize="small" sx={{ mt: 0.5 }} />
+                            <Typography variant="body1">{userProfile.address.street}</Typography>
+                          </Box>
+                        )}
+                        
+                        {(userProfile.address.city || userProfile.address.state || userProfile.address.postalCode) && (
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <LocationOnIcon color="action" fontSize="small" sx={{ mt: 0.5 }} />
+                            <Typography variant="body1">
+                              {[
+                                userProfile.address.city,
+                                userProfile.address.state,
+                                userProfile.address.postalCode
+                              ].filter(Boolean).join(', ')}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.address.country && (
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <FlagIcon color="action" fontSize="small" sx={{ mt: 0.5 }} />
+                            <Typography variant="body1">{userProfile.address.country}</Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Typography variant="body1" color="text.secondary">No address information available.</Typography>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Employment Tab */}
+        <TabPanel value={activeTab} index={2}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Employment Details
+                </Typography>
+                
+                <Stack divider={<Divider />}>
+                  <InfoItem
+                    icon={<BadgeIcon />}
+                    label={isEmployee ? "Employee ID" : "Manager ID"}
+                    value={isEmployee ? userProfile.employeeId : userProfile.managerId}
+                  />
+                  <InfoItem
+                    icon={<BusinessIcon />}
+                    label="Department"
+                    value={userProfile.department?.dep_name}
+                  />
+                  <InfoItem
+                    icon={<PersonIcon />}
+                    label="Designation"
+                    value={userProfile.designation}
+                  />
+                  <InfoItem
+                    icon={<CalendarMonthIcon />}
+                    label="Joining Date"
+                    value={formatDate(userProfile.joiningDate)}
+                  />
+                  
+                  {userProfile.confirmationDate && (
+                    <InfoItem
+                      icon={<CalendarMonthIcon />}
+                      label="Confirmation Date"
+                      value={formatDate(userProfile.confirmationDate)}
+                    />
+                  )}
+                  
+                  {userProfile.employmentStatus && (
+                    <InfoItem
+                      icon={<WorkIcon />}
+                      label="Employment Status"
+                      value={userProfile.employmentStatus}
+                    />
+                  )}
+                  
+                  {userProfile.noticePeriod && (
+                    <InfoItem
+                      icon={<UpdateIcon />}
+                      label="Notice Period"
+                      value={`${userProfile.noticePeriod} days`}
+                    />
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Experience
+                </Typography>
+                
+                <Stack divider={<Divider />}>
+                  {userProfile.currentCompanyExperience && (
+                    <InfoItem
+                      icon={<WorkIcon />}
+                      label="Current Company Experience"
+                      value={`${userProfile.currentCompanyExperience} years`}
+                    />
+                  )}
+                  
+                  {userProfile.previousExperience && (
+                    <InfoItem
+                      icon={<WorkIcon />}
+                      label="Previous Experience"
+                      value={`${userProfile.previousExperience} years`}
+                    />
+                  )}
+                  
+                  {userProfile.totalExperience && (
+                    <InfoItem
+                      icon={<WorkIcon />}
+                      label="Total Experience"
+                      value={`${userProfile.totalExperience} years`}
+                    />
+                  )}
+                  
+                  {isEmployee && userProfile.salary && (
+                    <InfoItem
+                      icon={<AttachMoneyIcon />}
+                      label="Salary"
+                      value={`₹ ${userProfile.salary.toLocaleString()}`}
+                    />
+                  )}
+                  
+                  {userProfile.probationPeriod && (
+                    <InfoItem
+                      icon={<UpdateIcon />}
+                      label="Probation Period"
+                      value={`${userProfile.probationPeriod} months`}
+                    />
+                  )}
+                </Stack>
+              </Paper>
+            </Grid>
+
+            {/* Teams Section for Managers */}
+            {isManager && userProfile.teams && userProfile.teams.length > 0 && (
+              <Grid item xs={12}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    mt: 2
+                  }}
+                >
+                  <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                    Teams Under Management
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {userProfile.teams.map((team) => (
+                      <Grid item xs={12} key={team._id}>
+                        <Card variant="outlined">
+                          <CardContent>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Box>
+                                <Typography variant="subtitle1" fontWeight="medium">
+                                  {team.name}
+                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <GroupIcon fontSize="small" color="action" />
+                                  <Typography variant="body2" color="text.secondary">
+                                    {team.members?.length || 0} members
+                                  </Typography>
+                                </Stack>
+                              </Box>
+                              <Chip 
+                                label="Active"
+                                color="success"
+                                size="small"
+                              />
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Paper>
+              </Grid>
+            )}
+          </Grid>
+        </TabPanel>
+
+        {/* Education Tab */}
+        <TabPanel value={activeTab} index={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              bgcolor: 'grey.50',
+              borderRadius: 2
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Education History
+            </Typography>
+            
+            {userProfile.education && userProfile.education.length > 0 ? (
+              <Grid container spacing={2}>
+                {userProfile.education.map((edu, index) => (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
+                          {edu.degree || 'Degree/Certification'}
+                        </Typography>
+                        
+                        <Stack spacing={1} sx={{ mt: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <SchoolIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                            <Typography variant="body2">
+                              {edu.institute || 'Institution not specified'}
+                            </Typography>
+                          </Box>
+                          
+                          {(edu.startDate || edu.endDate) && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CalendarMonthIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2">
+                                {edu.startDate ? formatDate(edu.startDate) : 'Start date not specified'} - {edu.endDate ? formatDate(edu.endDate) : 'Present'}
+                              </Typography>
+                            </Box>
+                          )}
+                          
+                          {edu.grade && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <BadgeIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2">
+                                Grade/Percentage: {edu.grade}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Alert severity="info">No education information available.</Alert>
+            )}
+          </Paper>
+        </TabPanel>
+
+        {/* Previous Work Tab */}
+        <TabPanel value={activeTab} index={4}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              bgcolor: 'grey.50',
+              borderRadius: 2
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Previous Employment History
+            </Typography>
+            
+            {userProfile.previousEmployment && userProfile.previousEmployment.length > 0 && 
+             userProfile.previousEmployment[0].company ? (
+              <Grid container spacing={2}>
+                {userProfile.previousEmployment.map((job, index) => (
+                  <Grid item xs={12} key={index}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
+                          {job.designation || 'Position'} at {job.company || 'Company'}
+                        </Typography>
+                        
+                        <Stack spacing={1} sx={{ mt: 1 }}>
+                          {(job.startDate || job.endDate) && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CalendarMonthIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2">
+                                {job.startDate ? formatDate(job.startDate) : 'Start date not specified'} - {job.endDate ? formatDate(job.endDate) : 'Present'}
+                              </Typography>
+                            </Box>
+                          )}
+                          
+                          {job.reasonForLeaving && (
+                            <Box>
+                              <Typography variant="body2" fontWeight="medium" sx={{ mt: 1 }}>
+                                Reason for Leaving:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {job.reasonForLeaving}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Alert severity="info">No previous employment information available.</Alert>
+            )}
+          </Paper>
+        </TabPanel>
+
+        {/* Salary & Bank Tab */}
+        <TabPanel value={activeTab} index={5}>
+          <Grid container spacing={3}>
+            {/* Salary Information */}
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Salary Information
+                </Typography>
+                
+                {userProfile.salaryInfo ? (
+                  <>
+                    <Typography variant="subtitle1" fontWeight="medium" sx={{ mt: 2 }}>
+                      Basic Salary
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      ₹ {userProfile.salaryInfo.basicSalary?.toLocaleString() || '0'}
+                    </Typography>
+                    
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      Allowances
+                    </Typography>
+                    <List dense>
+                      {Object.entries(userProfile.salaryInfo.allowances || {}).map(([key, value]) => (
+                        value > 0 && (
+                          <ListItem key={key} disableGutters>
+                            <ListItemText 
+                              primary={key === 'DA' ? 'Dearness Allowance' : 
+                                      key === 'HRA' ? 'House Rent Allowance' : 
+                                      key.charAt(0).toUpperCase() + key.slice(1)}
+                              secondary={`₹ ${value.toLocaleString()}`} 
+                            />
+                          </ListItem>
+                        )
+                      ))}
+                    </List>
+                    
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      Deductions
+                    </Typography>
+                    <List dense>
+                      {Object.entries(userProfile.salaryInfo.deductions || {}).map(([key, value]) => (
+                        value > 0 && (
+                          <ListItem key={key} disableGutters>
+                            <ListItemText 
+                              primary={key === 'PF' ? 'Provident Fund' : 
+                                      key === 'ESI' ? 'Employee State Insurance' :
+                                      key === 'PT' ? 'Professional Tax' :
+                                      key === 'TDS' ? 'Tax Deducted at Source' :
+                                      key === 'MLWF' ? 'Maharashtra Labor Welfare Fund' :
+                                      key.charAt(0).toUpperCase() + key.slice(1)}
+                              secondary={`₹ ${value.toLocaleString()}`} 
+                            />
+                          </ListItem>
+                        )
+                      ))}
+                    </List>
+                    
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      Statutory Information
+                    </Typography>
+                    <List dense>
+                      {userProfile.salaryInfo.PFNumber && (
+                        <ListItem disableGutters>
+                          <ListItemText primary="PF Number" secondary={userProfile.salaryInfo.PFNumber} />
+                        </ListItem>
+                      )}
+                      {userProfile.salaryInfo.ESINumber && (
+                        <ListItem disableGutters>
+                          <ListItemText primary="ESI Number" secondary={userProfile.salaryInfo.ESINumber} />
+                        </ListItem>
+                      )}
+                      {userProfile.salaryInfo.PAN && (
+                        <ListItem disableGutters>
+                          <ListItemText primary="PAN" secondary={userProfile.salaryInfo.PAN} />
+                        </ListItem>
+                      )}
+                      {userProfile.salaryInfo.aadhaarNo && (
+                        <ListItem disableGutters>
+                          <ListItemText primary="Aadhaar Number" secondary={userProfile.salaryInfo.aadhaarNo} />
+                        </ListItem>
+                      )}
+                      {userProfile.salaryInfo.passportNo && (
+                        <ListItem disableGutters>
+                          <ListItemText primary="Passport Number" secondary={userProfile.salaryInfo.passportNo} />
+                        </ListItem>
+                      )}
+                    </List>
+                  </>
+                ) : (
+                  <Alert severity="info">No salary information available.</Alert>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Bank Details */}
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  bgcolor: 'grey.50',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+                  Bank Details
+                </Typography>
+                
+                {userProfile.salaryInfo?.bankDetails && (
+                  userProfile.salaryInfo.bankDetails.bankName || 
+                  userProfile.salaryInfo.bankDetails.accountNumber
+                ) ? (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Stack spacing={2}>
+                        {userProfile.salaryInfo.bankDetails.bankName && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">Bank Name</Typography>
+                            <Typography variant="body1">{userProfile.salaryInfo.bankDetails.bankName}</Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.salaryInfo.bankDetails.accountNumber && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">Account Number</Typography>
+                            <Typography variant="body1">
+                              {/* Show only last 4 digits for security */}
+                              {'•••• •••• •••• ' + userProfile.salaryInfo.bankDetails.accountNumber.slice(-4)}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.salaryInfo.bankDetails.accountType && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">Account Type</Typography>
+                            <Typography variant="body1">{userProfile.salaryInfo.bankDetails.accountType}</Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.salaryInfo.bankDetails.IFSCCode && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">IFSC Code</Typography>
+                            <Typography variant="body1">{userProfile.salaryInfo.bankDetails.IFSCCode}</Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.salaryInfo.bankDetails.branchName && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">Branch</Typography>
+                            <Typography variant="body1">{userProfile.salaryInfo.bankDetails.branchName}</Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.salaryInfo.bankDetails.nameAsPerBank && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">Name as per Bank Records</Typography>
+                            <Typography variant="body1">{userProfile.salaryInfo.bankDetails.nameAsPerBank}</Typography>
+                          </Box>
+                        )}
+                        
+                        {userProfile.salaryInfo.bankDetails.paymentType && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">Payment Method</Typography>
+                            <Typography variant="body1">{userProfile.salaryInfo.bankDetails.paymentType}</Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Alert severity="info">No bank details available.</Alert>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        {/* Leave Balances Tab */}
+        <TabPanel value={activeTab} index={6}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              bgcolor: 'grey.50',
+              borderRadius: 2
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+              Leave Balances
+            </Typography>
+            
+            {leaveBalances && leaveBalances.length > 0 ? (
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Leave Type</TableCell>
+                      <TableCell align="center">Available Balance</TableCell>
+                      <TableCell align="center">Used</TableCell>
+                      <TableCell align="center">Carry Forward</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {leaveBalances.map((leave, index) => (
+                      <TableRow key={index}>
+                        <TableCell component="th" scope="row">
+                          <Typography fontWeight="medium">{leave.leaveType}</Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip 
+                            label={leave.balance}
+                            color={leave.balance > 0 ? "success" : "default"}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="center">{leave.used}</TableCell>
+                        <TableCell align="center">{leave.carryForward}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Alert severity="info">No leave balances available.</Alert>
+            )}
+          </Paper>
+        </TabPanel>
 
         {/* Action Buttons - Only show for admin users */}
         {isAdmin && isAdminDashboard && (

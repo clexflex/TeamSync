@@ -71,6 +71,11 @@ TeamSync
 │  │  │  │  └─ TaskDetailsModal.jsx
 │  │  │  ├─ salary
 │  │  │  │  ├─ AddSalary.jsx
+│  │  │  │  ├─ AdminSalaryDashboard.jsx
+│  │  │  │  ├─ SalaryDetail.jsx
+│  │  │  │  ├─ SalaryGeneration.jsx
+│  │  │  │  ├─ SalaryList.jsx
+│  │  │  │  ├─ UserSalaryHistory.jsx
 │  │  │  │  └─ ViewSalary.jsx
 │  │  │  ├─ shared
 │  │  │  │  └─ AttendanceTable.jsx

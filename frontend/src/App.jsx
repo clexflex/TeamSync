@@ -12,8 +12,6 @@ import EmployeeList from "./components/employee/EmployeeList";
 import AddEmployee from "./components/employee/AddEmployee";
 import ViewEmployee from "./components/employee/ViewEmployee";
 import EditEmployee from "./components/employee/EditEmployee";
-import AddSalary from "./components/salary/AddSalary";
-import ViewSalary from "./components/salary/ViewSalary";
 import EmployeeSummary from "./components/EmployeeDashboard/EmployeeSummary";
 import ViewProfile from "./components/EmployeeDashboard/ViewProfile";
 import LeaveList from "./components/leave/LeaveList";
@@ -48,8 +46,13 @@ import AssignLeavePolicy from "./components/leavePolicy/AssignLeavePolicy";
 import LeaveBalanceReset from "./components/leavePolicy/LeaveBalanceReset";
 import AdminAttendanceManagement from "./components/dashboard/AdminAttendanceManagement";
 import AddAttendanceForm from "./components/dashboard/AddAttendanceForm";
-
-
+import AdminSalaryDashboard from "./components/salary/AdminSalaryDashboard";
+import SalaryGeneration from "./components/salary/SalaryGeneration";
+import SalaryList from "./components/salary/SalaryList";
+import SalaryDetail from "./components/salary/SalaryDetail";
+import UserSalaryHistory from "./components/salary/UserSalaryHistory";
+import DocumentCenter from "./components/document/DocumentCenter";
+import UserDocumentCenter from "./components/document/UserDocumentCenter";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -80,8 +83,7 @@ function App() {
           <Route path="employees/edit/:id" element={<EditEmployee />} />
           <Route path="leaves" element={<AdminLeaveList />} />
           <Route path="employees/leaves/:id" element={<LeaveList />} />
-          <Route path="employees/salary/:id" element={<ViewSalary />} />
-          <Route path="salary/add" element={<AddSalary />} />
+
           <Route path="holidays" element={<HolidayManagement />} />
 
           <Route path="attendance-approval" element={<AdminAttendanceApproval />} />
@@ -109,6 +111,13 @@ function App() {
           <Route path="leave-policy/edit/:id" element={<EditLeavePolicy />} />
           <Route path="leave-policy/assign/:id" element={<AssignLeavePolicy />} />
           <Route path="leave-balance-reset" element={<LeaveBalanceReset />} />
+          <Route path="salary-management" element={<AdminSalaryDashboard />} />
+          <Route path="salary/generate" element={<SalaryGeneration />} />
+          <Route path="salary/list" element={<SalaryList />} />
+          <Route path="salary/detail/:id" element={<SalaryDetail />} />
+
+          <Route path="document-center" element={<DocumentCenter />} />
+
         </Route>
 
         {/* Employee Dashboard */}
@@ -126,9 +135,11 @@ function App() {
           <Route path="profile/:id" element={<ViewProfile />} />
           <Route path="leaves/:id" element={<LeaveList />} />
           <Route path="add-leave" element={<AddLeave />} />
-          <Route path="salary/:id" element={<ViewSalary />} />
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
           <Route path="user-profile/:id" element={<ViewUserProfile />} />
+          <Route path="salary/history" element={<UserSalaryHistory />} />
+          <Route path="document-center" element={<UserDocumentCenter />} />
+
         </Route>
 
         {/* Manager Dashboard */}
@@ -152,8 +163,10 @@ function App() {
           <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
           <Route path="leaves/:id" element={<LeaveList />} />
           <Route path="add-leave" element={<AddLeave />} />
-          <Route path="salary/:id" element={<ViewSalary />} />
           <Route path="user-profile/:id" element={<ViewUserProfile />} />
+          <Route path="salary/history" element={<UserSalaryHistory />} />
+          <Route path="document-center" element={<UserDocumentCenter />} />
+
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />

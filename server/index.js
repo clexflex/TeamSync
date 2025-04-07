@@ -16,6 +16,7 @@ import managerRouter from './routes/manager.js';
 import attendanceRouter from './routes/attendance.js';
 import holidayRouter from "./routes/holiday.js";
 import userProfileRouter from './routes/userProfile.js';
+import documentRouter from './routes/document.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -47,6 +48,12 @@ app.use('/uploads/leave-documents', express.static(path.join(__dirname, 'public/
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     }
   }));
+
+app.use('/uploads/payslips', express.static(path.join(__dirname, 'public/uploads/payslips'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+  }));
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/department', departmentRouter);
@@ -60,6 +67,7 @@ app.use('/api/manager', managerRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use("/api/holidays", holidayRouter);
 app.use('/api/user-profile', userProfileRouter);
+app.use('/api/documents', documentRouter);
 // Root directory route
 app.get('/', (req, res) => {
     res.status(200).json({

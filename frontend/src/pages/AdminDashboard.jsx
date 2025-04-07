@@ -8,7 +8,8 @@ import { Menu as MenuIcon, Dashboard as DashboardIcon, Group as GroupIcon,
          Assessment as AnalyticsIcon, EventNote as LeaveIcon,
          AttachMoney as SalaryIcon, Settings as SettingsIcon, 
          Celebration,
-         Rule as PolicyIcon} from '@mui/icons-material';
+         Rule as PolicyIcon,
+         FolderSpecial} from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
@@ -31,8 +32,9 @@ const AdminDashboard = () => {
     { text: 'Analytics', icon: <AnalyticsIcon />, path: '/admin-dashboard/attendance/reports' },
     { text: 'Leave Policy', icon: <PolicyIcon />, path: '/admin-dashboard/leave-policies' },
     { text: 'Leave', icon: <LeaveIcon />, path: '/admin-dashboard/leaves' },
-    { text: 'Salary', icon: <SalaryIcon />, path: '/admin-dashboard/salary/add' },
+    { text: 'Salary', icon: <SalaryIcon />, path: '/admin-dashboard/salary-management' },
     { text: 'Holidays', icon: <Celebration />, path: '/admin-dashboard/holidays' },
+    { text: 'Document Center', icon: <FolderSpecial />, path: '/admin-dashboard/document-center' },
   ];
 
   const drawer = (

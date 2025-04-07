@@ -9,7 +9,8 @@ import {
   Person as ProfileIcon,
   CalendarToday as LeaveIcon,
   AttachMoney as SalaryIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  FolderSpecial
 } from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
@@ -29,7 +30,10 @@ const EmployeeDashboard = () => {
     { text: 'Attendance Form', icon: <AttendanceIcon />, path: '/employee-dashboard/attendance-form' },
     { text: 'My Profile', icon: <ProfileIcon />, path: `/employee-dashboard/user-profile/${user?._id}` },
     { text: 'Leaves', icon: <LeaveIcon />, path: `/employee-dashboard/leaves/${user?._id}` },
-    { text: 'Salary', icon: <SalaryIcon />, path: `/employee-dashboard/salary/${user?._id}` },
+    // { text: 'Salary', icon: <SalaryIcon />, path: `/employee-dashboard/salary/${user?._id}` },
+    { text: 'Salary', icon: <SalaryIcon />, path: '/employee-dashboard/salary/history/' },
+    { text: 'Document Center', icon: <FolderSpecial />, path: '/employee-dashboard/document-center' },
+
   ];
 
   const drawer = (

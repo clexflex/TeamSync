@@ -47,9 +47,35 @@ const createDefaultLeaveBalances = () => {
     ];
 };
 
+// Parse nested JSON objects from FormData
+const parseNestedObjects = (obj) => {
+    const result = {};
+    Object.keys(obj).forEach(key => {
+        if (typeof obj[key] === 'string' && obj[key].startsWith('{') && obj[key].endsWith('}')) {
+            try {
+                result[key] = JSON.parse(obj[key]);
+            } catch (e) {
+                result[key] = obj[key];
+            }
+        } else if (typeof obj[key] === 'string' && obj[key].startsWith('[') && obj[key].endsWith(']')) {
+            try {
+                result[key] = JSON.parse(obj[key]);
+            } catch (e) {
+                result[key] = obj[key];
+            }
+        } else {
+            result[key] = obj[key];
+        }
+    });
+    return result;
+};
+
 // Create a new user profile
 const createUserProfile = async (req, res) => {
     try {
+        // Parse any JSON strings in the form data
+        let formData = parseNestedObjects(req.body);
+        
         const {
             name,
             email,
@@ -64,8 +90,43 @@ const createUserProfile = async (req, res) => {
             maritalStatus,
             salary,
             leavePolicy, // optional
-            status = "active" // default to active
-        } = req.body;
+            status = "active", // default to active
+            
+            // Personal Information
+            companyEmail,
+            location,
+            primaryContactNo,
+            bloodGroup,
+            nationality,
+            marriageDate,
+            spouse,
+            fatherName,
+            religion,
+            physicallyHandicapped,
+            height,
+            weight,
+            
+            // Address
+            address,
+            
+            // Education Information
+            education,
+            
+            // Employment & Job Information
+            confirmationDate,
+            noticePeriod,
+            employmentStatus,
+            currentCompanyExperience,
+            previousExperience,
+            totalExperience,
+            probationPeriod,
+            
+            // Previous Employment
+            previousEmployment,
+            
+            // Salary Information
+            salaryInfo
+        } = formData;
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -93,14 +154,62 @@ const createUserProfile = async (req, res) => {
         });
         const savedUser = await newUser.save();
 
-        // Create user profile
+        // Create user profile with extended fields
         const newUserProfile = new UserProfile({
             userId: savedUser._id,
             leavePolicy: leavePolicy || null,
             leaveBalances: createDefaultLeaveBalances(),
             joiningDate: joiningDate || new Date(),
-            lastLeaveBalanceReset: null
+            lastLeaveBalanceReset: null,
+            
+            // Personal Information
+            companyEmail,
+            location,
+            primaryContactNo,
+            bloodGroup,
+            nationality,
+            marriageDate,
+            spouse,
+            fatherName,
+            religion,
+            physicallyHandicapped: physicallyHandicapped === 'true' || physicallyHandicapped === true,
+            height,
+            weight,
+            
+            // Address
+            address,
+            
+            // Education Information
+            education: education || [{
+                degree: '',
+                institute: '',
+                startDate: '',
+                endDate: '',
+                grade: ''
+            }],
+            
+            // Employment & Job Information
+            confirmationDate,
+            noticePeriod,
+            employmentStatus,
+            currentCompanyExperience,
+            previousExperience,
+            totalExperience,
+            probationPeriod,
+            
+            // Previous Employment
+            previousEmployment: previousEmployment || [{
+                company: '',
+                designation: '',
+                startDate: '',
+                endDate: '',
+                reasonForLeaving: ''
+            }],
+            
+            // Salary Information
+            salaryInfo
         });
+        
         const savedUserProfile = await newUserProfile.save();
 
         // Create either employee or manager based on userType
@@ -135,7 +244,7 @@ const createUserProfile = async (req, res) => {
         });
     } catch (error) {
         logger.error(`Error creating user profile: ${error.message}`);
-        return res.status(500).json({ success: false, error: "Server error in creating user profile" });
+        return res.status(500).json({ success: false, error: `Server error in creating user profile: ${error.message}` });
     }
 };
 
@@ -147,7 +256,7 @@ const getUserProfiles = async (req, res) => {
                 path: 'userId',
                 select: 'name email role status profileImage'
             })
-            .populate('leavePolicy', 'name'); // Add this line to populate leave policy details
+            .populate('leavePolicy', 'name');
 
         // Enhance user profiles with employee or manager data
         const enhancedProfiles = await Promise.all(userProfiles.map(async (profile) => {
@@ -189,9 +298,9 @@ const getUserProfiles = async (req, res) => {
                     profileImage: user.profileImage
                 },
                 ...additionalData,
-                hasLeavePolicy: !!profile.leavePolicy, // Add boolean flag to indicate if user has a policy
-                leavePolicyId: profile.leavePolicy?._id || null, // Include the policy ID if available
-                leavePolicyName: profile.leavePolicy?.name || null, // Include the policy name if available
+                hasLeavePolicy: !!profile.leavePolicy,
+                leavePolicyId: profile.leavePolicy?._id || null,
+                leavePolicyName: profile.leavePolicy?.name || null,
                 joiningDate: profile.joiningDate,
                 leaveBalances: profile.leaveBalances,
                 createdAt: profile.createdAt
@@ -278,6 +387,7 @@ const getUserProfileById = async (req, res) => {
             }
         }
 
+        // Build complete profile with all additional fields
         const completeProfile = {
             _id: userProfile._id,
             user: {
@@ -289,7 +399,46 @@ const getUserProfileById = async (req, res) => {
                 profileImage: user.profileImage
             },
             ...additionalData,
+            
+            // Include all additional fields from user profile
             joiningDate: userProfile.joiningDate,
+            
+            // Personal Information
+            companyEmail: userProfile.companyEmail,
+            location: userProfile.location,
+            primaryContactNo: userProfile.primaryContactNo,
+            bloodGroup: userProfile.bloodGroup,
+            nationality: userProfile.nationality,
+            marriageDate: userProfile.marriageDate,
+            spouse: userProfile.spouse,
+            fatherName: userProfile.fatherName,
+            religion: userProfile.religion,
+            physicallyHandicapped: userProfile.physicallyHandicapped,
+            height: userProfile.height,
+            weight: userProfile.weight,
+            
+            // Address
+            address: userProfile.address,
+            
+            // Education Information
+            education: userProfile.education,
+            
+            // Employment & Job Information
+            confirmationDate: userProfile.confirmationDate,
+            noticePeriod: userProfile.noticePeriod,
+            employmentStatus: userProfile.employmentStatus,
+            currentCompanyExperience: userProfile.currentCompanyExperience,
+            previousExperience: userProfile.previousExperience,
+            totalExperience: userProfile.totalExperience,
+            probationPeriod: userProfile.probationPeriod,
+            
+            // Previous Employment
+            previousEmployment: userProfile.previousEmployment,
+            
+            // Salary Information
+            salaryInfo: userProfile.salaryInfo,
+            
+            // Leave Information
             leaveBalances: userProfile.leaveBalances,
             leavePolicy: userProfile.leavePolicy,
             createdAt: userProfile.createdAt,
@@ -310,6 +459,11 @@ const getUserProfileById = async (req, res) => {
 const updateUserProfile = async (req, res) => {
     try {
         const { id } = req.params;
+        let updateData = req.body;
+        
+        // Parse any JSON strings in the form data
+        updateData = parseNestedObjects(updateData);
+        
         const {
             name,
             email,
@@ -324,8 +478,43 @@ const updateUserProfile = async (req, res) => {
             maritalStatus,
             leavePolicy,
             status,
-            leaveBalances
-        } = req.body;
+            leaveBalances,
+            
+            // Personal Information
+            companyEmail,
+            location,
+            primaryContactNo,
+            bloodGroup,
+            nationality,
+            marriageDate,
+            spouse,
+            fatherName,
+            religion,
+            physicallyHandicapped,
+            height,
+            weight,
+            
+            // Address
+            address,
+            
+            // Education Information
+            education,
+            
+            // Employment & Job Information
+            confirmationDate,
+            noticePeriod,
+            employmentStatus,
+            currentCompanyExperience,
+            previousExperience,
+            totalExperience,
+            probationPeriod,
+            
+            // Previous Employment
+            previousEmployment,
+            
+            // Salary Information
+            salaryInfo
+        } = updateData;
 
         // First verify the profile exists
         const userProfile = await UserProfile.findById(id);
@@ -361,11 +550,54 @@ const updateUserProfile = async (req, res) => {
 
         await user.save();
 
-        // Update UserProfile
-        if (joiningDate) userProfile.joiningDate = joiningDate;
-        if (leavePolicy) userProfile.leavePolicy = leavePolicy;
-        if (leaveBalances) {userProfile.leaveBalances = leaveBalances;}
-        await userProfile.save();
+        // Update UserProfile with all the additional fields
+        const profileUpdates = {};
+        
+        // Only update fields that were provided
+        if (joiningDate) profileUpdates.joiningDate = joiningDate;
+        if (leavePolicy) profileUpdates.leavePolicy = leavePolicy;
+        if (leaveBalances) profileUpdates.leaveBalances = leaveBalances;
+        
+        // Personal Information
+        if (companyEmail !== undefined) profileUpdates.companyEmail = companyEmail;
+        if (location !== undefined) profileUpdates.location = location;
+        if (primaryContactNo !== undefined) profileUpdates.primaryContactNo = primaryContactNo;
+        if (bloodGroup !== undefined) profileUpdates.bloodGroup = bloodGroup;
+        if (nationality !== undefined) profileUpdates.nationality = nationality;
+        if (marriageDate !== undefined) profileUpdates.marriageDate = marriageDate;
+        if (spouse !== undefined) profileUpdates.spouse = spouse;
+        if (fatherName !== undefined) profileUpdates.fatherName = fatherName;
+        if (religion !== undefined) profileUpdates.religion = religion;
+        if (physicallyHandicapped !== undefined) {
+            profileUpdates.physicallyHandicapped = physicallyHandicapped === 'true' || physicallyHandicapped === true;
+        }
+        if (height !== undefined) profileUpdates.height = height;
+        if (weight !== undefined) profileUpdates.weight = weight;
+        
+        // Address
+        if (address) profileUpdates.address = address;
+        
+        // Education Information
+        if (education) profileUpdates.education = education;
+        
+        // Employment & Job Information
+        if (confirmationDate !== undefined) profileUpdates.confirmationDate = confirmationDate;
+        if (noticePeriod !== undefined) profileUpdates.noticePeriod = noticePeriod;
+        if (employmentStatus !== undefined) profileUpdates.employmentStatus = employmentStatus;
+        if (currentCompanyExperience !== undefined) profileUpdates.currentCompanyExperience = currentCompanyExperience;
+        if (previousExperience !== undefined) profileUpdates.previousExperience = previousExperience;
+        if (totalExperience !== undefined) profileUpdates.totalExperience = totalExperience;
+        if (probationPeriod !== undefined) profileUpdates.probationPeriod = probationPeriod;
+        
+        // Previous Employment
+        if (previousEmployment) profileUpdates.previousEmployment = previousEmployment;
+        
+        // Salary Information
+        if (salaryInfo) profileUpdates.salaryInfo = salaryInfo;
+        
+        if (Object.keys(profileUpdates).length > 0) {
+            await UserProfile.updateOne({ _id: id }, { $set: profileUpdates });
+        }
 
         // Update Employee or Manager based on role
         if (user.role === 'employee') {
@@ -399,7 +631,7 @@ const updateUserProfile = async (req, res) => {
         });
     } catch (error) {
         logger.error(`Error updating user profile ${id}: ${error.message}`);
-        return res.status(500).json({ success: false, error: "Server error in updating user profile" });
+        return res.status(500).json({ success: false, error: `Server error in updating user profile: ${error.message}` });
     }
 };
 
