@@ -44,24 +44,24 @@ const UserSalaryHistory = () => {
   const [selectedSalary, setSelectedSalary] = useState(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
-  
+
   useEffect(() => {
     if (user?._id) {
       fetchSalaryHistory();
     }
   }, [user]);
-  
+
   const fetchSalaryHistory = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await axios.get(`${config.API_URL}/api/salary/history/${user._id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setSalaries(response.data.salaries);
       } else {
@@ -74,18 +74,18 @@ const UserSalaryHistory = () => {
       setLoading(false);
     }
   };
-  
+
   const handleViewDetail = async (id) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await axios.get(`${config.API_URL}/api/salary/detail/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setSelectedSalary(response.data);
         setDetailDialogOpen(true);
@@ -99,19 +99,19 @@ const UserSalaryHistory = () => {
       setLoading(false);
     }
   };
-  
+
   const handleCloseDetail = () => {
     setDetailDialogOpen(false);
     setSelectedSalary(null);
   };
-  
+
   const handleDownloadPayslip = async (id) => {
     try {
       setDownloadLoading(true);
-      
+
       // Using window.open for direct download
       window.open(`${config.API_URL}/api/salary/payslip/${id}`, '_blank');
-      
+
     } catch (error) {
       console.error('Error downloading payslip:', error);
       setError('Failed to download payslip');
@@ -119,24 +119,24 @@ const UserSalaryHistory = () => {
       setDownloadLoading(false);
     }
   };
-  
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    
+
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
-  
+
   const formatCurrency = (amount) => {
     return `₹ ${parseFloat(amount).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`;
   };
-  
+
   const getStatusChip = (status) => {
     let color = 'default';
-    
+
     switch (status) {
       case 'Draft':
         color = 'default';
@@ -156,7 +156,7 @@ const UserSalaryHistory = () => {
       default:
         color = 'default';
     }
-    
+
     return (
       <Chip
         label={status}
@@ -166,7 +166,7 @@ const UserSalaryHistory = () => {
       />
     );
   };
-  
+
   if (loading && salaries.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
@@ -174,19 +174,19 @@ const UserSalaryHistory = () => {
       </Box>
     );
   }
-  
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" fontWeight="bold" gutterBottom>
         My Salary History
       </Typography>
-      
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-      
+
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={4}>
@@ -217,7 +217,7 @@ const UserSalaryHistory = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={4}>
           <Card elevation={2}>
             <CardContent>
@@ -250,7 +250,7 @@ const UserSalaryHistory = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={4}>
           <Card elevation={2}>
             <CardContent>
@@ -280,7 +280,7 @@ const UserSalaryHistory = () => {
           </Card>
         </Grid>
       </Grid>
-      
+
       {/* Salary History Table */}
       {salaries.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
@@ -329,19 +329,19 @@ const UserSalaryHistory = () => {
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
                         <Tooltip title="View Details">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             color="primary"
                             onClick={() => handleViewDetail(salary._id)}
                           >
                             <ViewIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        
+
                         {salary.payslipGenerated && (
                           <Tooltip title="Download Payslip">
-                            <IconButton 
-                              size="small" 
+                            <IconButton
+                              size="small"
                               color="secondary"
                               onClick={() => handleDownloadPayslip(salary._id)}
                               disabled={downloadLoading}
@@ -359,7 +359,7 @@ const UserSalaryHistory = () => {
           </TableContainer>
         </Paper>
       )}
-      
+
       {/* Salary Detail Dialog */}
       <Dialog
         open={detailDialogOpen}
@@ -375,7 +375,7 @@ const UserSalaryHistory = () => {
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        
+
         <DialogContent dividers>
           {selectedSalary && (
             <>
@@ -392,14 +392,14 @@ const UserSalaryHistory = () => {
                   {formatCurrency(selectedSalary.salary.netSalary)}
                 </Typography>
               </Box>
-              
+
               <Divider sx={{ mb: 3 }} />
-              
+
               {/* Attendance Summary */}
               <Typography variant="h6" gutterBottom>
                 Attendance Summary
               </Typography>
-              
+
               <Grid container spacing={3} sx={{ mb: 3 }}>
                 <Grid item xs={12} md={6}>
                   <TableContainer component={Paper} variant="outlined">
@@ -425,7 +425,7 @@ const UserSalaryHistory = () => {
                     </Table>
                   </TableContainer>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
@@ -453,21 +453,21 @@ const UserSalaryHistory = () => {
                   </TableContainer>
                 </Grid>
               </Grid>
-              
+
               <Divider sx={{ mb: 3 }} />
-              
+
               {/* Salary Breakdown */}
               <Typography variant="h6" gutterBottom>
                 Salary Breakdown
               </Typography>
-              
+
               <Grid container spacing={3}>
                 {/* Earnings */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="success.main" gutterBottom>
                     Earnings
                   </Typography>
-                  
+
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableBody>
@@ -475,20 +475,20 @@ const UserSalaryHistory = () => {
                           <TableCell>Basic Salary</TableCell>
                           <TableCell align="right">{formatCurrency(selectedSalary.salary.basicSalary)}</TableCell>
                         </TableRow>
-                        
-                        {Object.entries(selectedSalary.salary.allowances).map(([key, value]) => 
+
+                        {Object.entries(selectedSalary.salary.allowances).map(([key, value]) =>
                           value > 0 && (
                             <TableRow key={key}>
                               <TableCell>
-                                {key === 'DA' ? 'Dearness Allowance' : 
-                                key === 'HRA' ? 'House Rent Allowance' : 
-                                key.charAt(0).toUpperCase() + key.slice(1)} Allowance
+                                {key === 'DA' ? 'Dearness Allowance' :
+                                  key === 'HRA' ? 'House Rent Allowance' :
+                                    key.charAt(0).toUpperCase() + key.slice(1)} Allowance
                               </TableCell>
                               <TableCell align="right">{formatCurrency(value)}</TableCell>
                             </TableRow>
                           )
                         )}
-                        
+
                         <TableRow sx={{ bgcolor: 'grey.50' }}>
                           <TableCell sx={{ fontWeight: 'bold' }}>Total Earnings</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 'bold' }}>
@@ -499,32 +499,32 @@ const UserSalaryHistory = () => {
                     </Table>
                   </TableContainer>
                 </Grid>
-                
+
                 {/* Deductions */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="error.main" gutterBottom>
                     Deductions
                   </Typography>
-                  
+
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableBody>
-                        {Object.entries(selectedSalary.salary.deductions).map(([key, value]) => 
+                        {Object.entries(selectedSalary.salary.deductions).map(([key, value]) =>
                           value > 0 && (
                             <TableRow key={key}>
                               <TableCell>
-                                {key === 'PF' ? 'Provident Fund' : 
-                                key === 'ESI' ? 'Employee State Insurance' :
-                                key === 'PT' ? 'Professional Tax' :
-                                key === 'TDS' ? 'Tax Deducted at Source' :
-                                key === 'MLWF' ? 'Maharashtra Labor Welfare Fund' :
-                                key.charAt(0).toUpperCase() + key.slice(1)}
+                                {key === 'PF' ? 'Provident Fund' :
+                                  key === 'ESI' ? 'Employee State Insurance' :
+                                    key === 'PT' ? 'Professional Tax' :
+                                      key === 'TDS' ? 'Tax Deducted at Source' :
+                                        key === 'MLWF' ? 'Maharashtra Labor Welfare Fund' :
+                                          key.charAt(0).toUpperCase() + key.slice(1)}
                               </TableCell>
                               <TableCell align="right">{formatCurrency(value)}</TableCell>
                             </TableRow>
                           )
                         )}
-                        
+
                         {selectedSalary.salary.attendanceAdjustment !== 0 && (
                           <TableRow>
                             <TableCell>Attendance Adjustment</TableCell>
@@ -533,7 +533,7 @@ const UserSalaryHistory = () => {
                             </TableCell>
                           </TableRow>
                         )}
-                        
+
                         <TableRow sx={{ bgcolor: 'grey.50' }}>
                           <TableCell sx={{ fontWeight: 'bold' }}>Total Deductions</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 'bold' }}>
@@ -545,7 +545,7 @@ const UserSalaryHistory = () => {
                   </TableContainer>
                 </Grid>
               </Grid>
-              
+
               {/* Net Salary */}
               <Box
                 sx={{
@@ -567,7 +567,48 @@ const UserSalaryHistory = () => {
                   {formatCurrency(selectedSalary.salary.netSalary)}
                 </Typography>
               </Box>
-              
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle1" gutterBottom color="primary.main">
+                  Net Salary Calculation
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="textSecondary">Total Salary:</Typography>
+                      <Typography variant="body1">
+                        Basic + Allowances = {formatCurrency(selectedSalary.salary.grossSalary)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" color="textSecondary">Total Deductions:</Typography>
+                      <Typography variant="body1">
+                        {formatCurrency(selectedSalary.salary.totalDeductions)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 1 }} />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="textSecondary">Step 1: Base Pay</Typography>
+                      <Typography variant="body1">
+                        Total Salary - Deductions = {formatCurrency(selectedSalary.salary.grossSalary - selectedSalary.salary.totalDeductions)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="textSecondary">Step 2: Attendance Adjustment</Typography>
+                      <Typography variant="body1">
+                        ({selectedSalary.salary.totalDays} days - {selectedSalary.salary.totalCredits.toFixed(1)} credits) × ({formatCurrency(selectedSalary.salary.grossSalary)} ÷ 30) = {formatCurrency(selectedSalary.salary.attendanceAdjustment)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="textSecondary">Step 3: Final Net Salary</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="success.main">
+                        (Step 1) - (Step 2) = {formatCurrency(selectedSalary.salary.netSalary)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Box>
               {/* Payment Information */}
               {selectedSalary.salary.status === 'Paid' && (
                 <Box sx={{ mt: 3 }}>
@@ -584,7 +625,7 @@ const UserSalaryHistory = () => {
                           {formatDate(selectedSalary.salary.paymentDate)}
                         </Typography>
                       </Grid>
-                      
+
                       <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="textSecondary">
                           Payment Method
@@ -593,7 +634,7 @@ const UserSalaryHistory = () => {
                           {selectedSalary.salary.paymentMethod}
                         </Typography>
                       </Grid>
-                      
+
                       {selectedSalary.salary.transactionId && (
                         <Grid item xs={12}>
                           <Typography variant="body2" color="textSecondary">
@@ -611,7 +652,7 @@ const UserSalaryHistory = () => {
             </>
           )}
         </DialogContent>
-        
+
         <DialogActions>
           {selectedSalary?.salary.payslipGenerated && (
             <Button

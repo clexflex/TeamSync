@@ -42,13 +42,13 @@ const AdminSalaryDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await axios.get(`${config.API_URL}/api/salary/stats`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setStats(response.data.stats);
       } else {
@@ -167,11 +167,11 @@ const AdminSalaryDashboard = () => {
             <StatCard
               icon={Description}
               title="Total Salaries"
-              value={(stats?.statusCounts?.Draft || 0) + 
-                    (stats?.statusCounts?.Verified || 0) + 
-                    (stats?.statusCounts?.Approved || 0) + 
-                    (stats?.statusCounts?.Paid || 0) + 
-                    (stats?.statusCounts?.Rejected || 0) || 0}
+              value={(stats?.statusCounts?.Draft || 0) +
+                (stats?.statusCounts?.Verified || 0) +
+                (stats?.statusCounts?.Approved || 0) +
+                (stats?.statusCounts?.Paid || 0) +
+                (stats?.statusCounts?.Rejected || 0) || 0}
               color="warning"
             />
           </Grid>
@@ -338,6 +338,43 @@ const AdminSalaryDashboard = () => {
             </Grid>
           </Grid>
         </Box>
+      </Paper>
+      <Paper elevation={0} sx={{ p: 3, mt: 3, border: 1, borderColor: 'divider' }}>
+        <Typography variant="h6" gutterBottom>
+          Salary Calculation Formula
+        </Typography>
+        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom color="primary.main">
+            Net Salary = (Total Salary - Deductions) - Attendance Adjustment
+          </Typography>
+          <Grid container spacing={1} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 1, bgcolor: 'primary.light', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ color: 'white', fontWeight: 'medium' }}>
+                  Total Salary = Basic Pay + Allowances
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ color: 'white', fontWeight: 'medium' }}>
+                  Deductions = PF + ESI + PT + TDS + Others
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ p: 1, bgcolor: 'warning.light', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ color: 'white', fontWeight: 'medium' }}>
+                  Attendance Adjustment = (Total Days - Credits) * (Total Salary ÷ 30)
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+        <Typography variant="body2" color="textSecondary">
+          The attendance adjustment may be positive (deduction) or negative (addition) based on the employee's attendance.
+          When an employee has worked extra days (Credits &gt; Total Days), they receive a bonus in their salary.
+        </Typography>
       </Paper>
     </Box>
   );

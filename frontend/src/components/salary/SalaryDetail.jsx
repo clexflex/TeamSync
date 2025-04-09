@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -33,7 +32,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Stack
+  Stack,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import {
   ArrowBack,
@@ -45,7 +47,9 @@ import {
   CreditCard as PaymentIcon,
   Description as PayslipIcon,
   DownloadOutlined as DownloadIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Refresh as RefreshIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
@@ -57,12 +61,13 @@ const SalaryDetail = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const actionParam = queryParams.get('action');
-  
+
   const [salaryData, setSalaryData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  
+  const [convertToDraftDialogOpen, setConvertToDraftDialogOpen] = useState(false);
+
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
   const [editedData, setEditedData] = useState({
@@ -71,11 +76,14 @@ const SalaryDetail = () => {
     deductions: {},
     comments: ''
   });
-  
+
   // Dialog states
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [pendingDatesOpen, setPendingDatesOpen] = useState(false);
+  const [pendingDates, setPendingDates] = useState([]);
   const [paymentData, setPaymentData] = useState({
     transactionId: '',
     paymentDate: '',
@@ -83,14 +91,15 @@ const SalaryDetail = () => {
     comments: ''
   });
   const [comments, setComments] = useState('');
-  
+
   // Download state
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [payslipLoading, setPayslipLoading] = useState(false);
-  
+  const [regenerateLoading, setRegenerateLoading] = useState(false);
+
   useEffect(() => {
     fetchSalaryDetails();
-    
+
     // Handle action parameter
     if (actionParam) {
       switch (actionParam) {
@@ -106,6 +115,9 @@ const SalaryDetail = () => {
         case 'edit':
           setTimeout(() => handleEditMode(), 500);
           break;
+        case 'regenerate':
+          setTimeout(() => setRegenerateDialogOpen(true), 500);
+          break;
         case 'payslip':
           setTimeout(() => handleGeneratePayslip(), 500);
           break;
@@ -114,21 +126,21 @@ const SalaryDetail = () => {
       }
     }
   }, [id, actionParam]);
-  
+
   const fetchSalaryDetails = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await axios.get(`${config.API_URL}/api/salary/detail/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setSalaryData(response.data);
-        
+
         // Initialize edit form data
         setEditedData({
           basicSalary: response.data.salary.basicSalary,
@@ -136,7 +148,7 @@ const SalaryDetail = () => {
           deductions: { ...response.data.salary.deductions },
           comments: ''
         });
-        
+
         // Set default payment date to today
         setPaymentData({
           ...paymentData,
@@ -152,7 +164,41 @@ const SalaryDetail = () => {
       setLoading(false);
     }
   };
-  
+  const handleConvertToDraft = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+      setConvertToDraftDialogOpen(false);
+
+      const response = await axios.post(
+        `${config.API_URL}/api/salary/${id}/convert-to-draft`,
+        { comments },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setSuccess('Salary record converted to draft successfully');
+        setSalaryData(prev => ({
+          ...prev,
+          salary: response.data.salary
+        }));
+        setComments('');
+      } else {
+        setError('Failed to convert salary record to draft');
+      }
+    } catch (error) {
+      console.error('Error converting salary to draft:', error);
+      setError(error.response?.data?.error || 'An error occurred while converting salary to draft');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEditMode = () => {
     setEditMode(true);
     setEditedData({
@@ -162,14 +208,14 @@ const SalaryDetail = () => {
       comments: ''
     });
   };
-  
+
   const handleCancelEdit = () => {
     setEditMode(false);
   };
-  
+
   const handleInputChange = (e, category, field) => {
     const { value } = e.target;
-    
+
     if (category) {
       setEditedData(prev => ({
         ...prev,
@@ -185,13 +231,13 @@ const SalaryDetail = () => {
       }));
     }
   };
-  
+
   const handleSaveChanges = async () => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      
+
       const response = await axios.put(
         `${config.API_URL}/api/salary/${id}`,
         {
@@ -206,7 +252,7 @@ const SalaryDetail = () => {
           }
         }
       );
-      
+
       if (response.data.success) {
         setSuccess('Salary record updated successfully');
         setSalaryData(prev => ({
@@ -224,14 +270,14 @@ const SalaryDetail = () => {
       setLoading(false);
     }
   };
-  
+
   const handleApprove = async () => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
       setApproveDialogOpen(false);
-      
+
       const response = await axios.post(
         `${config.API_URL}/api/salary/${id}/approve`,
         { comments },
@@ -241,7 +287,7 @@ const SalaryDetail = () => {
           }
         }
       );
-      
+
       if (response.data.success) {
         setSuccess('Salary record approved successfully');
         setSalaryData(prev => ({
@@ -259,19 +305,19 @@ const SalaryDetail = () => {
       setLoading(false);
     }
   };
-  
+
   const handleReject = async () => {
     try {
       if (!comments.trim()) {
         setError('Comments are required for rejection');
         return;
       }
-      
+
       setLoading(true);
       setError(null);
       setSuccess(null);
       setRejectDialogOpen(false);
-      
+
       const response = await axios.post(
         `${config.API_URL}/api/salary/${id}/reject`,
         { comments },
@@ -281,7 +327,7 @@ const SalaryDetail = () => {
           }
         }
       );
-      
+
       if (response.data.success) {
         setSuccess('Salary record rejected successfully');
         setSalaryData(prev => ({
@@ -299,19 +345,62 @@ const SalaryDetail = () => {
       setLoading(false);
     }
   };
-  
+
+  // New function to handle regeneration of salary draft
+  const handleRegenerateSalary = async () => {
+    try {
+      setRegenerateLoading(true);
+      setError(null);
+      setSuccess(null);
+      setRegenerateDialogOpen(false);
+
+      const response = await axios.post(
+        `${config.API_URL}/api/salary/${id}/regenerate`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setSuccess('Salary draft regenerated successfully with latest attendance data');
+        // Refresh salary data
+        fetchSalaryDetails();
+      } else {
+        setError('Failed to regenerate salary draft');
+      }
+    } catch (error) {
+      console.error('Error regenerating salary draft:', error);
+
+      // Handle specific case of pending attendance records
+      if (error.response?.data?.error?.includes('pending approval')) {
+        if (error.response.data.pendingDates) {
+          setPendingDates(error.response.data.pendingDates);
+          setPendingDatesOpen(true);
+        }
+        setError('Cannot regenerate salary draft while attendance records are pending approval');
+      } else {
+        setError(error.response?.data?.error || 'An error occurred while regenerating salary draft');
+      }
+    } finally {
+      setRegenerateLoading(false);
+    }
+  };
+
   const handleMarkAsPaid = async () => {
     try {
       if (!paymentData.transactionId || !paymentData.paymentMethod) {
         setError('Transaction ID and payment method are required');
         return;
       }
-      
+
       setLoading(true);
       setError(null);
       setSuccess(null);
       setPaymentDialogOpen(false);
-      
+
       const response = await axios.post(
         `${config.API_URL}/api/salary/${id}/pay`,
         paymentData,
@@ -321,7 +410,7 @@ const SalaryDetail = () => {
           }
         }
       );
-      
+
       if (response.data.success) {
         setSuccess('Salary record marked as paid successfully');
         setSalaryData(prev => ({
@@ -338,13 +427,13 @@ const SalaryDetail = () => {
       setLoading(false);
     }
   };
-  
+
   const handleGeneratePayslip = async () => {
     try {
       setPayslipLoading(true);
       setError(null);
       setSuccess(null);
-      
+
       const response = await axios.post(
         `${config.API_URL}/api/salary/${id}/payslip`,
         {},
@@ -354,7 +443,7 @@ const SalaryDetail = () => {
           }
         }
       );
-      
+
       if (response.data.success) {
         setSuccess('Payslip generated successfully');
         // Refresh salary data to get updated payslip URL
@@ -369,32 +458,14 @@ const SalaryDetail = () => {
       setPayslipLoading(false);
     }
   };
-  
+
   const handleDownloadPayslip = async () => {
     try {
       setDownloadLoading(true);
-      
+
       // Using window.open for simple download
       window.open(`${config.API_URL}/api/salary/payslip/${id}`, '_blank');
-      
-      // For more complex download handling, you could use axios with responseType: 'blob'
-      /*
-      const response = await axios.get(`${config.API_URL}/api/salary/payslip/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        responseType: 'blob'
-      });
-      
-      // Create a blob link to download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `payslip_${salaryData.salary.payPeriod.replace(/\s+/g, '_')}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      */
+
     } catch (error) {
       console.error('Error downloading payslip:', error);
       setError('Failed to download payslip');
@@ -402,24 +473,24 @@ const SalaryDetail = () => {
       setDownloadLoading(false);
     }
   };
-  
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    
+
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
-  
+
   const formatCurrency = (amount) => {
     return `₹ ${parseFloat(amount).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`;
   };
-  
+
   const getStatusChip = (status) => {
     let color = 'default';
-    
+
     switch (status) {
       case 'Draft':
         color = 'default';
@@ -439,7 +510,7 @@ const SalaryDetail = () => {
       default:
         color = 'default';
     }
-    
+
     return (
       <Chip
         label={status}
@@ -448,7 +519,7 @@ const SalaryDetail = () => {
       />
     );
   };
-  
+
   const StatusStepper = () => {
     const getStatusStep = (status) => {
       switch (status) {
@@ -460,16 +531,16 @@ const SalaryDetail = () => {
         default: return 0;
       }
     };
-    
+
     const steps = [
       'Draft',
       'Verified',
       'Approved',
       'Paid'
     ];
-    
+
     const activeStep = getStatusStep(salaryData?.salary?.status);
-    
+
     return (
       <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 3 }}>
         {steps.map((label, index) => (
@@ -491,7 +562,7 @@ const SalaryDetail = () => {
       </Stepper>
     );
   };
-  
+
   if (loading && !salaryData) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
@@ -499,7 +570,7 @@ const SalaryDetail = () => {
       </Box>
     );
   }
-  
+
   if (error && !salaryData) {
     return (
       <Box p={3}>
@@ -516,7 +587,7 @@ const SalaryDetail = () => {
       </Box>
     );
   }
-  
+
   if (!salaryData) {
     return (
       <Box p={3}>
@@ -534,9 +605,9 @@ const SalaryDetail = () => {
       </Box>
     );
   }
-  
+
   const { salary, employee, manager, departmentInfo, userProfile } = salaryData;
-  
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -548,7 +619,7 @@ const SalaryDetail = () => {
         >
           Back to Salary List
         </Button>
-        
+
         <Box sx={{ display: 'flex', gap: 2 }}>
           {salary.payslipGenerated ? (
             <Button
@@ -573,7 +644,7 @@ const SalaryDetail = () => {
               </Button>
             )
           )}
-          
+
           {salary.status === 'Draft' && (
             <>
               <Button
@@ -594,7 +665,7 @@ const SalaryDetail = () => {
               </Button>
             </>
           )}
-          
+
           {salary.status === 'Approved' && (
             <Button
               variant="contained"
@@ -605,7 +676,30 @@ const SalaryDetail = () => {
               Mark as Paid
             </Button>
           )}
-          
+          {salary.status === 'Rejected' && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<RefreshIcon />}
+              onClick={() => setConvertToDraftDialogOpen(true)}
+            >
+              Convert to Draft
+            </Button>
+          )}
+
+          {/* Regenerate Button - Only available for Draft or Rejected status */}
+          {(salary.status === 'Draft' || salary.status === 'Rejected') && !editMode && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              startIcon={<RefreshIcon />}
+              onClick={() => setRegenerateDialogOpen(true)}
+              disabled={regenerateLoading}
+            >
+              {regenerateLoading ? 'Regenerating...' : 'Regenerate'}
+            </Button>
+          )}
+
           {(salary.status === 'Draft' || salary.status === 'Rejected') && !editMode && (
             <Button
               variant="outlined"
@@ -615,7 +709,7 @@ const SalaryDetail = () => {
               Edit
             </Button>
           )}
-          
+
           {editMode && (
             <>
               <Button
@@ -640,19 +734,19 @@ const SalaryDetail = () => {
           )}
         </Box>
       </Box>
-      
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-      
+
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
           {success}
         </Alert>
       )}
-      
+
       {/* Salary Status */}
       <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -661,9 +755,9 @@ const SalaryDetail = () => {
           </Typography>
           {getStatusChip(salary.status)}
         </Box>
-        
+
         <StatusStepper />
-        
+
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
@@ -673,7 +767,7 @@ const SalaryDetail = () => {
               {salary.userId.name}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Department
@@ -682,7 +776,7 @@ const SalaryDetail = () => {
               {departmentInfo?.dep_name || 'N/A'}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Employee ID
@@ -691,7 +785,7 @@ const SalaryDetail = () => {
               {employee?.employeeId || manager?.managerId || 'N/A'}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Role
@@ -700,7 +794,7 @@ const SalaryDetail = () => {
               {salary.userId.role}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Pay Period
@@ -709,7 +803,7 @@ const SalaryDetail = () => {
               {salary.payPeriod}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Period Dates
@@ -718,7 +812,7 @@ const SalaryDetail = () => {
               {formatDate(salary.periodStart)} to {formatDate(salary.periodEnd)}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Total Days
@@ -727,7 +821,7 @@ const SalaryDetail = () => {
               {salary.totalDays} days
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="subtitle2" color="textSecondary">
               Net Salary
@@ -738,13 +832,14 @@ const SalaryDetail = () => {
           </Grid>
         </Grid>
       </Paper>
-      
+
+
       {/* Attendance Summary */}
       <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Attendance Summary
         </Typography>
-        
+
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <TableContainer>
@@ -776,7 +871,7 @@ const SalaryDetail = () => {
               </Table>
             </TableContainer>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <TableContainer>
               <Table size="small">
@@ -807,7 +902,7 @@ const SalaryDetail = () => {
               </Table>
             </TableContainer>
           </Grid>
-          
+
           <Grid item xs={12}>
             <Box
               sx={{
@@ -832,20 +927,20 @@ const SalaryDetail = () => {
           </Grid>
         </Grid>
       </Paper>
-      
+
       {/* Salary Breakdown */}
       <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
           Salary Breakdown
         </Typography>
-        
+
         <Grid container spacing={4}>
           {/* Earnings */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle1" gutterBottom color="success.main">
               Earnings
             </Typography>
-            
+
             <TableContainer>
               <Table size="small">
                 <TableHead>
@@ -876,12 +971,12 @@ const SalaryDetail = () => {
                     </TableCell>
                     {editMode && <TableCell align="right"></TableCell>}
                   </TableRow>
-                  
+
                   {Object.entries(editMode ? editedData.allowances : salary.allowances).map(([key, value]) => (
                     <TableRow key={key}>
-                      <TableCell>{key === 'DA' ? 'Dearness Allowance' : 
-                                  key === 'HRA' ? 'House Rent Allowance' : 
-                                  key.charAt(0).toUpperCase() + key.slice(1)} Allowance</TableCell>
+                      <TableCell>{key === 'DA' ? 'Dearness Allowance' :
+                        key === 'HRA' ? 'House Rent Allowance' :
+                          key.charAt(0).toUpperCase() + key.slice(1)} Allowance</TableCell>
                       <TableCell align="right">
                         {editMode ? (
                           <TextField
@@ -901,7 +996,7 @@ const SalaryDetail = () => {
                       {editMode && <TableCell align="right"></TableCell>}
                     </TableRow>
                   ))}
-                  
+
                   <TableRow sx={{ bgcolor: 'grey.50' }}>
                     <TableCell sx={{ fontWeight: 'bold' }}>Total Earnings</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
@@ -913,13 +1008,13 @@ const SalaryDetail = () => {
               </Table>
             </TableContainer>
           </Grid>
-          
+
           {/* Deductions */}
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle1" gutterBottom color="error.main">
               Deductions
             </Typography>
-            
+
             <TableContainer>
               <Table size="small">
                 <TableHead>
@@ -932,12 +1027,12 @@ const SalaryDetail = () => {
                 <TableBody>
                   {Object.entries(editMode ? editedData.deductions : salary.deductions).map(([key, value]) => (
                     <TableRow key={key}>
-                      <TableCell>{key === 'PF' ? 'Provident Fund' : 
-                                  key === 'ESI' ? 'Employee State Insurance' :
-                                  key === 'PT' ? 'Professional Tax' :
-                                  key === 'TDS' ? 'Tax Deducted at Source' :
-                                  key === 'MLWF' ? 'Maharashtra Labor Welfare Fund' :
-                                  key.charAt(0).toUpperCase() + key.slice(1)}</TableCell>
+                      <TableCell>{key === 'PF' ? 'Provident Fund' :
+                        key === 'ESI' ? 'Employee State Insurance' :
+                          key === 'PT' ? 'Professional Tax' :
+                            key === 'TDS' ? 'Tax Deducted at Source' :
+                              key === 'MLWF' ? 'Maharashtra Labor Welfare Fund' :
+                                key.charAt(0).toUpperCase() + key.slice(1)}</TableCell>
                       <TableCell align="right">
                         {editMode ? (
                           <TextField
@@ -957,7 +1052,7 @@ const SalaryDetail = () => {
                       {editMode && <TableCell align="right"></TableCell>}
                     </TableRow>
                   ))}
-                  
+
                   <TableRow>
                     <TableCell>Attendance Adjustment</TableCell>
                     <TableCell align="right">
@@ -965,7 +1060,7 @@ const SalaryDetail = () => {
                     </TableCell>
                     {editMode && <TableCell align="right"></TableCell>}
                   </TableRow>
-                  
+
                   <TableRow sx={{ bgcolor: 'grey.50' }}>
                     <TableCell sx={{ fontWeight: 'bold' }}>Total Deductions</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
@@ -978,7 +1073,7 @@ const SalaryDetail = () => {
             </TableContainer>
           </Grid>
         </Grid>
-        
+
         {/* Net Salary */}
         <Box
           sx={{
@@ -1000,7 +1095,47 @@ const SalaryDetail = () => {
             {formatCurrency(salary.netSalary)}
           </Typography>
         </Box>
-        
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Salary Calculation Breakdown
+          </Typography>
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="body2" fontWeight="medium">Formula: Net Salary = (Total Salary - Deductions) - Attendance Adjustment</Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="textSecondary">Total Salary (Basic + Allowances):</Typography>
+                <Typography variant="body1">{formatCurrency(salaryData.salary.grossSalary)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="textSecondary">Total Deductions:</Typography>
+                <Typography variant="body1">{formatCurrency(salaryData.salary.totalDeductions)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Typography variant="body2" color="textSecondary">Base Pay (Total Salary - Deductions):</Typography>
+                <Typography variant="body1">{formatCurrency(salaryData.salary.grossSalary - salaryData.salary.totalDeductions)}</Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Divider sx={{ my: 1 }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" color="textSecondary">Attendance Adjustment Calculation:</Typography>
+                <Typography variant="body1">
+                  ({salaryData.salary.totalDays} days - {salaryData.salary.totalCredits.toFixed(1)} credits) × ({formatCurrency(salaryData.salary.grossSalary)} ÷ 30)
+                  = {formatCurrency(salaryData.salary.attendanceAdjustment)}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" color="textSecondary">Final Net Salary:</Typography>
+                <Typography variant="body1" fontWeight="bold">
+                  ({formatCurrency(salaryData.salary.grossSalary - salaryData.salary.totalDeductions)}) - ({formatCurrency(salaryData.salary.attendanceAdjustment)})
+                  = {formatCurrency(salaryData.salary.netSalary)}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Box>
         {editMode && (
           <Box sx={{ mt: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
@@ -1018,7 +1153,7 @@ const SalaryDetail = () => {
           </Box>
         )}
       </Paper>
-      
+
       {/* Audit Log */}
       <Paper variant="outlined" sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -1027,7 +1162,7 @@ const SalaryDetail = () => {
             Audit Log
           </Typography>
         </Box>
-        
+
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -1051,7 +1186,110 @@ const SalaryDetail = () => {
           </Table>
         </TableContainer>
       </Paper>
-      
+
+      {/* Regenerate Confirmation Dialog */}
+      <Dialog
+        open={regenerateDialogOpen}
+        onClose={() => setRegenerateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          pb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <RefreshIcon color="secondary" />
+          Regenerate Salary Draft
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            This will recalculate the salary based on the latest attendance and leave data. Any manual edits made to this salary record will be lost.
+          </DialogContentText>
+
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="body2" fontWeight="medium">
+              This action will:
+            </Typography>
+            <Box component="ul" sx={{ pl: 2, mt: 1, mb: 0 }}>
+              <li>Update all attendance metrics (days present, absent, leaves, etc.)</li>
+              <li>Reset salary components to values from user profile</li>
+              <li>Recalculate all credits, adjustments, and final salary</li>
+            </Box>
+          </Alert>
+
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to regenerate this salary draft?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setRegenerateDialogOpen(false)}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRegenerateSalary}
+            variant="contained"
+            color="secondary"
+            startIcon={<RefreshIcon />}
+            disabled={regenerateLoading}
+          >
+            {regenerateLoading ?
+              <CircularProgress size={24} color="inherit" /> :
+              'Regenerate Salary'
+            }
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Pending Attendance Dates Dialog */}
+      <Dialog
+        open={pendingDatesOpen}
+        onClose={() => setPendingDatesOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          Pending Attendance Records
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            The following dates have attendance records pending approval. Please approve or reject these records before regenerating the salary draft.
+          </DialogContentText>
+
+          {pendingDates.length > 0 ? (
+            <List sx={{ maxHeight: 300, overflow: 'auto', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+              {pendingDates.map((date, index) => (
+                <ListItem key={index} divider={index < pendingDates.length - 1}>
+                  <ListItemText
+                    primary={formatDate(date)}
+                    secondary={new Date(date).toLocaleDateString('en-US', { weekday: 'long' })}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Typography color="text.secondary">
+              No specific dates available. Please check attendance records.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => navigate('/admin-dashboard/attendance-approval')}
+            color="primary"
+            variant="contained"
+          >
+            Go to Attendance Approval
+          </Button>
+          <Button onClick={() => setPendingDatesOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Approve Dialog */}
       <Dialog
         open={approveDialogOpen}
@@ -1082,7 +1320,7 @@ const SalaryDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Reject Dialog */}
       <Dialog
         open={rejectDialogOpen}
@@ -1111,9 +1349,9 @@ const SalaryDetail = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleReject} 
-            variant="contained" 
+          <Button
+            onClick={handleReject}
+            variant="contained"
             color="error"
             disabled={!comments.trim()}
           >
@@ -1121,7 +1359,42 @@ const SalaryDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+      <Dialog
+        open={convertToDraftDialogOpen}
+        onClose={() => setConvertToDraftDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Convert to Draft</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will change the status of this rejected salary record back to "Draft" status, allowing it to be approved again. Please add any comments explaining the conversion.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Comments (Optional)"
+            fullWidth
+            variant="outlined"
+            value={comments}
+            onChange={(e) => setComments(e.target.value)}
+            multiline
+            rows={3}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConvertToDraftDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConvertToDraft}
+            variant="contained"
+            color="primary"
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Convert to Draft'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Payment Dialog */}
       <Dialog
         open={paymentDialogOpen}
@@ -1134,7 +1407,7 @@ const SalaryDetail = () => {
           <DialogContentText>
             Record payment details for {salary.userId.name}'s salary for {salary.payPeriod}.
           </DialogContentText>
-          
+
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <TextField
@@ -1146,7 +1419,7 @@ const SalaryDetail = () => {
                 margin="dense"
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Payment Date"
@@ -1158,7 +1431,7 @@ const SalaryDetail = () => {
                 margin="dense"
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="dense">
                 <InputLabel>Payment Method</InputLabel>
@@ -1174,7 +1447,7 @@ const SalaryDetail = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12}>
               <TextField
                 label="Comments (Optional)"
@@ -1190,9 +1463,9 @@ const SalaryDetail = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleMarkAsPaid} 
-            variant="contained" 
+          <Button
+            onClick={handleMarkAsPaid}
+            variant="contained"
             color="primary"
             disabled={!paymentData.transactionId || !paymentData.paymentMethod}
           >
@@ -1200,6 +1473,9 @@ const SalaryDetail = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+
+
     </Box>
   );
 };

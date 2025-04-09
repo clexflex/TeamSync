@@ -33,15 +33,16 @@ import {
   ListItem,
   ListItemText
 } from '@mui/material';
-import { 
-  Paid, 
-  CalendarMonth, 
-  Group, 
-  ArrowForward, 
+import {
+  Paid,
+  CalendarMonth,
+  Group,
+  ArrowForward,
   CheckCircle,
   Info as InfoIcon,
   Refresh,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  ArrowBack
 } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
@@ -63,50 +64,50 @@ const SalaryGeneration = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [pendingDatesOpen, setPendingDatesOpen] = useState(false);
   const [pendingDates, setPendingDates] = useState([]);
-  
+
   const navigate = useNavigate();
-  
+
   const steps = ['Select Options', 'Review Period', 'Generate Salary'];
-  
+
   useEffect(() => {
     fetchEmployees();
-    
+
     // Set default dates (26th of last month to 25th of current month)
     const today = new Date();
     const lastMonth = new Date(today);
     lastMonth.setMonth(lastMonth.getMonth() - 1);
-    
+
     const startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 26);
     const endDate = new Date(today.getFullYear(), today.getMonth(), 25);
-    
+
     setPeriodStart(formatDateForInput(startDate));
     setPeriodEnd(formatDateForInput(endDate));
   }, []);
-  
+
   const formatDateForInput = (date) => {
     const d = new Date(date);
     const month = `${d.getMonth() + 1}`.padStart(2, '0');
     const day = `${d.getDate()}`.padStart(2, '0');
     return `${d.getFullYear()}-${month}-${day}`;
   };
-  
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
-  
+
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      
+
       // Use the UserProfile endpoint instead of separate employee/manager endpoints
       const userProfileResponse = await axios.get(`${config.API_URL}/api/user-profile`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (userProfileResponse.data.success && userProfileResponse.data.userProfiles) {
         // Process user profiles and create a structured list of employees and managers
         const userList = userProfileResponse.data.userProfiles
@@ -118,7 +119,7 @@ const SalaryGeneration = () => {
             department: profile.department?.dep_name || 'N/A',
             employeeId: profile.employeeId || profile.managerId || 'N/A'
           }));
-        
+
         setEmployees(userList);
       } else {
         setError('Failed to fetch user profiles');
@@ -130,38 +131,38 @@ const SalaryGeneration = () => {
       setLoading(false);
     }
   };
-  
+
   const validatePeriod = () => {
     if (!periodStart || !periodEnd) {
       setError('Please select both start and end dates for the period');
       return false;
     }
-    
+
     const start = new Date(periodStart);
     const end = new Date(periodEnd);
-    
+
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       setError('Invalid date format');
       return false;
     }
-    
+
     if (end < start) {
       setError('End date cannot be before start date');
       return false;
     }
-    
+
     // Check if period spans approximately one month
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    
+
     if (diffDays < 28 || diffDays > 31) {
       setError('Period should span approximately one month (28-31 days)');
       return false;
     }
-    
+
     return true;
   };
-  
+
   const handleNext = () => {
     if (activeStep === 0) {
       // Validate first step
@@ -177,31 +178,31 @@ const SalaryGeneration = () => {
       }
       setError(null);
     }
-    
+
     setActiveStep((prevStep) => prevStep + 1);
   };
-  
+
   const handleBack = () => {
     setActiveStep((prevStep) => prevStep - 1);
     setError(null);
     setSuccess(null);
   };
-  
+
   const handleOpenConfirmDialog = () => {
     setConfirmDialogOpen(true);
   };
-  
+
   const handleCloseConfirmDialog = () => {
     setConfirmDialogOpen(false);
   };
-  
+
   const generateSalary = async () => {
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
       handleCloseConfirmDialog();
-      
+
       if (generationType === 'individual') {
         // Generate salary for single employee
         const response = await axios.post(
@@ -217,7 +218,7 @@ const SalaryGeneration = () => {
             }
           }
         );
-        
+
         if (response.data.success) {
           setSuccess(`Salary draft generated successfully for the selected employee`);
           setGenerationResults({
@@ -248,7 +249,7 @@ const SalaryGeneration = () => {
             }
           }
         );
-        
+
         if (response.data.success) {
           setSuccess(`Generated salary drafts for ${response.data.results.success.length} employees/managers`);
           setGenerationResults(response.data.results);
@@ -256,7 +257,7 @@ const SalaryGeneration = () => {
       }
     } catch (error) {
       console.error('Error generating salary:', error);
-      
+
       // Handle specific case of pending attendance records
       if (error.response?.data?.error?.includes('pending approval')) {
         if (error.response.data.pendingDates) {
@@ -271,12 +272,12 @@ const SalaryGeneration = () => {
       setLoading(false);
     }
   };
-  
+
   const handleShowErrorDetails = (errorMessage) => {
     setSelectedError(errorMessage);
     setDetailsDialogOpen(true);
   };
-  
+
   const viewSalaryRecord = (salaryId) => {
     navigate(`/admin-dashboard/salary/detail/${salaryId}`);
   };
@@ -289,7 +290,7 @@ const SalaryGeneration = () => {
     setSelectedEmployee(e.target.value);
     console.log("Selected employee:", e.target.value); // Add this for debugging
   };
-  
+
   const renderStepContent = () => {
     switch (activeStep) {
       case 0:
@@ -309,47 +310,47 @@ const SalaryGeneration = () => {
                 <MenuItem value="individual">Individual Employee/Manager</MenuItem>
               </Select>
             </FormControl>
-            
+
             {generationType === 'individual' && (
               // Replace the existing Select component for employee selection with this:
-<FormControl fullWidth sx={{ mb: 3 }}>
-  <InputLabel id="employee-select-label">Select Employee/Manager</InputLabel>
-  <Select
-    labelId="employee-select-label"
-    name="selectedEmployee"
-    value={selectedEmployee}
-    onChange={(e) => setSelectedEmployee(e.target.value)}
-    label="Select Employee/Manager"
-  >
-    <MenuItem value="" disabled>
-      Select an Employee or Manager
-    </MenuItem>
-    
-    {/* Employee Section */}
-    <MenuItem value="" disabled divider>
-      --- Employees ---
-    </MenuItem>
-    {employees
-      .filter(emp => emp.role === 'employee')
-      .map(employee => (
-        <MenuItem key={employee.id} value={employee.id}>
-          {employee.name} ({employee.employeeId}) - {employee.department}
-        </MenuItem>
-      ))}
-    
-    {/* Manager Section */}
-    <MenuItem value="" disabled divider>
-      --- Managers ---
-    </MenuItem>
-    {employees
-      .filter(emp => emp.role === 'manager')
-      .map(manager => (
-        <MenuItem key={manager.id} value={manager.id}>
-          {manager.name} ({manager.employeeId}) - {manager.department}
-        </MenuItem>
-      ))}
-  </Select>
-</FormControl>
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel id="employee-select-label">Select Employee/Manager</InputLabel>
+                <Select
+                  labelId="employee-select-label"
+                  name="selectedEmployee"
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  label="Select Employee/Manager"
+                >
+                  <MenuItem value="" disabled>
+                    Select an Employee or Manager
+                  </MenuItem>
+
+                  {/* Employee Section */}
+                  <MenuItem value="" disabled divider>
+                    --- Employees ---
+                  </MenuItem>
+                  {employees
+                    .filter(emp => emp.role === 'employee')
+                    .map(employee => (
+                      <MenuItem key={employee.id} value={employee.id}>
+                        {employee.name} ({employee.employeeId}) - {employee.department}
+                      </MenuItem>
+                    ))}
+
+                  {/* Manager Section */}
+                  <MenuItem value="" disabled divider>
+                    --- Managers ---
+                  </MenuItem>
+                  {employees
+                    .filter(emp => emp.role === 'manager')
+                    .map(manager => (
+                      <MenuItem key={manager.id} value={manager.id}>
+                        {manager.name} ({manager.employeeId}) - {manager.department}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
             )}
           </Box>
         );
@@ -383,7 +384,7 @@ const SalaryGeneration = () => {
                 />
               </Grid>
             </Grid>
-            
+
             <Paper sx={{ mt: 3, p: 2, bgcolor: 'info.50', borderRadius: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <InfoIcon color="info" sx={{ mr: 1 }} />
@@ -393,7 +394,7 @@ const SalaryGeneration = () => {
                 </Typography>
               </Box>
             </Paper>
-            
+
             <Box sx={{ mt: 3, p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Summary:
@@ -404,8 +405,8 @@ const SalaryGeneration = () => {
                     Generation Type:
                   </Typography>
                   <Typography variant="body1">
-                    {generationType === 'all' 
-                      ? 'All Employees & Managers' 
+                    {generationType === 'all'
+                      ? 'All Employees & Managers'
                       : 'Individual Employee/Manager'}
                   </Typography>
                 </Grid>
@@ -424,8 +425,8 @@ const SalaryGeneration = () => {
                     Period:
                   </Typography>
                   <Typography variant="body1">
-                    {periodStart && periodEnd 
-                      ? `${formatDate(periodStart)} to ${formatDate(periodEnd)}` 
+                    {periodStart && periodEnd
+                      ? `${formatDate(periodStart)} to ${formatDate(periodEnd)}`
                       : 'Not set'}
                   </Typography>
                 </Grid>
@@ -439,7 +440,7 @@ const SalaryGeneration = () => {
             <Typography variant="h6" gutterBottom>
               Generate Salary
             </Typography>
-            
+
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
                 <CircularProgress />
@@ -449,7 +450,7 @@ const SalaryGeneration = () => {
                 <Alert severity="success" sx={{ mb: 3 }}>
                   {success}
                 </Alert>
-                
+
                 {generationResults && (
                   <Box>
                     {generationResults.success.length > 0 && (
@@ -489,7 +490,7 @@ const SalaryGeneration = () => {
                         </TableContainer>
                       </Box>
                     )}
-                    
+
                     {generationResults.failed && generationResults.failed.length > 0 && (
                       <Box>
                         <Typography variant="subtitle1" gutterBottom color="error">
@@ -509,8 +510,8 @@ const SalaryGeneration = () => {
                                 <TableRow key={result.userId}>
                                   <TableCell>{result.name}</TableCell>
                                   <TableCell>
-                                    {result.error.length > 50 
-                                      ? `${result.error.substring(0, 50)}...` 
+                                    {result.error.length > 50
+                                      ? `${result.error.substring(0, 50)}...`
                                       : result.error}
                                   </TableCell>
                                   <TableCell align="right">
@@ -532,7 +533,7 @@ const SalaryGeneration = () => {
                     )}
                   </Box>
                 )}
-                
+
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                   <Button
                     variant="contained"
@@ -550,19 +551,19 @@ const SalaryGeneration = () => {
                   <Typography variant="subtitle1" gutterBottom>
                     Please review the information below before generating salaries
                   </Typography>
-                  
+
                   <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="textSecondary">
                         Generation Type:
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                        {generationType === 'all' 
-                          ? 'All Employees & Managers' 
+                        {generationType === 'all'
+                          ? 'All Employees & Managers'
                           : 'Individual Employee/Manager'}
                       </Typography>
                     </Grid>
-                    
+
                     {generationType === 'individual' && (
                       <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="textSecondary">
@@ -573,7 +574,7 @@ const SalaryGeneration = () => {
                         </Typography>
                       </Grid>
                     )}
-                    
+
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="textSecondary">
                         Period Start:
@@ -582,7 +583,7 @@ const SalaryGeneration = () => {
                         {formatDate(periodStart)}
                       </Typography>
                     </Grid>
-                    
+
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="textSecondary">
                         Period End:
@@ -593,7 +594,7 @@ const SalaryGeneration = () => {
                     </Grid>
                   </Grid>
                 </Paper>
-                
+
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <Button
                     variant="contained"
@@ -613,19 +614,30 @@ const SalaryGeneration = () => {
         return null;
     }
   };
-  
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper elevation={1} sx={{ p: 3 }}>
+
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" gutterBottom fontWeight="bold">
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate('/admin-dashboard/salary-management')}
+              sx={{ mb: 2 }}
+            >
+              Back to Dashboard
+            </Button>
+          </Box>
+          <Typography variant="h5" fontWeight="bold">
             Generate Salary Drafts
           </Typography>
           <Typography variant="body2" color="textSecondary">
             Generate salary drafts for employees and managers based on attendance data.
           </Typography>
         </Box>
-        
+
         <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
           {steps.map((label) => (
             <Step key={label}>
@@ -633,15 +645,15 @@ const SalaryGeneration = () => {
             </Step>
           ))}
         </Stepper>
-        
+
         {error && (
-          <Alert 
-            severity="error" 
+          <Alert
+            severity="error"
             sx={{ mb: 3 }}
             action={
               error.includes('pending approval') && (
-                <Button 
-                  color="inherit" 
+                <Button
+                  color="inherit"
                   size="small"
                   onClick={viewPendingAttendance}
                 >
@@ -653,9 +665,9 @@ const SalaryGeneration = () => {
             {error}
           </Alert>
         )}
-        
+
         {renderStepContent()}
-        
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
           <Button
             disabled={activeStep === 0 || loading || success}
@@ -664,7 +676,7 @@ const SalaryGeneration = () => {
           >
             Back
           </Button>
-          
+
           {activeStep < steps.length - 1 ? (
             <Button
               variant="contained"
@@ -688,7 +700,7 @@ const SalaryGeneration = () => {
           )}
         </Box>
       </Paper>
-      
+
       {/* Error Details Dialog */}
       <Dialog
         open={detailsDialogOpen}
@@ -706,7 +718,7 @@ const SalaryGeneration = () => {
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Pending Attendance Dates Dialog */}
       <Dialog
         open={pendingDatesOpen}
@@ -722,13 +734,13 @@ const SalaryGeneration = () => {
           <DialogContentText sx={{ mb: 2 }}>
             The following dates have attendance records pending approval. Please approve or reject these records before generating salary.
           </DialogContentText>
-          
+
           {pendingDates.length > 0 ? (
             <List sx={{ maxHeight: 300, overflow: 'auto', bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
               {pendingDates.map((date, index) => (
                 <ListItem key={index} divider={index < pendingDates.length - 1}>
-                  <ListItemText 
-                    primary={formatDate(date)} 
+                  <ListItemText
+                    primary={formatDate(date)}
                     secondary={new Date(date).toLocaleDateString('en-US', { weekday: 'long' })}
                   />
                 </ListItem>
@@ -741,7 +753,7 @@ const SalaryGeneration = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => navigate('/admin-dashboard/attendance-approval')}
             color="primary"
             variant="contained"
@@ -751,7 +763,7 @@ const SalaryGeneration = () => {
           <Button onClick={() => setPendingDatesOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Confirmation Dialog */}
       <Dialog
         open={confirmDialogOpen}
@@ -762,26 +774,26 @@ const SalaryGeneration = () => {
           <DialogContentText>
             {generationType === 'all' ? (
               <>
-                You are about to generate salary drafts for all employees and managers 
+                You are about to generate salary drafts for all employees and managers
                 for the period <strong>{formatDate(periodStart)}</strong> to <strong>{formatDate(periodEnd)}</strong>.
               </>
             ) : (
               <>
-                You are about to generate a salary draft for <strong>{employees.find(emp => emp.id === selectedEmployee)?.name}</strong> 
+                You are about to generate a salary draft for <strong>{employees.find(emp => emp.id === selectedEmployee)?.name}</strong>
                 for the period <strong>{formatDate(periodStart)}</strong> to <strong>{formatDate(periodEnd)}</strong>.
               </>
             )}
           </DialogContentText>
           <DialogContentText sx={{ mt: 2 }}>
-            This action will calculate salaries based on attendance records. Please ensure that all attendance 
+            This action will calculate salaries based on attendance records. Please ensure that all attendance
             records for this period have been approved.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfirmDialog}>Cancel</Button>
-          <Button 
-            onClick={generateSalary} 
-            variant="contained" 
+          <Button
+            onClick={generateSalary}
+            variant="contained"
             color="primary"
             disabled={loading}
           >
