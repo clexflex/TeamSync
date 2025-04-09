@@ -9,7 +9,8 @@ import { Menu as MenuIcon, Dashboard as DashboardIcon, Group as GroupIcon,
          AttachMoney as SalaryIcon, Settings as SettingsIcon, 
          Celebration,
          Rule as PolicyIcon,
-         FolderSpecial, ConfirmationNumber} from '@mui/icons-material';
+         FolderSpecial, ConfirmationNumber,
+         ExitToApp} from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
@@ -36,6 +37,8 @@ const AdminDashboard = () => {
     { text: 'Holidays', icon: <Celebration />, path: '/admin-dashboard/holidays' },
     { text: 'Document Center', icon: <FolderSpecial />, path: '/admin-dashboard/document-center' },
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/admin-dashboard/tickets' },
+    { text: 'Resignations', icon: <ExitToApp />, path: '/admin-dashboard/resignations/list' },
+
 
   ];
 

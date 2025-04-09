@@ -54,6 +54,15 @@ const login = async (req, res) => {
             });
         }
 
+        // Check if user is active
+        if (user.status === 'inactive') {
+            logger.warn(`Inactive user attempted login: ${email} from IP ${req.ip}`);
+            return res.status(403).json({
+                success: false,
+                error: "Your account is no longer active. Please contact HR for more information."
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         
         if (!isMatch) {
@@ -105,7 +114,6 @@ const login = async (req, res) => {
         });
     }
 };
-
 const verify = async (req, res) => {
     try {
         const user = await User.findById(req.user._id).select('-password');

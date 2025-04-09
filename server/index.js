@@ -18,6 +18,7 @@ import holidayRouter from "./routes/holiday.js";
 import userProfileRouter from './routes/userProfile.js';
 import documentRouter from './routes/document.js';
 import ticketRouter from './routes/ticket.js';
+import resignationRouter from './routes/resignation.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -74,6 +75,7 @@ app.use("/api/holidays", holidayRouter);
 app.use('/api/user-profile', userProfileRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api/tickets', ticketRouter);
+app.use('/api/resignation', resignationRouter);
 // Root directory route
 app.get('/', (req, res) => {
   res.status(200).json({

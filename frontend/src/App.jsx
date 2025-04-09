@@ -57,6 +57,9 @@ import TicketList from "./components/ticket/TicketList";
 import AddTicket from "./components/ticket/AddTicket";
 import ViewTicket from "./components/ticket/ViewTicket";
 import AdminTicketDashboard from "./components/ticket/AdminTicketDashboard";
+import SubmitResignationForm from "./components/resignation/SubmitResignationForm";
+import ResignationList from "./components/resignation/ResignationList";
+import ResignationDetail from "./components/resignation/ResignationDetail";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -124,6 +127,9 @@ function App() {
           <Route path="tickets" element={<AdminTicketDashboard />} />
           <Route path="tickets/:id" element={<ViewTicket />} />
 
+          <Route path="resignations/list" element={<ResignationList />} />
+<Route path="resignations/detail/:id" element={<ResignationDetail />} />
+
         </Route>
 
         {/* Employee Dashboard */}
@@ -148,6 +154,7 @@ function App() {
           <Route path="tickets" element={<TicketList />} />
           <Route path="add-ticket" element={<AddTicket />} />
           <Route path="tickets/:id" element={<ViewTicket />} />
+          <Route path="submit-resignation" element={<SubmitResignationForm />} />
 
         </Route>
 
@@ -178,6 +185,8 @@ function App() {
           <Route path="tickets" element={<TicketList />} />
           <Route path="add-ticket" element={<AddTicket />} />
           <Route path="tickets/:id" element={<ViewTicket />} />
+          <Route path="submit-resignation" element={<SubmitResignationForm />} />
+
         </Route>
 
         <Route path="/unauthorized" element={<Unauthorized />} />

@@ -12,6 +12,7 @@ const AuthContext = ({ children }) => {
     // Configure axios defaults
     axios.defaults.withCredentials = true;
 
+
     const verifyUser = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -31,7 +32,14 @@ const AuthContext = ({ children }) => {
             );
 
             if (response.data.success) {
-                setUser(response.data.user);
+                // Check if user is active
+                if (response.data.user.status === 'inactive') {
+                    // Handle inactive user
+                    logout();
+                    setError('Your account has been deactivated. Please contact HR for more information.');
+                } else {
+                    setUser(response.data.user);
+                }
             } else {
                 setUser(null);
                 localStorage.removeItem('token');
@@ -80,10 +88,10 @@ const AuthContext = ({ children }) => {
     };
 
     return (
-        <userContext.Provider value={{ 
-            user, 
-            login, 
-            logout, 
+        <userContext.Provider value={{
+            user,
+            login,
+            logout,
             loading,
             error,
             verifyUser // Expose verifyUser for manual verification if needed

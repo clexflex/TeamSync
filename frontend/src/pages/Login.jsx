@@ -86,9 +86,14 @@ const Login = () => {
         navigate(intendedPath, { replace: true });
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error ||
-        'Unable to connect to the server. Please try again later.';
-      setError(errorMessage);
+      // Handle inactive account error specifically
+      if (error.response?.status === 403 && error.response?.data?.error?.includes('account is no longer active')) {
+        setError("Your account has been deactivated. Please contact HR for more information.");
+      } else {
+        const errorMessage = error.response?.data?.error ||
+          'Unable to connect to the server. Please try again later.';
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
