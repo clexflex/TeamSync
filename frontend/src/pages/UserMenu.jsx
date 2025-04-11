@@ -14,6 +14,8 @@ import { useAuth } from '../context/authContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import config from '../config';
+import NotificationBell from '../components/notifications/NotificationBell';
+
 
 const UserMenu = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -85,6 +87,9 @@ const UserMenu = () => {
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* NotificationBell  */}
+        <NotificationBell />
+        
         <Typography 
           variant="subtitle1" 
           color="text.secondary"

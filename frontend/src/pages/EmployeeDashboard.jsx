@@ -11,7 +11,8 @@ import {
   AttachMoney as SalaryIcon,
   Settings as SettingsIcon,
   FolderSpecial,ConfirmationNumber,
-  ExitToApp
+  ExitToApp, Notifications as NotificationsIcon,
+  NotificationsActive as CreateNotificationIcon
 } from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
@@ -35,6 +36,7 @@ const EmployeeDashboard = () => {
     { text: 'Document Center', icon: <FolderSpecial />, path: '/employee-dashboard/document-center' },
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/employee-dashboard/tickets' },
     { text: 'Resignation', icon: <ExitToApp />, path: '/employee-dashboard/submit-resignation' },
+    { text: 'Notifications', icon: <NotificationsIcon />, path: '/employee-dashboard/notifications' }, 
 
 
   ];

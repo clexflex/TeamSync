@@ -60,138 +60,148 @@ import AdminTicketDashboard from "./components/ticket/AdminTicketDashboard";
 import SubmitResignationForm from "./components/resignation/SubmitResignationForm";
 import ResignationList from "./components/resignation/ResignationList";
 import ResignationDetail from "./components/resignation/ResignationDetail";
+import NotificationProvider from './context/notificationContext';
+import NotificationsPage from './components/notifications/NotificationsPage';
+import NotificationCreator from './components/notifications/NotificationCreator';
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to={DEFAULT_REDIRECT} />} />
-        <Route path="/login" element={<Login />} />
+      <NotificationProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to={DEFAULT_REDIRECT} />} />
+          <Route path="/login" element={<Login />} />
 
-        {/* Admin Dashboard */}
-        <Route
-          path="/admin-dashboard"
-          element={
-            <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["admin"]}>
-                <AdminDashboard />
-              </RoleBaseRoutes>
-            </PrivateRoutes>
-          }
-        >
-          <Route index element={<AdminSummary />} />
-          <Route path="departments" element={<DepartmentList />} />
-          <Route path="add-department" element={<AddDepartment />} />
-          <Route path="department/:id" element={<EditDepartment />} />
-          <Route path="employees" element={<EmployeeList />} />
-          <Route path="add-employee" element={<AddEmployee />} />
-          <Route path="employees/:id" element={<ViewEmployee />} />
-          <Route path="employees/edit/:id" element={<EditEmployee />} />
-          <Route path="leaves" element={<AdminLeaveList />} />
-          <Route path="employees/leaves/:id" element={<LeaveList />} />
+          {/* Admin Dashboard */}
+          <Route
+            path="/admin-dashboard"
+            element={
+              <PrivateRoutes>
+                <RoleBaseRoutes requiredRole={["admin"]}>
+                  <AdminDashboard />
+                </RoleBaseRoutes>
+              </PrivateRoutes>
+            }
+          >
+            <Route index element={<AdminSummary />} />
+            <Route path="departments" element={<DepartmentList />} />
+            <Route path="add-department" element={<AddDepartment />} />
+            <Route path="department/:id" element={<EditDepartment />} />
+            <Route path="employees" element={<EmployeeList />} />
+            <Route path="add-employee" element={<AddEmployee />} />
+            <Route path="employees/:id" element={<ViewEmployee />} />
+            <Route path="employees/edit/:id" element={<EditEmployee />} />
+            <Route path="leaves" element={<AdminLeaveList />} />
+            <Route path="employees/leaves/:id" element={<LeaveList />} />
 
-          <Route path="holidays" element={<HolidayManagement />} />
+            <Route path="holidays" element={<HolidayManagement />} />
 
-          <Route path="attendance-approval" element={<AdminAttendanceApproval />} />
-          <Route path="attendance/reports" element={<AdminAttendanceReport />} />
-          <Route path="managers" element={<ManagersList />} />
-          <Route path="add-manager" element={<AddManager />} />
-          <Route path="managers/edit/:id" element={<EditManager />} />
-          <Route path="manager/:id" element={<ViewManager />} />
-          <Route path="attendance-management" element={<AdminAttendanceManagement />} />
-          <Route path="attendance/add" element={<AddAttendanceForm />} />
+            <Route path="attendance-approval" element={<AdminAttendanceApproval />} />
+            <Route path="attendance/reports" element={<AdminAttendanceReport />} />
+            <Route path="managers" element={<ManagersList />} />
+            <Route path="add-manager" element={<AddManager />} />
+            <Route path="managers/edit/:id" element={<EditManager />} />
+            <Route path="manager/:id" element={<ViewManager />} />
+            <Route path="attendance-management" element={<AdminAttendanceManagement />} />
+            <Route path="attendance/add" element={<AddAttendanceForm />} />
 
-          <Route path="team" element={<TeamList />} />
-          <Route path="team/create" element={<AddTeam />} />
-          <Route path="team/edit/:teamId" element={<EditTeam />} />
-          <Route path="team/members/:teamId" element={<TeamMembers />} />
+            <Route path="team" element={<TeamList />} />
+            <Route path="team/create" element={<AddTeam />} />
+            <Route path="team/edit/:teamId" element={<EditTeam />} />
+            <Route path="team/members/:teamId" element={<TeamMembers />} />
 
-          <Route path="user-profiles" element={<UserProfileList />} />
-          <Route path="user-profile/create" element={<CreateUserProfile />} />
-          <Route path="user-profile/:id" element={<ViewUserProfile />} />
-          <Route path="user-profile/edit/:id" element={<EditUserProfile />} />
+            <Route path="user-profiles" element={<UserProfileList />} />
+            <Route path="user-profile/create" element={<CreateUserProfile />} />
+            <Route path="user-profile/:id" element={<ViewUserProfile />} />
+            <Route path="user-profile/edit/:id" element={<EditUserProfile />} />
 
-          <Route path="leave-policies" element={<LeavePolicyList />} />
-          <Route path="leave-policy/:id" element={<ViewLeavePolicy />} />
-          <Route path="leave-policy/create" element={<CreateLeavePolicy />} />
-          <Route path="leave-policy/edit/:id" element={<EditLeavePolicy />} />
-          <Route path="leave-policy/assign/:id" element={<AssignLeavePolicy />} />
-          <Route path="leave-balance-reset" element={<LeaveBalanceReset />} />
-          <Route path="salary-management" element={<AdminSalaryDashboard />} />
-          <Route path="salary/generate" element={<SalaryGeneration />} />
-          <Route path="salary/list" element={<SalaryList />} />
-          <Route path="salary/detail/:id" element={<SalaryDetail />} />
+            <Route path="leave-policies" element={<LeavePolicyList />} />
+            <Route path="leave-policy/:id" element={<ViewLeavePolicy />} />
+            <Route path="leave-policy/create" element={<CreateLeavePolicy />} />
+            <Route path="leave-policy/edit/:id" element={<EditLeavePolicy />} />
+            <Route path="leave-policy/assign/:id" element={<AssignLeavePolicy />} />
+            <Route path="leave-balance-reset" element={<LeaveBalanceReset />} />
+            <Route path="salary-management" element={<AdminSalaryDashboard />} />
+            <Route path="salary/generate" element={<SalaryGeneration />} />
+            <Route path="salary/list" element={<SalaryList />} />
+            <Route path="salary/detail/:id" element={<SalaryDetail />} />
 
-          <Route path="document-center" element={<DocumentCenter />} />
-          <Route path="tickets" element={<AdminTicketDashboard />} />
-          <Route path="tickets/:id" element={<ViewTicket />} />
+            <Route path="document-center" element={<DocumentCenter />} />
+            <Route path="tickets" element={<AdminTicketDashboard />} />
+            <Route path="tickets/:id" element={<ViewTicket />} />
 
-          <Route path="resignations/list" element={<ResignationList />} />
-<Route path="resignations/detail/:id" element={<ResignationDetail />} />
+            <Route path="resignations/list" element={<ResignationList />} />
+            <Route path="resignations/detail/:id" element={<ResignationDetail />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="create-notification" element={<NotificationCreator />} />
 
-        </Route>
+          </Route>
 
-        {/* Employee Dashboard */}
-        <Route
-          path="/employee-dashboard"
-          element={
-            <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["employee"]}>
-                <EmployeeDashboard />
-              </RoleBaseRoutes>
-            </PrivateRoutes>
-          }
-        >
-          <Route index element={<EmployeeSummary />} />
-          <Route path="profile/:id" element={<ViewProfile />} />
-          <Route path="leaves/:id" element={<LeaveList />} />
-          <Route path="add-leave" element={<AddLeave />} />
-          <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
-          <Route path="user-profile/:id" element={<ViewUserProfile />} />
-          <Route path="salary/history" element={<UserSalaryHistory />} />
-          <Route path="document-center" element={<UserDocumentCenter />} />
-          <Route path="tickets" element={<TicketList />} />
-          <Route path="add-ticket" element={<AddTicket />} />
-          <Route path="tickets/:id" element={<ViewTicket />} />
-          <Route path="submit-resignation" element={<SubmitResignationForm />} />
+          {/* Employee Dashboard */}
+          <Route
+            path="/employee-dashboard"
+            element={
+              <PrivateRoutes>
+                <RoleBaseRoutes requiredRole={["employee"]}>
+                  <EmployeeDashboard />
+                </RoleBaseRoutes>
+              </PrivateRoutes>
+            }
+          >
+            <Route index element={<EmployeeSummary />} />
+            <Route path="profile/:id" element={<ViewProfile />} />
+            <Route path="leaves/:id" element={<LeaveList />} />
+            <Route path="add-leave" element={<AddLeave />} />
+            <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
+            <Route path="user-profile/:id" element={<ViewUserProfile />} />
+            <Route path="salary/history" element={<UserSalaryHistory />} />
+            <Route path="document-center" element={<UserDocumentCenter />} />
+            <Route path="tickets" element={<TicketList />} />
+            <Route path="add-ticket" element={<AddTicket />} />
+            <Route path="tickets/:id" element={<ViewTicket />} />
+            <Route path="submit-resignation" element={<SubmitResignationForm />} />
+            <Route path="notifications" element={<NotificationsPage />} />
 
-        </Route>
+          </Route>
 
-        {/* Manager Dashboard */}
-        <Route
-          path="/manager-dashboard"
-          element={
-            <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["manager"]}>
-                <ManagerDashboard />
-              </RoleBaseRoutes>
-            </PrivateRoutes>
-          }
-        >
-          <Route index element={<ManagerSummary />} />
+          {/* Manager Dashboard */}
+          <Route
+            path="/manager-dashboard"
+            element={
+              <PrivateRoutes>
+                <RoleBaseRoutes requiredRole={["manager"]}>
+                  <ManagerDashboard />
+                </RoleBaseRoutes>
+              </PrivateRoutes>
+            }
+          >
+            <Route index element={<ManagerSummary />} />
 
-          <Route path="team" element={<TeamList />} />
-          <Route path="team/create" element={<AddTeam />} />
-          <Route path="team/edit/:teamId" element={<EditTeam />} />
-          <Route path="team/members/:teamId" element={<TeamMembers />} />
-          <Route path="attendance-approval" element={<TeamAttendanceApproval />} />
-          <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
-          <Route path="leaves/:id" element={<LeaveList />} />
-          <Route path="add-leave" element={<AddLeave />} />
-          <Route path="user-profile/:id" element={<ViewUserProfile />} />
-          <Route path="salary/history" element={<UserSalaryHistory />} />
-          <Route path="document-center" element={<UserDocumentCenter />} />
-          <Route path="tickets" element={<TicketList />} />
-          <Route path="add-ticket" element={<AddTicket />} />
-          <Route path="tickets/:id" element={<ViewTicket />} />
-          <Route path="submit-resignation" element={<SubmitResignationForm />} />
+            <Route path="team" element={<TeamList />} />
+            <Route path="team/create" element={<AddTeam />} />
+            <Route path="team/edit/:teamId" element={<EditTeam />} />
+            <Route path="team/members/:teamId" element={<TeamMembers />} />
+            <Route path="attendance-approval" element={<TeamAttendanceApproval />} />
+            <Route path="attendance-form" element={<EmployeeAttendanceForm />} />
+            <Route path="leaves/:id" element={<LeaveList />} />
+            <Route path="add-leave" element={<AddLeave />} />
+            <Route path="user-profile/:id" element={<ViewUserProfile />} />
+            <Route path="salary/history" element={<UserSalaryHistory />} />
+            <Route path="document-center" element={<UserDocumentCenter />} />
+            <Route path="tickets" element={<TicketList />} />
+            <Route path="add-ticket" element={<AddTicket />} />
+            <Route path="tickets/:id" element={<ViewTicket />} />
+            <Route path="submit-resignation" element={<SubmitResignationForm />} />
+            <Route path="notifications" element={<NotificationsPage />} />
 
-        </Route>
+          </Route>
 
-        <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </NotificationProvider>
+
     </BrowserRouter>
   );
 }

@@ -20,6 +20,10 @@ import documentRouter from './routes/document.js';
 import ticketRouter from './routes/ticket.js';
 import resignationRouter from './routes/resignation.js';
 import path from 'path';
+import http from 'http';
+import setupSocket from './socket.js';
+import notificationRouter from './routes/notification.js';
+import setupCronJobs from './cron.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +31,16 @@ const __dirname = path.dirname(__filename);
 
 connectToDatabase();
 const app = express();
+const server = http.createServer(app);
+// Setup Socket.io
+const { io } = setupSocket(server);
+global.io = io;
+
+// Add middleware to pass io to routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // Security middleware
 app.use(helmet());
@@ -76,6 +90,11 @@ app.use('/api/user-profile', userProfileRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api/tickets', ticketRouter);
 app.use('/api/resignation', resignationRouter);
+app.use('/api/notifications', notificationRouter);
+
+// Setup cron jobs
+setupCronJobs();
+
 // Root directory route
 app.get('/', (req, res) => {
   res.status(200).json({
@@ -105,10 +124,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
+// Update the server startup (replace existing app.listen)
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  logger.info(`🌍 Server running on port ${PORT}`);
+server.listen(PORT, () => {
+    logger.info(`🌍 Server running on port ${PORT}`);
 });
 
 // Handle unhandled rejections
