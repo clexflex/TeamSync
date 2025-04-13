@@ -8,10 +8,6 @@ import AdminSummary from "./components/dashboard/AdminSummary";
 import DepartmentList from "./components/department/DepartmentList";
 import AddDepartment from "./components/department/AddDepartment";
 import EditDepartment from "./components/department/EditDepartment";
-import EmployeeList from "./components/employee/EmployeeList";
-import AddEmployee from "./components/employee/AddEmployee";
-import ViewEmployee from "./components/employee/ViewEmployee";
-import EditEmployee from "./components/employee/EditEmployee";
 import EmployeeSummary from "./components/EmployeeDashboard/EmployeeSummary";
 import ViewProfile from "./components/EmployeeDashboard/ViewProfile";
 import LeaveList from "./components/leave/LeaveList";
@@ -23,10 +19,6 @@ import TeamMembers from "./components/TeamManagement/TeamMembers";
 import TeamList from "./components/TeamManagement/TeamList";
 import ManagerSummary from "./components/ManagerDashboard/ManagerSummary";
 import ManagerDashboard from "./pages/ManagerDashboard";
-import ManagersList from "./components/manager/ManagersList";
-import AddManager from "./components/manager/AddManager";
-import EditManager from "./components/manager/EditManager";
-import ViewManager from "./components/manager/ViewManager";
 import AddTeam from "./components/TeamManagement/AddTeam";
 import EditTeam from "./components/TeamManagement/EditTeam";
 import HolidayManagement from "./components/dashboard/HolidayManagement";
@@ -63,6 +55,10 @@ import ResignationDetail from "./components/resignation/ResignationDetail";
 import NotificationProvider from './context/notificationContext';
 import NotificationsPage from './components/notifications/NotificationsPage';
 import NotificationCreator from './components/notifications/NotificationCreator';
+import AdminAttendanceAnalytics from "./components/dashboard/AdminAttendanceAnalytics";
+import AdminAttendanceAnalytics2 from "./components/dashboard/AdminAttendanceAnalytics2";
+import LiveAttendanceDashboard from "./components/dashboard/LiveAttendanceDashboard";
+import RealTimeAttendanceForm from "./components/EmployeeDashboard/RealTimeAttendanceForm";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -88,34 +84,23 @@ function App() {
             <Route path="departments" element={<DepartmentList />} />
             <Route path="add-department" element={<AddDepartment />} />
             <Route path="department/:id" element={<EditDepartment />} />
-            <Route path="employees" element={<EmployeeList />} />
-            <Route path="add-employee" element={<AddEmployee />} />
-            <Route path="employees/:id" element={<ViewEmployee />} />
-            <Route path="employees/edit/:id" element={<EditEmployee />} />
             <Route path="leaves" element={<AdminLeaveList />} />
             <Route path="employees/leaves/:id" element={<LeaveList />} />
-
             <Route path="holidays" element={<HolidayManagement />} />
-
             <Route path="attendance-approval" element={<AdminAttendanceApproval />} />
             <Route path="attendance/reports" element={<AdminAttendanceReport />} />
-            <Route path="managers" element={<ManagersList />} />
-            <Route path="add-manager" element={<AddManager />} />
-            <Route path="managers/edit/:id" element={<EditManager />} />
-            <Route path="manager/:id" element={<ViewManager />} />
             <Route path="attendance-management" element={<AdminAttendanceManagement />} />
             <Route path="attendance/add" element={<AddAttendanceForm />} />
-
+            <Route path="attendance/report/1" element={<AdminAttendanceAnalytics />} />
+            <Route path="attendance/report/2" element={<AdminAttendanceAnalytics2 />} />
             <Route path="team" element={<TeamList />} />
             <Route path="team/create" element={<AddTeam />} />
             <Route path="team/edit/:teamId" element={<EditTeam />} />
             <Route path="team/members/:teamId" element={<TeamMembers />} />
-
             <Route path="user-profiles" element={<UserProfileList />} />
             <Route path="user-profile/create" element={<CreateUserProfile />} />
             <Route path="user-profile/:id" element={<ViewUserProfile />} />
             <Route path="user-profile/edit/:id" element={<EditUserProfile />} />
-
             <Route path="leave-policies" element={<LeavePolicyList />} />
             <Route path="leave-policy/:id" element={<ViewLeavePolicy />} />
             <Route path="leave-policy/create" element={<CreateLeavePolicy />} />
@@ -126,7 +111,6 @@ function App() {
             <Route path="salary/generate" element={<SalaryGeneration />} />
             <Route path="salary/list" element={<SalaryList />} />
             <Route path="salary/detail/:id" element={<SalaryDetail />} />
-
             <Route path="document-center" element={<DocumentCenter />} />
             <Route path="tickets" element={<AdminTicketDashboard />} />
             <Route path="tickets/:id" element={<ViewTicket />} />
@@ -135,6 +119,7 @@ function App() {
             <Route path="resignations/detail/:id" element={<ResignationDetail />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="create-notification" element={<NotificationCreator />} />
+            <Route path="live-attendance" element={<LiveAttendanceDashboard />} />
 
           </Route>
 
@@ -162,7 +147,7 @@ function App() {
             <Route path="tickets/:id" element={<ViewTicket />} />
             <Route path="submit-resignation" element={<SubmitResignationForm />} />
             <Route path="notifications" element={<NotificationsPage />} />
-
+            <Route path="realtime-attendance" element={<RealTimeAttendanceForm />} />
           </Route>
 
           {/* Manager Dashboard */}
@@ -194,7 +179,7 @@ function App() {
             <Route path="tickets/:id" element={<ViewTicket />} />
             <Route path="submit-resignation" element={<SubmitResignationForm />} />
             <Route path="notifications" element={<NotificationsPage />} />
-
+            <Route path="live-attendance" element={<LiveAttendanceDashboard />} />
           </Route>
 
           <Route path="/unauthorized" element={<Unauthorized />} />

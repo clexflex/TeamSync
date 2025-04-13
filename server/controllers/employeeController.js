@@ -1,3 +1,7 @@
+/**
+ * @deprecated This endpoint is maintained for API compatibility.
+ * New implementations should use /api/user-profile/create instead.
+ */
 import multer from "multer"
 import Department from "../models/Department.js"
 import User from "../models/User.js"

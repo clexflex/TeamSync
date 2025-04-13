@@ -15,7 +15,8 @@ import {
   FolderSpecial,
   ConfirmationNumber,
   ExitToApp, Notifications as NotificationsIcon,
-  NotificationsActive as CreateNotificationIcon
+  NotificationsActive as CreateNotificationIcon,
+  AccessTime
 } from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
@@ -42,7 +43,7 @@ const ManagerDashboard = () => {
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/manager-dashboard/tickets' },
     { text: 'Resignation', icon: <ExitToApp />, path: '/manager-dashboard/submit-resignation' },
     { text: 'Notifications', icon: <NotificationsIcon />, path: '/manager-dashboard/notifications' },
-
+    {        text: 'Live Attendance',        icon: <AccessTime />,        path: '/manager-dashboard/live-attendance'     },
       ];
 
   const drawer = (

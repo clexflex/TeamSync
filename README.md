@@ -1,4 +1,26 @@
+npm install firebase
 
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDsNb_DRV5ohW_2oqfL_gMCHxvoAOSpjJ0",
+  authDomain: "teamsync-5b6d1.firebaseapp.com",
+  projectId: "teamsync-5b6d1",
+  storageBucket: "teamsync-5b6d1.firebasestorage.app",
+  messagingSenderId: "209809507243",
+  appId: "1:209809507243:web:e507a3609adbcfa7c148ee",
+  measurementId: "G-WWQ14V7Y7T"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 ```
 TeamSync
 ├─ .DS_Store
@@ -47,13 +69,6 @@ TeamSync
 │  │  │  ├─ document
 │  │  │  │  ├─ DocumentCenter.jsx
 │  │  │  │  └─ UserDocumentCenter.jsx
-│  │  │  ├─ employee
-│  │  │  │  ├─ .DS_Store
-│  │  │  │  ├─ AddEmployee.jsx
-│  │  │  │  ├─ EditEmployee Backup.js
-│  │  │  │  ├─ EditEmployee.jsx
-│  │  │  │  ├─ EmployeeList.jsx
-│  │  │  │  └─ ViewEmployee.jsx
 │  │  │  ├─ leave
 │  │  │  │  ├─ AddLeave.jsx
 │  │  │  │  ├─ AdminLeaveList.jsx
@@ -65,11 +80,6 @@ TeamSync
 │  │  │  │  ├─ LeaveBalanceReset.jsx
 │  │  │  │  ├─ LeavePolicyList.jsx
 │  │  │  │  └─ ViewLeavePolicy.jsx
-│  │  │  ├─ manager
-│  │  │  │  ├─ AddManager.jsx
-│  │  │  │  ├─ EditManager.jsx
-│  │  │  │  ├─ ManagersList.jsx
-│  │  │  │  └─ ViewManager.jsx
 │  │  │  ├─ modal
 │  │  │  │  └─ TaskDetailsModal.jsx
 │  │  │  ├─ notifications

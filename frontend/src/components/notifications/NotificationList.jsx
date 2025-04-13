@@ -81,18 +81,6 @@ const NotificationList = ({ small = false, onNotificationClick }) => {
       const { model, id } = notification.relatedTo;
       
       switch (model) {
-        case 'User':
-          navigate(`/admin-dashboard/user-profile/${id}`);
-          break;
-        case 'Leave':
-          navigate(`/admin-dashboard/leaves`);
-          break;
-        case 'Employee':
-          navigate(`/admin-dashboard/employees/${id}`);
-          break;
-        case 'Document':
-          navigate(`/admin-dashboard/document-center`);
-          break;
         default:
           // No specific navigation
           break;
