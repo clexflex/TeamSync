@@ -179,7 +179,7 @@ function App() {
             <Route path="tickets/:id" element={<ViewTicket />} />
             <Route path="submit-resignation" element={<SubmitResignationForm />} />
             <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="live-attendance" element={<LiveAttendanceDashboard />} />
+            <Route path="realtime-attendance" element={<RealTimeAttendanceForm />} />
           </Route>
 
           <Route path="/unauthorized" element={<Unauthorized />} />
