@@ -119,10 +119,10 @@ const Login = () => {
         >
           <Box sx={{ textAlign: 'center', color: 'white' }}>
             <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold' }}>
-              TeamSync
+            Maximize Market Research
             </Typography>
             <Typography variant="h6" sx={{ mt: 2, color: 'primary.light' }}>
-              Streamline Your Workforce Management
+            Employee Management System
             </Typography>
             <Box sx={{ mt: 4, width: 64, height: 4, bgcolor: 'primary.light', mx: 'auto', borderRadius: 2 }} />
           </Box>
@@ -147,7 +147,7 @@ const Login = () => {
               color="primary"
               sx={{ textAlign: 'center', mb: 4, fontWeight: 'bold' }}
             >
-              TeamSync
+              MMR | EMS
             </Typography>
           )}
 

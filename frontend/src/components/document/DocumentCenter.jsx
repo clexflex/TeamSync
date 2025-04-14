@@ -291,10 +291,10 @@ const DocumentCenter = () => {
 
   const handleDownloadDocument = async (document) => {
     try {
-      window.open(`${config.API_URL}/api/documents/download/${document._id}`, '_blank');
+      window.open(document.fileUrl, '_blank');
     } catch (error) {
-      setError('Error downloading document');
-      console.error('Error downloading document:', error);
+      setError('Error accessing document');
+      console.error('Error accessing document:', error);
     }
   };
 

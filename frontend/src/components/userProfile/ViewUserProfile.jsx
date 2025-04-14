@@ -241,7 +241,7 @@ const ViewUserProfile = () => {
           >
             <Avatar
               src={profileUser.profileImage 
-                ? `${config.API_URL}/uploads/${profileUser.profileImage}`
+                ? profileUser.profileImage
                 : `https://ui-avatars.com/api/?name=${encodeURIComponent(profileUser.name)}&background=random`}
               alt={profileUser.name}
               sx={{ 

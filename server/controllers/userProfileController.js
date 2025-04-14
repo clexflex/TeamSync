@@ -3,39 +3,14 @@ import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
 import UserProfile from "../models/UserProfile.js";
 import bcrypt from "bcrypt";
-import multer from "multer";
+
 import path from "path";
 import fs from "fs";
 import logger from "../utils/logger.js";
+import { uploadProfileImage } from '../utils/cloudinary.js';
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = 'public/uploads/';
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
 
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: function (req, file, cb) {
-        const filetypes = /jpeg|jpg|png/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error("Only image files are allowed!"));
-    }
-});
+export { uploadProfileImage as upload };
 
 // Helper to create default leave balances
 const createDefaultLeaveBalances = () => {
@@ -150,7 +125,7 @@ const createUserProfile = async (req, res) => {
             password: hashPassword,
             role,
             status,
-            profileImage: req.file ? req.file.filename : ""
+            profileImage: req.file ? req.file.path : "" // Use Cloudinary URL
         });
         const savedUser = await newUser.save();
 
@@ -546,8 +521,8 @@ const updateUserProfile = async (req, res) => {
         }
         
         if (status) user.status = status;
-        if (req.file) user.profileImage = req.file.filename;
-
+        if (req.file) user.profileImage = req.file.path; // Use Cloudinary URL
+        
         await user.save();
 
         // Update UserProfile with all the additional fields
@@ -674,4 +649,4 @@ const deleteUserProfile = async (req, res) => {
     }
 };
 
-export { createUserProfile, getUserProfiles, getUserProfileById, updateUserProfile, deleteUserProfile, upload };
+export { createUserProfile, getUserProfiles, getUserProfileById, updateUserProfile, deleteUserProfile };

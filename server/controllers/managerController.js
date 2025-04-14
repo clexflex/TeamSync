@@ -2,23 +2,14 @@
  * @deprecated This endpoint is maintained for API compatibility.
  * New implementations should use /api/user-profile/create instead.
  */
-import multer from "multer"
+import { uploadProfileImage } from '../utils/cloudinary.js';
 import Department from "../models/Department.js"
 import User from "../models/User.js"
 import Manager from "../models/Manager.js"
 import bcrypt from "bcrypt"
 import path from "path"
 import logger from "../utils/logger.js"; 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "public/uploads")
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname))
-    }
-})
-
-const upload = multer({ storage: storage })
+export { uploadProfileImage as upload };
 
 const addManager = async (req, res) => {
     try {
@@ -53,7 +44,7 @@ const addManager = async (req, res) => {
             password: hashPassword,
             department,
             role: 'manager',
-            profileImage: req.file ? req.file.filename : ""
+            profileImage: req.file ? req.file.path : "" // Use Cloudinary URL
         })
         const savedUser = await newUser.save()
 
@@ -177,7 +168,7 @@ const updateManager = async (req, res) => {
                 userUpdates.password = await bcrypt.hash(updates.password, 10);
             }
             if (req.file) {
-                userUpdates.profileImage = req.file.filename;
+                userUpdates.profileImage = req.file.path; // Use Cloudinary URL
             }
             
             await User.findByIdAndUpdate(manager.userId, userUpdates);
@@ -310,7 +301,7 @@ const getManagerTeams = async (req, res) => {
 };
 
 export {
-    addManager, upload ,getAvailableDepartments,
+    addManager, getAvailableDepartments,
     getManagers,
     getManagerById,
     updateManager,

@@ -1,43 +1,15 @@
 // server/controllers/documentController.js
 import Document from "../models/Document.js";
-import multer from "multer";
+import { uploadDocument, deleteFromCloudinary } from '../utils/cloudinary.js';
 import path from "path";
 import fs from "fs";
 import logger from "../utils/logger.js";
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = 'public/uploads/documents';
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'doc-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+const upload = uploadDocument;
 
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-    fileFilter: function (req, file, cb) {
-        // Allow documents, PDFs, images, etc.
-        const filetypes = /jpeg|jpg|png|pdf|doc|docx|xls|xlsx|ppt|pptx|txt/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        
-        if (mimetype && extname) {
-            return cb(null, true);
-        }
-        cb(new Error("Only document files are allowed!"));
-    }
-});
 
 // Upload document
-const uploadDocument = async (req, res) => {
+const uploadDocuments = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, error: "No file uploaded" });
@@ -51,7 +23,7 @@ const uploadDocument = async (req, res) => {
             subCategory: subCategory || '',
             title,
             description: description || '',
-            fileUrl: `/uploads/documents/${req.file.filename}`,
+            fileUrl: req.file.path,
             fileType: req.file.mimetype,
             fileSize: req.file.size,
             uploadedBy: req.user._id,
@@ -189,13 +161,11 @@ const updateDocument = async (req, res) => {
         if (req.file) {
             // Delete old file if it exists
             if (document.fileUrl) {
-                const oldFilePath = path.join(__dirname, '../public', document.fileUrl);
-                if (fs.existsSync(oldFilePath)) {
-                    fs.unlinkSync(oldFilePath);
-                }
+                // Extract the public_id from the URL
+                const publicId = document.fileUrl.split('/').pop().split('.')[0];
+                await deleteFromCloudinary(publicId);
             }
-            
-            document.fileUrl = `/uploads/documents/${req.file.filename}`;
+            document.fileUrl = req.file.path;
             document.fileType = req.file.mimetype;
             document.fileSize = req.file.size;
         }
@@ -229,10 +199,8 @@ const deleteDocument = async (req, res) => {
         
         // Delete file from storage
         if (document.fileUrl) {
-            const filePath = path.join(__dirname, '../public', document.fileUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
+            const publicId = document.fileUrl.split('/').pop().split('.')[0];
+            await deleteFromCloudinary(publicId);
         }
         
         await Document.findByIdAndDelete(id);
@@ -266,13 +234,8 @@ const downloadDocument = async (req, res) => {
             }
         }
         
-        const filePath = path.join(__dirname, '../public', document.fileUrl);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ success: false, error: "File not found" });
-        }
-        
-        return res.download(filePath, `${document.title}${path.extname(filePath)}`);
+        return res.redirect(document.fileUrl);
     } catch (error) {
         logger.error(`Error downloading document: ${error.message}`);
         return res.status(500).json({ success: false, error: `Server error in downloading document: ${error.message}` });
@@ -280,7 +243,7 @@ const downloadDocument = async (req, res) => {
 };
 
 export { 
-    uploadDocument, 
+    uploadDocuments, 
     getDocuments, 
     getDocumentById, 
     updateDocument,

@@ -25,7 +25,7 @@ const sendEmail = async (notification, user) => {
         }
 
         const mailOptions = {
-            from: `"TeamSync" <${process.env.EMAIL_USER || "notifications@teamsync.com"}>`,
+            from: `"Mximize Market Research Pvt. Ltd." <${process.env.EMAIL_USER || "notifications@teamsync.com"}>`,
             to: user.email,
             subject: notification.title,
             html: `
@@ -37,7 +37,7 @@ const sendEmail = async (notification, user) => {
                         <p>${notification.message}</p>
                         <p>Sent on: ${new Date(notification.createdAt).toLocaleString()}</p>
                         <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
-                        <p style="font-size: 12px; color: #666;">This is an automated message from TeamSync. Please do not reply to this email.</p>
+                        <p style="font-size: 12px; color: #666;">This is an automated message from Mximize Market Research Pvt. Ltd.. Please do not reply to this email.</p>
                     </div>
                 </div>
             `

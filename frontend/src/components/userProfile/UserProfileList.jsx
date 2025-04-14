@@ -507,7 +507,7 @@ const UserProfileList = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar
                             src={profile.user.profileImage 
-                              ? `${config.API_URL}/uploads/${profile.user.profileImage}`
+                              ? profile.user.profileImage
                               : null
                             }
                             sx={{ 

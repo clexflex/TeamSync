@@ -64,7 +64,7 @@ const ManagerDashboard = () => {
             letterSpacing: 0.5
           }}
         >
-          TeamSync
+          MMR | EMS
         </Typography>
       </Box>
       <List sx={{ p: 2 }}>

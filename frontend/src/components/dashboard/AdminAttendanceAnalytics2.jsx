@@ -303,7 +303,7 @@ const AdminAttendanceAnalytics2 = () => {
               <div>Period: ${reportData.periodInfo.startDate} to ${reportData.periodInfo.endDate}</div>
             </div>
             <div class="company-info">
-              <h3>TeamSync</h3>
+              <h3>MMR</h3>
               <div>Report Generated: ${formattedDate}</div>
             </div>
           </div>

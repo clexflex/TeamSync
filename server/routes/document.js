@@ -1,7 +1,7 @@
 import express from "express";
 import { verifyUser, verifyRole } from "../middleware/authMiddleware.js";
 import { 
-    uploadDocument, 
+    uploadDocuments, 
     getDocuments, 
     getDocumentById, 
     updateDocument,
@@ -15,7 +15,7 @@ import {
 const router = express.Router();
 
 // Admin routes
-router.post("/upload", verifyUser, verifyRole(["admin"]), upload.single("file"), uploadDocument);
+router.post("/upload", verifyUser, verifyRole(["admin"]), upload.single("file"), uploadDocuments);
 router.put("/:id", verifyUser, verifyRole(["admin"]), upload.single("file"), updateDocument);
 router.delete("/:id", verifyUser, verifyRole(["admin"]), deleteDocument);
 router.get("/all", verifyUser, verifyRole(["admin"]), getDocuments);
