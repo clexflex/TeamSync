@@ -1,4 +1,4 @@
-// frontend/src/components/notifications/NotificationCreator.jsx
+// Modified NotificationCreator.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -14,8 +14,7 @@ import {
   Checkbox,
   Alert,
   CircularProgress,
-  Grid,
-  Snackbar
+  Grid
 } from '@mui/material';
 import { Send as SendIcon } from '@mui/icons-material';
 import axios from 'axios';
@@ -31,46 +30,50 @@ const NotificationCreator = () => {
     userId: ''
   });
   
-  const [users, setUsers] = useState([]);
+  const [userProfiles, setUserProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchingUsers, setFetchingUsers] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  // Fetch users when component mounts or when isGlobal changes to false
+  // Fetch user profiles when component mounts or when isGlobal changes to false
   useEffect(() => {
     if (!form.isGlobal) {
-      fetchUsers();
+      fetchUserProfiles();
     }
   }, [form.isGlobal]);
   
-  // Fetch users for individual selection
-  const fetchUsers = async () => {
+  // Fetch user profiles for individual selection
+  const fetchUserProfiles = async () => {
     try {
       setFetchingUsers(true);
-      // Use the correct endpoint to fetch employees and managers
+      // Use the user-profile endpoint to fetch all user profiles
       const response = await axios.get(
-        `${config.API_URL}/api/employee`,
+        `${config.API_URL}/api/user-profile`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       
       if (response.data.success) {
-        // Extract user details from employee records
-        const employeeUsers = response.data.employees.map(employee => ({
-          id: employee.userId._id,
-          name: employee.userId.name,
-          email: employee.userId.email,
-          role: employee.userId.role,
-          employeeId: employee.employeeId
+        // Extract user details from user profiles
+        const profiles = response.data.userProfiles.map(profile => ({
+          id: profile.user._id,
+          name: profile.user.name,
+          email: profile.user.email,
+          role: profile.user.role,
+          status: profile.user.status,
+          employeeId: profile.employeeId || profile.managerId || 'N/A'
         }));
         
-        setUsers(employeeUsers);
+        // Filter only active users
+        const activeProfiles = profiles.filter(profile => profile.status === 'active');
+        
+        setUserProfiles(activeProfiles);
       } else {
-        console.error('Failed to fetch employees:', response.data.error);
+        console.error('Failed to fetch user profiles:', response.data.error);
         setError('Failed to load users. Please try again.');
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching user profiles:', error);
       setError('Failed to fetch users. Please try again.');
     } finally {
       setFetchingUsers(false);
@@ -152,7 +155,6 @@ const NotificationCreator = () => {
     }
   };
   
-  
   const handleCloseAlert = () => {
     setSuccess('');
     setError('');
@@ -232,10 +234,10 @@ const NotificationCreator = () => {
                           Loading users...
                         </Box>
                       </MenuItem>
-                    ) : users.length > 0 ? (
-                      users.map(user => (
+                    ) : userProfiles.length > 0 ? (
+                      userProfiles.map(user => (
                         <MenuItem key={user.id} value={user.id}>
-                          {user.name} ({user.employeeId || user.email})
+                          {user.name} ({user.role === 'employee' ? 'Employee' : 'Manager'}: {user.employeeId})
                         </MenuItem>
                       ))
                     ) : (

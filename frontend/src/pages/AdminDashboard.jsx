@@ -41,6 +41,7 @@ const AdminDashboard = () => {
     { text: 'Notifications', icon: <NotificationsIcon />, path: '/admin-dashboard/notifications' },
     { text: 'Create Notification', icon: <CreateNotificationIcon />, path: '/admin-dashboard/create-notification' },
     { text: 'Live Attendance',icon: <AccessTime />, path: '/admin-dashboard/live-attendance'},
+    { text: 'Manual Attendance',icon: <AccessTime />, path: '/admin-dashboard/attendance-management'},
 
   ];
 

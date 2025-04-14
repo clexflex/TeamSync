@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import {   Box,   Paper,   Typography,   Grid,   Select,   MenuItem,   Button,   Table,   TableBody,   TableCell,   TableContainer,   TableHead,   TableRow,   CircularProgress,   Card,   CardContent,   Stack,   FormControl } from '@mui/material';
+import { Box, Paper, Typography, Grid, Select, MenuItem, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Card, CardContent, Stack, FormControl } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
-  GetApp as DownloadIcon
+  GetApp as DownloadIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
+import { useNavigate } from 'react-router-dom';
 
 const AdminAttendanceReport = () => {
   const [reportData, setReportData] = useState({
@@ -25,6 +27,7 @@ const AdminAttendanceReport = () => {
     const year = today.getFullYear();
     return `${year}-${String(month).padStart(2, '0')}`;
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchReportData();
@@ -177,13 +180,29 @@ const AdminAttendanceReport = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3 }}><Stack
+    direction="row-reverse"
+    alignItems="right"
+    spacing={1}
+    onClick={() => navigate('/admin-dashboard/attendance/report/2')}
+    sx={{
+      mb: 4,
+      cursor: 'pointer',
+      color: 'text.secondary',
+      '&:hover': {
+        color: 'primary.main'
+      }
+    }}
+  >
+    <ArrowBackIcon />
+    <Typography>Go to Advance Analytics</Typography>
+  </Stack>
       <Paper elevation={0} sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" fontWeight="bold">
             Attendance Report
           </Typography>
-
+          
           <Stack direction="row" spacing={2}>
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <Select
