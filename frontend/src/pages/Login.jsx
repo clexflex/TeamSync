@@ -119,7 +119,7 @@ const Login = () => {
         >
           <Box sx={{ textAlign: 'center', color: 'white' }}>
             <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold' }}>
-            Maximize Market Research
+            MMR 
             </Typography>
             <Typography variant="h6" sx={{ mt: 2, color: 'primary.light' }}>
             Employee Management System
