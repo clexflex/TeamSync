@@ -23,6 +23,8 @@ import path from 'path';
 import http from 'http';
 import setupSocket from './socket.js';
 import notificationRouter from './routes/notification.js';
+import seedAdminRouter from './routes/seedAdmin.js';
+
 import setupCronJobs from './cron.js';
 import { fileURLToPath } from 'url';
 
@@ -91,6 +93,8 @@ app.use('/api/documents', documentRouter);
 app.use('/api/tickets', ticketRouter);
 app.use('/api/resignation', resignationRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/seed-admin', seedAdminRouter);
+
 
 // Setup cron jobs
 setupCronJobs();
