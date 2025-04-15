@@ -129,10 +129,10 @@ app.use((err, req, res, next) => {
 });
 
 // Update the server startup (replace existing app.listen)
-server.listen(process.env.PORT || 3000, () => {
-  console.log(`🌍 Server running on port ${process.env.PORT || 3000}`);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    logger.info(`🌍 Server running on port ${PORT}`);
 });
-
 console.log("PORT from env:", process.env.PORT);
 
 // Handle unhandled rejections
