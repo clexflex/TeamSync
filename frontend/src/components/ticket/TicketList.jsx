@@ -50,7 +50,6 @@ const TicketList = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Fetch tickets based on current status filter
   const fetchTickets = async () => {
     setLoading(true);
     try {
