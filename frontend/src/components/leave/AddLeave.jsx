@@ -23,7 +23,7 @@ import config from "../../config";
 const AddLeave = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     userId: user?._id || '',
     leaveType: '',
@@ -32,29 +32,31 @@ const AddLeave = () => {
     reason: '',
     isPaid: true, // This is now managed internally based on useLeaveBalance
     useLeaveBalance: true,
-    documents: []
+    document: null
   });
-  
+
   const [leaveBalances, setLeaveBalances] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [totalDays, setTotalDays] = useState(0);
+  
   const getBasePath = (user) => {
     return user.role === "employee" ? "/employee-dashboard" : "/manager-dashboard";
   };
 
   const basePath = getBasePath(user);
+  
   useEffect(() => {
     fetchLeaveBalances();
   }, []);
-  
+
   useEffect(() => {
     if (formData.startDate && formData.endDate) {
       calculateTotalDays();
     }
   }, [formData.startDate, formData.endDate]);
-  
+
   // When useLeaveBalance changes, update isPaid accordingly
   useEffect(() => {
     // If using leave balance, it's a paid leave, otherwise unpaid
@@ -63,7 +65,7 @@ const AddLeave = () => {
       isPaid: prev.useLeaveBalance
     }));
   }, [formData.useLeaveBalance]);
-  
+
   const fetchLeaveBalances = async () => {
     try {
       setLoading(true);
@@ -72,7 +74,7 @@ const AddLeave = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setLeaveBalances(response.data.leaveBalances || []);
       }
@@ -83,28 +85,28 @@ const AddLeave = () => {
       setLoading(false);
     }
   };
-  
+
   const calculateTotalDays = () => {
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
-    
+
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       setTotalDays(0);
       return;
     }
-    
+
     if (end < start) {
       setError('End date cannot be before start date');
       setTotalDays(0);
       return;
     }
-    
+
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     setTotalDays(diffDays);
     setError('');
   };
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -112,7 +114,7 @@ const AddLeave = () => {
       [name]: value
     });
   };
-  
+
   const handleSwitchChange = (e) => {
     const { name, checked } = e.target;
     setFormData({
@@ -122,51 +124,54 @@ const AddLeave = () => {
       ...(name === 'useLeaveBalance' ? { isPaid: checked } : {})
     });
   };
-  
+
   const handleFileChange = (e) => {
+    // Store only the first file if multiple are selected
+    const file = e.target.files[0];
+    console.log(`Selected file for upload: ${file ? file.name : 'none'}`);
     setFormData({
       ...formData,
-      documents: e.target.files
+      document: file
     });
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.leaveType) {
       setError('Please select a leave type');
       return;
     }
-    
+
     if (!formData.startDate || !formData.endDate) {
       setError('Please select both start and end dates');
       return;
     }
-    
+
     if (!formData.reason) {
       setError('Please provide a reason for leave');
       return;
     }
-    
+
     // Check if user has sufficient leave balance if using leave balance
     if (formData.useLeaveBalance) {
       const selectedLeaveBalance = leaveBalances.find(lb => lb.leaveType === formData.leaveType);
-      
+
       if (!selectedLeaveBalance) {
         setError(`No balance found for ${formData.leaveType}`);
         return;
       }
-      
+
       if (selectedLeaveBalance.balance < totalDays) {
         setError(`Insufficient leave balance. Available: ${selectedLeaveBalance.balance}, Required: ${totalDays}`);
         return;
       }
     }
-    
+
     try {
       setLoading(true);
       setError('');
-      
+
       const formDataObj = new FormData();
       formDataObj.append('userId', formData.userId);
       formDataObj.append('leaveType', formData.leaveType);
@@ -176,20 +181,20 @@ const AddLeave = () => {
       // isPaid is now determined by useLeaveBalance
       formDataObj.append('isPaid', formData.useLeaveBalance);
       formDataObj.append('useLeaveBalance', formData.useLeaveBalance);
-      
-      if (formData.documents && formData.documents.length > 0) {
-        for (let i = 0; i < formData.documents.length; i++) {
-          formDataObj.append('documents', formData.documents[i]);
-        }
+
+      // Append document if exists
+      if (formData.document) {
+        console.log(`Appending document to form data: ${formData.document.name}`);
+        formDataObj.append('document', formData.document);
       }
-      
+
       const response = await axios.post(`${config.API_URL}/api/leave/add`, formDataObj, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       if (response.data.success) {
         setSuccess('Leave application submitted successfully');
         // Reset form
@@ -201,11 +206,11 @@ const AddLeave = () => {
           reason: '',
           isPaid: true,
           useLeaveBalance: true,
-          documents: []
+          document: null
         });
         // Refresh leave balances
         fetchLeaveBalances();
-        
+
         // Navigate to leave list after successful submission
         setTimeout(() => {
           navigate(`${basePath}/leaves/${user?._id}`)
@@ -218,21 +223,21 @@ const AddLeave = () => {
       setLoading(false);
     }
   };
-  
+
   const getLeaveBalance = (leaveType) => {
     const balance = leaveBalances.find(lb => lb.leaveType === leaveType);
     return balance ? balance.balance : 0;
   };
-  
+
   return (
     <Paper elevation={3} sx={{ p: 3, marginTop: 2 }}>
       <Typography variant="h5" component="h2" gutterBottom>
         Apply for Leave
       </Typography>
-      
+
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-      
+
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
@@ -257,7 +262,7 @@ const AddLeave = () => {
               </FormHelperText>
             </FormControl>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -271,7 +276,7 @@ const AddLeave = () => {
               required
             />
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -285,7 +290,7 @@ const AddLeave = () => {
               required
             />
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
               <Typography variant="body1">
@@ -293,7 +298,7 @@ const AddLeave = () => {
               </Typography>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -307,7 +312,7 @@ const AddLeave = () => {
               required
             />
           </Grid>
-          
+
           <Grid item xs={12}>
             <FormControlLabel
               control={
@@ -320,24 +325,31 @@ const AddLeave = () => {
               label={formData.useLeaveBalance ? "Using Leave Balance (Paid Leave)" : "Not Using Leave Balance (Unpaid Leave)"}
             />
             <FormHelperText>
-              {formData.useLeaveBalance 
-                ? "Leave days will be deducted from your balance" 
+              {formData.useLeaveBalance
+                ? "Leave days will be deducted from your balance"
                 : "No leave balance will be used (Unpaid leave)"}
             </FormHelperText>
           </Grid>
-          
+
           <Grid item xs={12}>
             <TextField
               fullWidth
               margin="normal"
               type="file"
-              inputProps={{ multiple: true }}
+              inputProps={{
+                accept: 'image/jpeg,image/png,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+              }}
               onChange={handleFileChange}
-              helperText="Upload supporting documents (optional)"
+              helperText="Upload supporting document (optional). Accepted formats: JPG, PNG, PDF, DOC, DOCX"
               InputLabelProps={{ shrink: true }}
             />
+            {formData.document && (
+              <Typography variant="caption" color="textSecondary">
+                Selected file: {formData.document.name}
+              </Typography>
+            )}
           </Grid>
-          
+
           <Grid item xs={12}>
             <Button
               type="submit"

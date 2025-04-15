@@ -11,6 +11,7 @@ import { startOfDay, endOfDay, format, parse, addDays, isWeekend, parseISO, isSa
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl, streamFileToResponse } from '../config/firebase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1478,19 +1479,10 @@ export const generatePayslip = async (req, res) => {
         // Get user profile with bank details and other info
         const userProfile = await UserProfile.findOne({ userId: salary.userId });
 
-        // Create payslip directory if it doesn't exist
-        const payslipDir = path.join(__dirname, '../public/uploads/payslips');
-        if (!fs.existsSync(payslipDir)) {
-            fs.mkdirSync(payslipDir, { recursive: true });
-            console.log(`Created payslip directory at: ${payslipDir}`);
-        }
-
         // Generate unique filename for the payslip
         let payPeriodClean = salary.payPeriod.replace(/\s+/g, '_');
         let employeeName = salary.userId.name.replace(/\s+/g, '_');
         const payslipFilename = `payslip_${employeeName}_${payPeriodClean}_${Date.now()}.pdf`;
-        const payslipPath = path.join(payslipDir, payslipFilename);
-
 
         // Function to convert number to words
         const numberToWords = (num) => {
@@ -1977,9 +1969,8 @@ export const generatePayslip = async (req, res) => {
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
-        // Set PDF options to ensure single page
-        await page.pdf({
-            path: payslipPath,
+        // Generate PDF as a buffer
+        const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
             preferCSSPageSize: true,
@@ -1994,9 +1985,19 @@ export const generatePayslip = async (req, res) => {
 
         await browser.close();
 
+        // Upload PDF buffer to Firebase Storage
+        const fileObj = {
+            buffer: pdfBuffer,
+            mimetype: 'application/pdf',
+            originalname: payslipFilename
+        };
+
+        const fileData = await uploadFileToFirebase(fileObj, 'payslips', payslipFilename);
+
         // Update salary record with payslip information
         salary.payslipGenerated = true;
-        salary.payslipUrl = `/uploads/payslips/${payslipFilename}`;
+        salary.payslipUrl = fileData.url;
+        salary.payslipPath = fileData.path;
 
         // Add to audit log
         salary.auditLog.push({
@@ -2040,32 +2041,29 @@ export const downloadPayslip = async (req, res) => {
         }
 
         // Check if payslip is generated
-        if (!salary.payslipGenerated || !salary.payslipUrl) {
+        if (!salary.payslipGenerated || !salary.payslipPath) {
             return res.status(400).json({
                 success: false,
                 error: 'Payslip not generated for this salary record'
             });
         }
 
-        // Send the file
-        const payslipPath = path.join(__dirname, '../public/uploads/payslips', path.basename(salary.payslipUrl));
+        // Get a fresh signed URL for the payslip
+        const signedUrl = await getFileSignedUrl(salary.payslipPath, 15 * 60); // 15 minutes expiry
 
-
-        if (!fs.existsSync(payslipPath)) {
+        if (!signedUrl) {
             return res.status(404).json({
                 success: false,
-                error: 'Payslip file not found'
+                error: 'Payslip file not found in storage'
             });
         }
 
-        // Set the appropriate headers
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=payslip_${salary.payPeriod.replace(/\s+/g, '_')}.pdf`);
-
-        // Stream the file
-        const fileStream = fs.createReadStream(payslipPath);
-        fileStream.pipe(res);
-
+        // Set the filename for download
+        const filename = path.basename(salary.payslipPath);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        // Redirect to the signed URL for download
+        return res.redirect(signedUrl);
     } catch (error) {
         logger.error(`Error downloading payslip: ${error.message}`);
         return res.status(500).json({

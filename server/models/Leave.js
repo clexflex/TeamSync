@@ -1,5 +1,14 @@
+// server/models/Leave.js
 import mongoose from "mongoose";
 import { Schema } from "mongoose";
+
+const documentSchema = new Schema({
+    filename: { type: String, required: true },
+    path: { type: String, required: true },    // Firebase storage path
+    url: { type: String, required: true },     // Firebase signed URL
+    contentType: { type: String },
+    size: { type: Number }
+});
 
 const leaveSchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -19,7 +28,7 @@ const leaveSchema = new Schema({
     },
     isPaid: { type: Boolean, default: true },
     useLeaveBalance: { type: Boolean, default: true },
-    documents: [{ type: String }], // For medical certificates etc.
+    documents: [documentSchema], // Updated to store more document details
     approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
     approvalComment: { type: String },
     appliedAt: { type: Date, default: Date.now },

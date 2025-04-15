@@ -3,4 +3,4 @@ build/
 dist/
 .env
 *.log
-server/public/uploads/payslips/
+server/public/*/*/*

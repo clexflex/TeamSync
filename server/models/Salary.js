@@ -95,7 +95,8 @@ const salarySchema = new Schema({
     
     // Payslip information
     payslipGenerated: { type: Boolean, default: false },
-    payslipUrl: { type: String },
+    payslipUrl: { type: String },       // Firebase signed URL
+    payslipPath: { type: String },      // Firebase storage path
     
     // Timestamps
     createdAt: { type: Date, default: Date.now },

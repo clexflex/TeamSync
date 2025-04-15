@@ -5,19 +5,17 @@ import User from '../models/User.js';
 import Employee from '../models/Employee.js';
 import Attendance from '../models/Attendance.js';
 import Holiday from '../models/Holiday.js';
-
-import path from 'path';
-import fs from 'fs';
 import logger from '../utils/logger.js';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { uploadLeaveDocument as cloudinaryUploader } from '../utils/cloudinary.js';
+import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl } from '../config/firebase.js';
+import { uploadLeaveDocument as firebaseUploader } from '../utils/firebase-multer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const upload = cloudinaryUploader;
+export const uploadLeaveDocument = firebaseUploader.single('document'); // Changed to single file
 
-export const uploadLeaveDocument = upload.array('documents', 5);
 
 // LEAVE POLICY CONTROLLERS
 // Create a new leave policy
@@ -938,8 +936,31 @@ export const addLeave = async (req, res) => {
             }
         }
         
-        // Process uploaded documents if any
-        const documents = req.files ? req.files.map(file => file.filename) : [];
+        // Process uploaded document if any (using Firebase)
+        let documentData = [];
+        
+        if (req.file) {
+            try {
+                logger.info(`Processing leave document: ${req.file.originalname}, size: ${req.file.size}, mimetype: ${req.file.mimetype}`);
+                
+                // Upload file to Firebase
+                const fileData = await uploadFileToFirebase(req.file, 'leave-documents');
+                logger.info(`Successfully uploaded file to Firebase: ${fileData.path}`);
+                
+                documentData.push({
+                    filename: fileData.filename,
+                    path: fileData.path,
+                    url: fileData.url,
+                    contentType: req.file.mimetype,
+                    size: req.file.size
+                });
+            } catch (uploadError) {
+                logger.error(`Error uploading leave document ${req.file.originalname}: ${uploadError.message}`);
+                // Continue without this file
+            }
+        } else {
+            logger.info('No document uploaded with leave application');
+        }
         
         // Create new leave request
         const newLeave = new Leave({
@@ -951,7 +972,7 @@ export const addLeave = async (req, res) => {
             reason,
             isPaid: useLeaveBalance,
             useLeaveBalance,
-            documents,
+            documents: documentData,
             appliedAt: Date.now()
         });
         
@@ -1519,6 +1540,21 @@ export const getLeaveDetail = async (req, res) => {
         });
       }
   
+      // Refresh document URLs if they exist
+      if (leave.documents && leave.documents.length > 0) {
+        for (let i = 0; i < leave.documents.length; i++) {
+          try {
+            // Get fresh signed URL with 24-hour expiration
+            const newUrl = await getFileSignedUrl(leave.documents[i].path, 24 * 60 * 60);
+            if (newUrl) {
+              leave.documents[i].url = newUrl;
+            }
+          } catch (error) {
+            logger.error(`Error refreshing URL for leave document: ${error.message}`);
+          }
+        }
+      }
+  
       // Get user details if needed
       let userProfile = null;
       if (leave.userId) {
@@ -1541,5 +1577,5 @@ export const getLeaveDetail = async (req, res) => {
         error: "Server error in fetching leave details"
       });
     }
-  };
+};
 

@@ -1,55 +1,16 @@
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import Ticket from "../models/Ticket.js";
 import User from "../models/User.js";
 import logger from "../utils/logger.js";
+import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl } from '../config/firebase.js';
+import { uploadTicket as firebaseUploader } from '../utils/firebase-multer.js';
 import { fileURLToPath } from 'url';
+import path from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, '../public/uploads/tickets');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'ticket-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-    fileFilter: function (req, file, cb) {
-        const allowedFileTypes = /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|txt/;
-        const extname = allowedFileTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedFileTypes.test(file.mimetype);
-        
-        if (extname || mimetype) {
-            return cb(null, true);
-        }
-        cb(new Error("Invalid file type. Only images, PDFs, Office documents, and text files are allowed!"));
-    }
-}).array('attachments', 5); // Allow up to 5 files
-
 // Middleware for handling file uploads
-const uploadTicketAttachment = (req, res, next) => {
-    upload(req, res, function (err) {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
-        } else if (err) {
-            return res.status(400).json({ success: false, error: err.message });
-        }
-        next();
-    });
-};
+export const uploadTicketAttachment = firebaseUploader.array('attachments', 5); // Allow up to 5 files
 
 // Create a new ticket
 const createTicket = async (req, res) => {
@@ -68,9 +29,22 @@ const createTicket = async (req, res) => {
         // Process attachments if any
         const attachments = [];
         if (req.files && req.files.length > 0) {
-            req.files.forEach(file => {
-                attachments.push(file.filename);
-            });
+            // Upload each file to Firebase
+            for (const file of req.files) {
+                try {
+                    const fileData = await uploadFileToFirebase(file, 'tickets');
+                    attachments.push({
+                        filename: fileData.filename,
+                        path: fileData.path,
+                        url: fileData.url,
+                        contentType: file.mimetype,
+                        size: file.size
+                    });
+                } catch (uploadError) {
+                    logger.error(`Error uploading ticket attachment: ${uploadError.message}`);
+                    // Continue with other files
+                }
+            }
         }
 
         const newTicket = new Ticket({
@@ -161,6 +135,42 @@ const getTicketById = async (req, res) => {
                 success: false,
                 error: "You don't have permission to view this ticket"
             });
+        }
+
+        // Refresh URLs for attachments if needed
+        if (ticket.attachments && ticket.attachments.length > 0) {
+            for (let i = 0; i < ticket.attachments.length; i++) {
+                try {
+                    if (ticket.attachments[i].path) {
+                        const newUrl = await getFileSignedUrl(ticket.attachments[i].path, 24 * 60 * 60);
+                        if (newUrl) {
+                            ticket.attachments[i].url = newUrl;
+                        }
+                    }
+                } catch (error) {
+                    logger.error(`Error refreshing URL for attachment: ${error.message}`);
+                }
+            }
+        }
+
+        // Refresh URLs for response attachments if needed
+        if (ticket.responses && ticket.responses.length > 0) {
+            for (let i = 0; i < ticket.responses.length; i++) {
+                if (ticket.responses[i].attachments && ticket.responses[i].attachments.length > 0) {
+                    for (let j = 0; j < ticket.responses[i].attachments.length; j++) {
+                        try {
+                            if (ticket.responses[i].attachments[j].path) {
+                                const newUrl = await getFileSignedUrl(ticket.responses[i].attachments[j].path, 24 * 60 * 60);
+                                if (newUrl) {
+                                    ticket.responses[i].attachments[j].url = newUrl;
+                                }
+                            }
+                        } catch (error) {
+                            logger.error(`Error refreshing URL for response attachment: ${error.message}`);
+                        }
+                    }
+                }
+            }
         }
 
         return res.status(200).json({
@@ -276,28 +286,36 @@ const deleteTicket = async (req, res) => {
             });
         }
         
-        // Delete associated attachments
+        // Delete associated attachments from Firebase
         if (ticket.attachments && ticket.attachments.length > 0) {
-            ticket.attachments.forEach(attachment => {
-                const filePath = path.join(__dirname, '../public/uploads/tickets', attachment);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
+            for (const attachment of ticket.attachments) {
+                try {
+                    if (attachment.path) {
+                        await deleteFileFromFirebase(attachment.path);
+                    }
+                } catch (error) {
+                    logger.error(`Error deleting attachment from Firebase: ${error.message}`);
+                    // Continue with other attachments
                 }
-            });
+            }
         }
         
-        // Delete response attachments
+        // Delete response attachments from Firebase
         if (ticket.responses) {
-            ticket.responses.forEach(response => {
+            for (const response of ticket.responses) {
                 if (response.attachments && response.attachments.length > 0) {
-                    response.attachments.forEach(attachment => {
-                        const filePath = path.join(__dirname, '../public/uploads/tickets', attachment);
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
+                    for (const attachment of response.attachments) {
+                        try {
+                            if (attachment.path) {
+                                await deleteFileFromFirebase(attachment.path);
+                            }
+                        } catch (error) {
+                            logger.error(`Error deleting response attachment from Firebase: ${error.message}`);
+                            // Continue with other attachments
                         }
-                    });
+                    }
                 }
-            });
+            }
         }
         
         await Ticket.findByIdAndDelete(id);
@@ -349,9 +367,22 @@ const addTicketResponse = async (req, res) => {
         // Process attachments if any
         const attachments = [];
         if (req.files && req.files.length > 0) {
-            req.files.forEach(file => {
-                attachments.push(file.filename);
-            });
+            // Upload each file to Firebase
+            for (const file of req.files) {
+                try {
+                    const fileData = await uploadFileToFirebase(file, 'tickets');
+                    attachments.push({
+                        filename: fileData.filename,
+                        path: fileData.path,
+                        url: fileData.url,
+                        contentType: file.mimetype,
+                        size: file.size
+                    });
+                } catch (uploadError) {
+                    logger.error(`Error uploading response attachment: ${uploadError.message}`);
+                    // Continue with other files
+                }
+            }
         }
         
         const response = {
@@ -548,6 +579,5 @@ export {
     deleteTicket,
     addTicketResponse,
     assignTicket,
-    uploadTicketAttachment,
     getTicketStats
 };

@@ -462,10 +462,9 @@ const SalaryDetail = () => {
   const handleDownloadPayslip = async () => {
     try {
       setDownloadLoading(true);
-
-      // Using window.open for simple download
-      window.open(`${config.API_URL}/api/salary/payslip/${id}`, '_blank');
-
+  
+      // Direct to the API endpoint that will provide a fresh signed URL
+      window.location.href = `${config.API_URL}/api/salary/payslip/${id}`;
     } catch (error) {
       console.error('Error downloading payslip:', error);
       setError('Failed to download payslip');

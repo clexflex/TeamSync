@@ -3,9 +3,9 @@ import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
 import UserProfile from "../models/UserProfile.js";
 import bcrypt from "bcrypt";
+import { uploadProfileImage } from '../utils/firebase-multer.js';
+import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl } from '../config/firebase.js';
 import logger from "../utils/logger.js";
-import { uploadProfileImage } from '../utils/cloudinary.js';
-
 
 export { uploadProfileImage as upload };
 
@@ -47,7 +47,7 @@ const createUserProfile = async (req, res) => {
     try {
         // Parse any JSON strings in the form data
         let formData = parseNestedObjects(req.body);
-        
+
         const {
             name,
             email,
@@ -63,7 +63,7 @@ const createUserProfile = async (req, res) => {
             salary,
             leavePolicy, // optional
             status = "active", // default to active
-            
+
             // Personal Information
             companyEmail,
             location,
@@ -77,13 +77,13 @@ const createUserProfile = async (req, res) => {
             physicallyHandicapped,
             height,
             weight,
-            
+
             // Address
             address,
-            
+
             // Education Information
             education,
-            
+
             // Employment & Job Information
             confirmationDate,
             noticePeriod,
@@ -92,10 +92,10 @@ const createUserProfile = async (req, res) => {
             previousExperience,
             totalExperience,
             probationPeriod,
-            
+
             // Previous Employment
             previousEmployment,
-            
+
             // Salary Information
             salaryInfo
         } = formData;
@@ -116,13 +116,25 @@ const createUserProfile = async (req, res) => {
         const hashPassword = await bcrypt.hash(password, 10);
 
         // Create new user
+        let profileImageData = null;
+        if (req.file) {
+            try {
+                profileImageData = await uploadFileToFirebase(req.file, 'profile-images');
+                logger.info(`Profile image uploaded to Firebase for user ${email}`);
+            } catch (error) {
+                logger.error(`Error uploading profile image to Firebase: ${error.message}`);
+                return res.status(500).json({ success: false, error: "Error uploading profile image" });
+            }
+        }
+
         const newUser = new User({
             name,
             email,
             password: hashPassword,
             role,
             status,
-            profileImage: req.file ? req.file.path : "" // Use Cloudinary URL
+            profileImage: profileImageData ? profileImageData.url : "",
+            profileImagePath: profileImageData ? profileImageData.path : ""
         });
         const savedUser = await newUser.save();
 
@@ -133,7 +145,7 @@ const createUserProfile = async (req, res) => {
             leaveBalances: createDefaultLeaveBalances(),
             joiningDate: joiningDate || new Date(),
             lastLeaveBalanceReset: null,
-            
+
             // Personal Information
             companyEmail,
             location,
@@ -147,10 +159,10 @@ const createUserProfile = async (req, res) => {
             physicallyHandicapped: physicallyHandicapped === 'true' || physicallyHandicapped === true,
             height,
             weight,
-            
+
             // Address
             address,
-            
+
             // Education Information
             education: education || [{
                 degree: '',
@@ -159,7 +171,7 @@ const createUserProfile = async (req, res) => {
                 endDate: '',
                 grade: ''
             }],
-            
+
             // Employment & Job Information
             confirmationDate,
             noticePeriod,
@@ -168,7 +180,7 @@ const createUserProfile = async (req, res) => {
             previousExperience,
             totalExperience,
             probationPeriod,
-            
+
             // Previous Employment
             previousEmployment: previousEmployment || [{
                 company: '',
@@ -177,11 +189,11 @@ const createUserProfile = async (req, res) => {
                 endDate: '',
                 reasonForLeaving: ''
             }],
-            
+
             // Salary Information
             salaryInfo
         });
-        
+
         const savedUserProfile = await newUserProfile.save();
 
         // Create either employee or manager based on userType
@@ -299,10 +311,10 @@ const getUserProfileById = async (req, res) => {
 
         // First, determine if we're looking for a UserProfile ID or a User ID
         let userProfile;
-        
+
         // Try to find by UserProfile ID first
         userProfile = await UserProfile.findById(id);
-        
+
         // If not found, try to find by User ID
         if (!userProfile) {
             userProfile = await UserProfile.findOne({ userId: id });
@@ -371,10 +383,10 @@ const getUserProfileById = async (req, res) => {
                 profileImage: user.profileImage
             },
             ...additionalData,
-            
+
             // Include all additional fields from user profile
             joiningDate: userProfile.joiningDate,
-            
+
             // Personal Information
             companyEmail: userProfile.companyEmail,
             location: userProfile.location,
@@ -388,13 +400,13 @@ const getUserProfileById = async (req, res) => {
             physicallyHandicapped: userProfile.physicallyHandicapped,
             height: userProfile.height,
             weight: userProfile.weight,
-            
+
             // Address
             address: userProfile.address,
-            
+
             // Education Information
             education: userProfile.education,
-            
+
             // Employment & Job Information
             confirmationDate: userProfile.confirmationDate,
             noticePeriod: userProfile.noticePeriod,
@@ -403,13 +415,13 @@ const getUserProfileById = async (req, res) => {
             previousExperience: userProfile.previousExperience,
             totalExperience: userProfile.totalExperience,
             probationPeriod: userProfile.probationPeriod,
-            
+
             // Previous Employment
             previousEmployment: userProfile.previousEmployment,
-            
+
             // Salary Information
             salaryInfo: userProfile.salaryInfo,
-            
+
             // Leave Information
             leaveBalances: userProfile.leaveBalances,
             leavePolicy: userProfile.leavePolicy,
@@ -432,10 +444,10 @@ const updateUserProfile = async (req, res) => {
     try {
         const { id } = req.params;
         let updateData = req.body;
-        
+
         // Parse any JSON strings in the form data
         updateData = parseNestedObjects(updateData);
-        
+
         const {
             name,
             email,
@@ -451,7 +463,7 @@ const updateUserProfile = async (req, res) => {
             leavePolicy,
             status,
             leaveBalances,
-            
+
             // Personal Information
             companyEmail,
             location,
@@ -465,13 +477,13 @@ const updateUserProfile = async (req, res) => {
             physicallyHandicapped,
             height,
             weight,
-            
+
             // Address
             address,
-            
+
             // Education Information
             education,
-            
+
             // Employment & Job Information
             confirmationDate,
             noticePeriod,
@@ -480,10 +492,10 @@ const updateUserProfile = async (req, res) => {
             previousExperience,
             totalExperience,
             probationPeriod,
-            
+
             // Previous Employment
             previousEmployment,
-            
+
             // Salary Information
             salaryInfo
         } = updateData;
@@ -510,26 +522,41 @@ const updateUserProfile = async (req, res) => {
             }
             user.email = email;
         }
-        
+
         // Handle password update if provided
         if (password && password.trim() !== '') {
             const hashPassword = await bcrypt.hash(password, 10);
             user.password = hashPassword;
         }
-        
+
         if (status) user.status = status;
-        if (req.file) user.profileImage = req.file.path; // Use Cloudinary URL
-        
+        if (req.file) {
+            try {
+                // Delete old profile image if exists
+                if (user.profileImagePath) {
+                    await deleteFileFromFirebase(user.profileImagePath);
+                }
+                
+                // Upload new image
+                const profileImageData = await uploadFileToFirebase(req.file, 'profile-images');
+                user.profileImage = profileImageData.url;
+                user.profileImagePath = profileImageData.path;
+                logger.info(`Updated profile image for user ${user.email}`);
+            } catch (error) {
+                logger.error(`Error updating profile image: ${error.message}`);
+                return res.status(500).json({ success: false, error: "Error updating profile image" });
+            }
+        }
         await user.save();
 
         // Update UserProfile with all the additional fields
         const profileUpdates = {};
-        
+
         // Only update fields that were provided
         if (joiningDate) profileUpdates.joiningDate = joiningDate;
         if (leavePolicy) profileUpdates.leavePolicy = leavePolicy;
         if (leaveBalances) profileUpdates.leaveBalances = leaveBalances;
-        
+
         // Personal Information
         if (companyEmail !== undefined) profileUpdates.companyEmail = companyEmail;
         if (location !== undefined) profileUpdates.location = location;
@@ -545,13 +572,13 @@ const updateUserProfile = async (req, res) => {
         }
         if (height !== undefined) profileUpdates.height = height;
         if (weight !== undefined) profileUpdates.weight = weight;
-        
+
         // Address
         if (address) profileUpdates.address = address;
-        
+
         // Education Information
         if (education) profileUpdates.education = education;
-        
+
         // Employment & Job Information
         if (confirmationDate !== undefined) profileUpdates.confirmationDate = confirmationDate;
         if (noticePeriod !== undefined) profileUpdates.noticePeriod = noticePeriod;
@@ -560,13 +587,13 @@ const updateUserProfile = async (req, res) => {
         if (previousExperience !== undefined) profileUpdates.previousExperience = previousExperience;
         if (totalExperience !== undefined) profileUpdates.totalExperience = totalExperience;
         if (probationPeriod !== undefined) profileUpdates.probationPeriod = probationPeriod;
-        
+
         // Previous Employment
         if (previousEmployment) profileUpdates.previousEmployment = previousEmployment;
-        
+
         // Salary Information
         if (salaryInfo) profileUpdates.salaryInfo = salaryInfo;
-        
+
         if (Object.keys(profileUpdates).length > 0) {
             await UserProfile.updateOne({ _id: id }, { $set: profileUpdates });
         }
@@ -619,7 +646,7 @@ const deleteUserProfile = async (req, res) => {
 
         const userId = userProfile.userId;
         const user = await User.findById(userId);
-        
+
         if (!user) {
             return res.status(404).json({ success: false, error: "User not found" });
         }

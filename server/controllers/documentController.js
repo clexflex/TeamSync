@@ -1,12 +1,9 @@
-// server/controllers/documentController.js
 import Document from "../models/Document.js";
-import { uploadDocument, deleteFromCloudinary } from '../utils/cloudinary.js';
-import path from "path";
-import fs from "fs";
+import { uploadDocument } from '../utils/firebase-multer.js';
+import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl, streamFileToResponse } from '../config/firebase.js';
 import logger from "../utils/logger.js";
 
 const upload = uploadDocument;
-
 
 // Upload document
 const uploadDocuments = async (req, res) => {
@@ -17,13 +14,17 @@ const uploadDocuments = async (req, res) => {
 
         const { userId, category, subCategory, title, description, isGlobal } = req.body;
 
+        // Upload file to Firebase Storage
+        const fileData = await uploadFileToFirebase(req.file, 'documents');
+
         const newDocument = new Document({
             userId,
             category,
             subCategory: subCategory || '',
             title,
             description: description || '',
-            fileUrl: req.file.path,
+            fileUrl: fileData.url,
+            filePath: fileData.path,
             fileType: req.file.mimetype,
             fileSize: req.file.size,
             uploadedBy: req.user._id,
@@ -52,9 +53,39 @@ const getDocuments = async (req, res) => {
             .populate('uploadedBy', 'name')
             .sort({ createdAt: -1 });
 
+        // Refresh signed URLs if they might be expired
+        const refreshedDocuments = await Promise.all(documents.map(async (doc) => {
+            const docObj = doc.toObject(); // Convert to plain object
+            
+            try {
+                // Handle documents created before Firebase integration (legacy support)
+                if (!doc.filePath) {
+                    return docObj; // Return as is
+                }
+                
+                // Generate a new signed URL with a 24-hour expiration
+                const newUrl = await getFileSignedUrl(doc.filePath, 24 * 60 * 60);
+                
+                if (newUrl) {
+                    // Update document object with new URL
+                    docObj.fileUrl = newUrl;
+                    
+                    // Save the document if URL was updated (optional, but keeps URLs fresh in DB)
+                    if (doc.fileUrl !== newUrl) {
+                        await Document.updateOne({ _id: doc._id }, { fileUrl: newUrl });
+                    }
+                }
+                
+                return docObj;
+            } catch (error) {
+                logger.error(`Error refreshing URL for document ${doc._id}: ${error.message}`);
+                return docObj; // Return original document if refresh fails
+            }
+        }));
+
         return res.status(200).json({
             success: true,
-            documents
+            documents: refreshedDocuments
         });
     } catch (error) {
         logger.error(`Error fetching documents: ${error.message}`);
@@ -62,7 +93,7 @@ const getDocuments = async (req, res) => {
     }
 };
 
-// Get documents for a specific user
+// Get documents for a specific user - with same fix
 const getUserDocuments = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -81,9 +112,34 @@ const getUserDocuments = async (req, res) => {
         .populate('uploadedBy', 'name')
         .sort({ createdAt: -1 });
 
+        // Refresh signed URLs
+        const refreshedDocuments = await Promise.all(documents.map(async (doc) => {
+            const docObj = doc.toObject(); // Convert to plain object
+            
+            try {
+                // Handle documents created before Firebase integration (legacy support)
+                if (!doc.filePath) {
+                    return docObj; // Return as is
+                }
+                
+                // Generate a new signed URL with a 24-hour expiration
+                const newUrl = await getFileSignedUrl(doc.filePath, 24 * 60 * 60);
+                
+                if (newUrl) {
+                    // Update document object with new URL
+                    docObj.fileUrl = newUrl;
+                }
+                
+                return docObj;
+            } catch (error) {
+                logger.error(`Error refreshing URL for document ${doc._id}: ${error.message}`);
+                return docObj;
+            }
+        }));
+
         return res.status(200).json({
             success: true,
-            documents
+            documents: refreshedDocuments
         });
     } catch (error) {
         logger.error(`Error fetching user documents: ${error.message}`);
@@ -91,16 +147,40 @@ const getUserDocuments = async (req, res) => {
     }
 };
 
-// Get global documents
+// Apply the same fix to getGlobalDocuments function
 const getGlobalDocuments = async (req, res) => {
     try {
         const documents = await Document.find({ isGlobal: true })
             .populate('uploadedBy', 'name')
             .sort({ createdAt: -1 });
 
+        // Refresh signed URLs
+        const refreshedDocuments = await Promise.all(documents.map(async (doc) => {
+            const docObj = doc.toObject(); // Convert to plain object
+            
+            try {
+                // Handle documents created before Firebase integration (legacy support)
+                if (!doc.filePath) {
+                    return docObj; // Return as is
+                }
+                
+                // Generate a new signed URL with a 24-hour expiration
+                const newUrl = await getFileSignedUrl(doc.filePath, 24 * 60 * 60);
+                
+                if (newUrl) {
+                    docObj.fileUrl = newUrl;
+                }
+                
+                return docObj;
+            } catch (error) {
+                logger.error(`Error refreshing URL for document ${doc._id}: ${error.message}`);
+                return docObj;
+            }
+        }));
+
         return res.status(200).json({
             success: true,
-            documents
+            documents: refreshedDocuments
         });
     } catch (error) {
         logger.error(`Error fetching global documents: ${error.message}`);
@@ -126,6 +206,14 @@ const getDocumentById = async (req, res) => {
             if (document.userId.toString() !== req.user._id.toString() && !document.isGlobal) {
                 return res.status(403).json({ success: false, error: "Access denied. You can only view your own documents or global documents" });
             }
+        }
+
+        // Refresh the signed URL
+        try {
+            const newUrl = await getFileSignedUrl(document.filePath, 24 * 60 * 60);
+            document.fileUrl = newUrl;
+        } catch (error) {
+            logger.error(`Error refreshing URL for document ${document._id}: ${error.message}`);
         }
 
         return res.status(200).json({
@@ -159,13 +247,16 @@ const updateDocument = async (req, res) => {
         
         // If a new file is uploaded, update the file information
         if (req.file) {
-            // Delete old file if it exists
-            if (document.fileUrl) {
-                // Extract the public_id from the URL
-                const publicId = document.fileUrl.split('/').pop().split('.')[0];
-                await deleteFromCloudinary(publicId);
+            // Delete old file from Firebase if it exists
+            if (document.filePath) {
+                await deleteFileFromFirebase(document.filePath);
             }
-            document.fileUrl = req.file.path;
+            
+            // Upload new file to Firebase
+            const fileData = await uploadFileToFirebase(req.file, 'documents');
+            
+            document.fileUrl = fileData.url;
+            document.filePath = fileData.path;
             document.fileType = req.file.mimetype;
             document.fileSize = req.file.size;
         }
@@ -197,10 +288,9 @@ const deleteDocument = async (req, res) => {
             return res.status(404).json({ success: false, error: "Document not found" });
         }
         
-        // Delete file from storage
-        if (document.fileUrl) {
-            const publicId = document.fileUrl.split('/').pop().split('.')[0];
-            await deleteFromCloudinary(publicId);
+        // Delete file from Firebase Storage
+        if (document.filePath) {
+            await deleteFileFromFirebase(document.filePath);
         }
         
         await Document.findByIdAndDelete(id);
@@ -234,8 +324,33 @@ const downloadDocument = async (req, res) => {
             }
         }
         
+        // Handle legacy documents (before Firebase integration)
+        if (!document.filePath && document.fileUrl) {
+            // For old documents that only have fileUrl
+            return res.redirect(document.fileUrl);
+        }
         
-        return res.redirect(document.fileUrl);
+        // Get fresh signed URL
+        try {
+            const signedUrl = await getFileSignedUrl(document.filePath, 15 * 60); // 15 minutes expiry
+            
+            if (!signedUrl) {
+                return res.status(404).json({ success: false, error: "Document file not found in storage" });
+            }
+            
+            // Set filename for download
+            const fileExtension = document.fileType ? document.fileType.split('/')[1] || 'file' : 'file';
+            res.setHeader(
+                'Content-Disposition',
+                `attachment; filename="${encodeURIComponent(document.title)}.${fileExtension}"`
+            );
+            
+            // Redirect to the signed URL
+            return res.redirect(signedUrl);
+        } catch (error) {
+            logger.error(`Error getting signed URL for document ${id}: ${error.message}`);
+            return res.status(500).json({ success: false, error: "Error generating download link" });
+        }
     } catch (error) {
         logger.error(`Error downloading document: ${error.message}`);
         return res.status(500).json({ success: false, error: `Server error in downloading document: ${error.message}` });

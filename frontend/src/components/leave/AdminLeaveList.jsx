@@ -1,39 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import {   
-  Box,   
-  Typography,   
-  Paper,   
-  Table,   
-  TableBody,   
-  TableCell,   
-  TableContainer,   
-  TableHead,   
-  TableRow,   
-  Button,   
-  IconButton,   
-  Dialog,   
-  DialogActions,   
-  DialogContent,   
-  DialogContentText,   
-  DialogTitle,   
-  TextField,   
-  CircularProgress,   
-  Alert,   
-  Chip,   
-  MenuItem,   
-  Select,   
-  FormControl,   
-  InputLabel,   
-  Grid,   
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
+  CircularProgress,
+  Alert,
+  Chip,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
   TablePagination,
   Link,
   Divider
 } from '@mui/material';
-import { 
-  CheckCircle as ApproveIcon, 
-  Cancel as RejectIcon, 
-  Visibility as ViewIcon, 
+import {
+  CheckCircle as ApproveIcon,
+  Cancel as RejectIcon,
+  Visibility as ViewIcon,
   FilterList as FilterIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
@@ -44,64 +44,64 @@ const AdminLeaveList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Pagination states
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   // Filters
   const [filters, setFilters] = useState({
     status: 'All',
     fromDate: '',
     toDate: ''
   });
-  
+
   // For approval/rejection dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState('');
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [comment, setComment] = useState('');
-  
+
   // For leave details dialog
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [leaveDetails, setLeaveDetails] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  
+
   useEffect(() => {
     fetchLeaves();
   }, []);
-  
+
   const fetchLeaves = async () => {
     try {
       setLoading(true);
       setError('');
-      
+
       let url = `${config.API_URL}/api/leave/`;
       const params = new URLSearchParams();
-      
+
       if (filters.status && filters.status !== 'All') {
         params.append('status', filters.status);
       }
-      
+
       if (filters.fromDate) {
         params.append('from', filters.fromDate);
       }
-      
+
       if (filters.toDate) {
         params.append('to', filters.toDate);
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
-      
+
       const response = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setLeaves(response.data.leaves || []);
         setPage(0); // Reset to first page when fetching new data
@@ -113,7 +113,7 @@ const AdminLeaveList = () => {
       setLoading(false);
     }
   };
-  
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters({
@@ -121,11 +121,11 @@ const AdminLeaveList = () => {
       [name]: value
     });
   };
-  
+
   const applyFilters = () => {
     fetchLeaves();
   };
-  
+
   const resetFilters = () => {
     setFilters({
       status: 'All',
@@ -134,14 +134,14 @@ const AdminLeaveList = () => {
     });
     setTimeout(() => fetchLeaves(), 100);
   };
-  
+
   const handleApproveClick = (leave) => {
     setSelectedLeave(leave);
     setDialogType('approve');
     setComment('');
     setDialogOpen(true);
   };
-  
+
   const handleRejectClick = (leave) => {
     setSelectedLeave(leave);
     setDialogType('reject');
@@ -152,13 +152,13 @@ const AdminLeaveList = () => {
   const handleViewDetails = async (leaveId) => {
     try {
       setDetailsLoading(true);
-      
+
       const response = await axios.get(`${config.API_URL}/api/leave/detail/${leaveId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setLeaveDetails(response.data);
         setDetailsDialogOpen(true);
@@ -170,34 +170,34 @@ const AdminLeaveList = () => {
       setDetailsLoading(false);
     }
   };
-  
+
   const closeDetailsDialog = () => {
     setDetailsDialogOpen(false);
     setLeaveDetails(null);
   };
-  
+
   const closeDialog = () => {
     setDialogOpen(false);
     setSelectedLeave(null);
     setComment('');
   };
- 
+
   const handleApproveReject = async () => {
     if (!selectedLeave) return;
-    
+
     try {
       setLoading(true);
-      
-      const endpoint = dialogType === 'approve' 
-        ? `${config.API_URL}/api/leave/${selectedLeave._id}/approve` 
+
+      const endpoint = dialogType === 'approve'
+        ? `${config.API_URL}/api/leave/${selectedLeave._id}/approve`
         : `${config.API_URL}/api/leave/${selectedLeave._id}/reject`;
-      
+
       const response = await axios.post(endpoint, { comment }, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.data.success) {
         setSuccess(`Leave application ${dialogType === 'approve' ? 'approved' : 'rejected'} successfully`);
         // Refresh leaves list
@@ -211,7 +211,7 @@ const AdminLeaveList = () => {
       closeDialog();
     }
   };
-  
+
   const getStatusChipColor = (status) => {
     switch (status) {
       case 'Approved':
@@ -223,7 +223,7 @@ const AdminLeaveList = () => {
         return 'warning';
     }
   };
-  
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -232,7 +232,7 @@ const AdminLeaveList = () => {
       day: 'numeric'
     });
   };
-  
+
   // Pagination handlers
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -242,34 +242,34 @@ const AdminLeaveList = () => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-  
+
   // Get current page data
   const displayedLeaves = rowsPerPage > 0
     ? leaves.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
     : leaves;
-  
+
   const clearMessage = () => {
     setTimeout(() => {
       setSuccess('');
       setError('');
     }, 5000);
   };
-  
+
   useEffect(() => {
     if (success || error) {
       clearMessage();
     }
   }, [success, error]);
-  
+
   return (
     <Paper elevation={3} sx={{ p: 3, marginTop: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" component="h2" gutterBottom>
           Leave Applications
         </Typography>
-        
-        <Button 
-          startIcon={<FilterIcon />} 
+
+        <Button
+          startIcon={<FilterIcon />}
           onClick={() => setShowFilters(!showFilters)}
           color="primary"
           variant="outlined"
@@ -277,10 +277,10 @@ const AdminLeaveList = () => {
           {showFilters ? 'Hide Filters' : 'Show Filters'}
         </Button>
       </Box>
-      
+
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-      
+
       {/* Filters */}
       {showFilters && (
         <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
@@ -304,7 +304,7 @@ const AdminLeaveList = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
@@ -316,7 +316,7 @@ const AdminLeaveList = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
@@ -328,19 +328,19 @@ const AdminLeaveList = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={3}>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
+                <Button
+                  variant="contained"
+                  color="primary"
                   onClick={applyFilters}
                 >
                   Apply
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  color="secondary" 
+                <Button
+                  variant="outlined"
+                  color="secondary"
                   onClick={resetFilters}
                 >
                   Reset
@@ -350,7 +350,7 @@ const AdminLeaveList = () => {
           </Grid>
         </Paper>
       )}
-      
+
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
           <CircularProgress />
@@ -388,43 +388,43 @@ const AdminLeaveList = () => {
                     <TableCell>{formatDate(leave.endDate)}</TableCell>
                     <TableCell>{leave.totalDays}</TableCell>
                     <TableCell>
-                      <Chip 
-                        label={leave.isPaid ? 'Paid' : 'Unpaid'} 
-                        color={leave.isPaid ? 'info' : 'default'} 
-                        size="small" 
+                      <Chip
+                        label={leave.isPaid ? 'Paid' : 'Unpaid'}
+                        color={leave.isPaid ? 'info' : 'default'}
+                        size="small"
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={leave.status} 
-                        color={getStatusChipColor(leave.status)} 
-                        size="small" 
+                      <Chip
+                        label={leave.status}
+                        color={getStatusChipColor(leave.status)}
+                        size="small"
                       />
                     </TableCell>
                     <TableCell>{formatDate(leave.appliedAt)}</TableCell>
                     <TableCell>
-                      <IconButton 
-                        color="info" 
-                        size="small" 
+                      <IconButton
+                        color="info"
+                        size="small"
                         onClick={() => handleViewDetails(leave._id)}
                         title="View details"
                       >
                         <ViewIcon />
                       </IconButton>
-                      
+
                       {leave.status === 'Pending' && (
                         <>
-                          <IconButton 
-                            color="success" 
-                            size="small" 
+                          <IconButton
+                            color="success"
+                            size="small"
                             onClick={() => handleApproveClick(leave)}
                             title="Approve"
                           >
                             <ApproveIcon />
                           </IconButton>
-                          <IconButton 
-                            color="error" 
-                            size="small" 
+                          <IconButton
+                            color="error"
+                            size="small"
                             onClick={() => handleRejectClick(leave)}
                             title="Reject"
                           >
@@ -438,7 +438,7 @@ const AdminLeaveList = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          
+
           {/* Pagination */}
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -451,7 +451,7 @@ const AdminLeaveList = () => {
           />
         </>
       )}
-      
+
       {/* Approve/Reject Dialog */}
       <Dialog open={dialogOpen} onClose={closeDialog}>
         <DialogTitle>
@@ -459,8 +459,8 @@ const AdminLeaveList = () => {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {dialogType === 'approve' 
-              ? 'Are you sure you want to approve this leave application?' 
+            {dialogType === 'approve'
+              ? 'Are you sure you want to approve this leave application?'
               : 'Are you sure you want to reject this leave application?'}
           </DialogContentText>
           <TextField
@@ -479,8 +479,8 @@ const AdminLeaveList = () => {
           <Button onClick={closeDialog} color="primary">
             Cancel
           </Button>
-          <Button 
-            onClick={handleApproveReject} 
+          <Button
+            onClick={handleApproveReject}
             color={dialogType === 'approve' ? 'success' : 'error'}
             variant="contained"
             disabled={loading}
@@ -491,8 +491,8 @@ const AdminLeaveList = () => {
       </Dialog>
 
       {/* Leave Details Dialog */}
-      <Dialog 
-        open={detailsDialogOpen} 
+      <Dialog
+        open={detailsDialogOpen}
         onClose={closeDetailsDialog}
         maxWidth="md"
         fullWidth
@@ -542,10 +542,10 @@ const AdminLeaveList = () => {
                     </Grid>
                     <Grid item xs={6}>
                       <Typography variant="subtitle2">Status</Typography>
-                      <Chip 
-                        label={leaveDetails.leave.status} 
-                        color={getStatusChipColor(leaveDetails.leave.status)} 
-                        size="small" 
+                      <Chip
+                        label={leaveDetails.leave.status}
+                        color={getStatusChipColor(leaveDetails.leave.status)}
+                        size="small"
                       />
                     </Grid>
                     <Grid item xs={6}>
@@ -562,10 +562,10 @@ const AdminLeaveList = () => {
                     </Grid>
                     <Grid item xs={6}>
                       <Typography variant="subtitle2">Is Paid</Typography>
-                      <Chip 
-                        label={leaveDetails.leave.isPaid ? 'Paid' : 'Unpaid'} 
-                        color={leaveDetails.leave.isPaid ? 'info' : 'default'} 
-                        size="small" 
+                      <Chip
+                        label={leaveDetails.leave.isPaid ? 'Paid' : 'Unpaid'}
+                        color={leaveDetails.leave.isPaid ? 'info' : 'default'}
+                        size="small"
                       />
                     </Grid>
                     <Grid item xs={6}>
@@ -627,10 +627,10 @@ const AdminLeaveList = () => {
                     <Grid container spacing={1}>
                       {leaveDetails.leave.documents.map((doc, index) => (
                         <Grid item key={index}>
-                          <Chip 
-                            label={`Document ${index + 1}`}
-                            component={Link}
-                            href={`${config.API_URL}/uploads/leave-documents/${doc}`}
+                          <Chip
+                            label={doc.filename || `Document ${index + 1}`}
+                            component="a"
+                            href={doc.url}
                             target="_blank"
                             clickable
                             color="primary"
@@ -645,6 +645,7 @@ const AdminLeaveList = () => {
                 </Paper>
               </Grid>
 
+
               {/* Approval Information */}
               {leaveDetails.leave.status !== 'Pending' && (
                 <Grid item xs={12}>
@@ -654,8 +655,8 @@ const AdminLeaveList = () => {
                       <Grid item xs={12} md={4}>
                         <Typography variant="subtitle2">Approved/Rejected By</Typography>
                         <Typography>
-                          {leaveDetails.leave.approvedBy ? 
-                            `${leaveDetails.leave.approvedBy.name} (${leaveDetails.leave.approvedBy.role})` : 
+                          {leaveDetails.leave.approvedBy ?
+                            `${leaveDetails.leave.approvedBy.name} (${leaveDetails.leave.approvedBy.role})` :
                             'N/A'}
                         </Typography>
                       </Grid>
@@ -675,23 +676,23 @@ const AdminLeaveList = () => {
         <DialogActions>
           {leaveDetails && leaveDetails.leave.status === 'Pending' && (
             <>
-              <Button 
+              <Button
                 onClick={() => {
                   closeDetailsDialog();
                   handleApproveClick(leaveDetails.leave);
-                }} 
-                color="success" 
+                }}
+                color="success"
                 variant="contained"
                 startIcon={<ApproveIcon />}
               >
                 Approve
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   closeDetailsDialog();
                   handleRejectClick(leaveDetails.leave);
-                }} 
-                color="error" 
+                }}
+                color="error"
                 variant="contained"
                 startIcon={<RejectIcon />}
               >

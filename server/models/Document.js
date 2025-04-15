@@ -20,7 +20,7 @@ const documentSchema = new Schema(
         subCategory: { type: String },
         title: { type: String, required: true },
         description: { type: String },
-        fileUrl: { type: String, required: true },
+        fileUrl: { type: String},
         fileType: { type: String },
         fileSize: { type: Number },
         uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

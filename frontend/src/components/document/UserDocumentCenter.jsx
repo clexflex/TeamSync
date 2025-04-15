@@ -151,10 +151,11 @@ const UserDocumentCenter = () => {
 
   const handleDownloadDocument = async (document) => {
     try {
-      window.open(document.fileUrl, '_blank');
+      // Instead of opening the URL directly, make a request to download endpoint
+      window.location.href = `${config.API_URL}/api/documents/download/${document._id}`;
     } catch (error) {
-      setError('Error accessing document');
-      console.error('Error accessing document:', error);
+      setError('Error downloading document');
+      console.error('Error downloading document:', error);
     }
   };
 

@@ -51,13 +51,13 @@ const ViewTicket = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const responseRef = useRef(null);
-  
+
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
-  
+
   const [response, setResponse] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
@@ -67,7 +67,7 @@ const ViewTicket = () => {
   const [admins, setAdmins] = useState([]);
   const [selectedAdmin, setSelectedAdmin] = useState('');
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  
+
   // Fetch ticket details
   const fetchTicket = async () => {
     setLoading(true);
@@ -98,7 +98,7 @@ const ViewTicket = () => {
   // Fetch admin users for assignment
   const fetchAdmins = async () => {
     if (user.role !== 'admin') return;
-    
+
     try {
       const response = await axios.get(
         `${config.API_URL}/api/auth/users?role=admin`,
@@ -134,7 +134,7 @@ const ViewTicket = () => {
 
   // Get priority color
   const getPriorityColor = (priority) => {
-    switch(priority) {
+    switch (priority) {
       case 'Low': return 'info';
       case 'Medium': return 'success';
       case 'High': return 'warning';
@@ -145,7 +145,7 @@ const ViewTicket = () => {
 
   // Get status color
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Open': return 'info';
       case 'In Progress': return 'warning';
       case 'Resolved': return 'success';
@@ -162,16 +162,16 @@ const ViewTicket = () => {
         setSubmitError('Maximum 5 files allowed');
         return;
       }
-      
+
       const selectedFiles = Array.from(e.target.files);
-      
+
       // Check file sizes (10MB limit per file)
       const oversizedFiles = selectedFiles.filter(file => file.size > 10 * 1024 * 1024);
       if (oversizedFiles.length > 0) {
         setSubmitError('One or more files exceed the 10MB size limit');
         return;
       }
-      
+
       setUploadedFiles(selectedFiles);
       setSubmitError('');
     }
@@ -180,26 +180,26 @@ const ViewTicket = () => {
   // Handle response submission
   const handleSubmitResponse = async (e) => {
     e.preventDefault();
-    
+
     if (!response.trim()) {
       setSubmitError('Response message is required');
       return;
     }
-    
+
     setSubmitError('');
     setSubmitSuccess('');
-    
+
     try {
       const formData = new FormData();
       formData.append('message', response);
-      
+
       // Add files if any
       if (uploadedFiles.length > 0) {
         uploadedFiles.forEach(file => {
           formData.append('attachments', file);
         });
       }
-      
+
       const res = await axios.post(
         `${config.API_URL}/api/tickets/${id}/response`,
         formData,
@@ -210,13 +210,13 @@ const ViewTicket = () => {
           }
         }
       );
-      
+
       if (res.data.success) {
         setTicket(res.data.ticket);
         setResponse('');
         setUploadedFiles([]);
         setSubmitSuccess('Response added successfully');
-        
+
         // Scroll to the latest response
         setTimeout(() => {
           if (responseRef.current) {
@@ -235,7 +235,7 @@ const ViewTicket = () => {
     if (!newStatus) {
       return;
     }
-    
+
     try {
       const response = await axios.put(
         `${config.API_URL}/api/tickets/${id}/status`,
@@ -249,7 +249,7 @@ const ViewTicket = () => {
           },
         }
       );
-      
+
       if (response.data.success) {
         setTicket(response.data.ticket);
         setStatusUpdateOpen(false);
@@ -267,7 +267,7 @@ const ViewTicket = () => {
     if (!selectedAdmin) {
       return;
     }
-    
+
     try {
       const response = await axios.put(
         `${config.API_URL}/api/tickets/${id}/assign`,
@@ -280,7 +280,7 @@ const ViewTicket = () => {
           },
         }
       );
-      
+
       if (response.data.success) {
         setTicket(response.data.ticket);
         setAssignDialogOpen(false);
@@ -303,11 +303,11 @@ const ViewTicket = () => {
           },
         }
       );
-      
+
       if (response.data.success) {
         setConfirmDeleteOpen(false);
         setSubmitSuccess('Ticket deleted successfully');
-        
+
         // Redirect after a short delay
         setTimeout(() => {
           navigate('/admin-dashboard/tickets');
@@ -321,8 +321,12 @@ const ViewTicket = () => {
   };
 
   // Download attachment
-  const handleDownloadAttachment = (filename) => {
-    window.open(`${config.API_URL}/uploads/tickets/${filename}`, '_blank');
+  const handleDownloadAttachment = (attachment) => {
+    if (attachment && attachment.url) {
+      window.open(attachment.url, '_blank');
+    } else {
+      setSubmitError('Download link not available');
+    }
   };
 
   if (loading) {
@@ -377,7 +381,7 @@ const ViewTicket = () => {
         >
           Back to Tickets
         </Button>
-        
+
         <Box>
           <Button
             variant="outlined"
@@ -387,7 +391,7 @@ const ViewTicket = () => {
           >
             Refresh
           </Button>
-          
+
           {user.role === 'admin' && (
             <>
               <Button
@@ -399,7 +403,7 @@ const ViewTicket = () => {
               >
                 Assign
               </Button>
-              
+
               <Button
                 variant="outlined"
                 color="warning"
@@ -409,7 +413,7 @@ const ViewTicket = () => {
               >
                 Update Status
               </Button>
-              
+
               <Button
                 variant="outlined"
                 color="error"
@@ -428,7 +432,7 @@ const ViewTicket = () => {
           {submitError}
         </Alert>
       )}
-      
+
       {submitSuccess && (
         <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSubmitSuccess('')}>
           {submitSuccess}
@@ -443,21 +447,21 @@ const ViewTicket = () => {
               {ticket.title}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-              <Chip 
-                label={ticket.status} 
-                color={getStatusColor(ticket.status)} 
+              <Chip
+                label={ticket.status}
+                color={getStatusColor(ticket.status)}
               />
-              <Chip 
-                label={ticket.priority} 
-                color={getPriorityColor(ticket.priority)} 
+              <Chip
+                label={ticket.priority}
+                color={getPriorityColor(ticket.priority)}
               />
-              <Chip 
-                label={ticket.type} 
+              <Chip
+                label={ticket.type}
                 variant="outlined"
               />
             </Box>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Submitted By
@@ -465,14 +469,14 @@ const ViewTicket = () => {
             <Typography variant="body1" gutterBottom>
               {ticket.userId?.name} ({ticket.userId?.role})
             </Typography>
-            
+
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
               Created At
             </Typography>
             <Typography variant="body1" gutterBottom>
               {formatDate(ticket.createdAt)}
             </Typography>
-            
+
             {ticket.resolvedAt && (
               <>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
@@ -484,18 +488,18 @@ const ViewTicket = () => {
               </>
             )}
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" color="text.secondary">
               Assigned To
             </Typography>
             <Typography variant="body1" gutterBottom>
-              {ticket.assignedTo ? 
-                `${ticket.assignedTo.name} (${ticket.assignedTo.email})` : 
+              {ticket.assignedTo ?
+                `${ticket.assignedTo.name} (${ticket.assignedTo.email})` :
                 'Not assigned'
               }
             </Typography>
-            
+
             {ticket.dueDate && (
               <>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
@@ -506,7 +510,7 @@ const ViewTicket = () => {
                 </Typography>
               </>
             )}
-            
+
             {ticket.closedAt && (
               <>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }}>
@@ -518,7 +522,7 @@ const ViewTicket = () => {
               </>
             )}
           </Grid>
-          
+
           <Grid item xs={12}>
             <Divider sx={{ my: 1 }} />
             <Typography variant="subtitle1" gutterBottom>
@@ -528,7 +532,7 @@ const ViewTicket = () => {
               {ticket.description}
             </Typography>
           </Grid>
-          
+
           {ticket.attachments && ticket.attachments.length > 0 && (
             <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
@@ -539,7 +543,7 @@ const ViewTicket = () => {
                   <Chip
                     key={index}
                     icon={<AttachmentIcon />}
-                    label={attachment.split('-').slice(1).join('-')}
+                    label={attachment.filename || `Attachment ${index + 1}`}
                     onClick={() => handleDownloadAttachment(attachment)}
                     variant="outlined"
                     clickable
@@ -555,18 +559,18 @@ const ViewTicket = () => {
       <Typography variant="h6" gutterBottom>
         Responses ({ticket.responses?.length || 0})
       </Typography>
-      
+
       <Paper sx={{ p: 3, mb: 4 }}>
         {ticket.responses && ticket.responses.length > 0 ? (
           <List>
             {ticket.responses.map((resp, index) => (
               <React.Fragment key={index}>
-                <ListItem 
+                <ListItem
                   alignItems="flex-start"
-                  sx={{ 
+                  sx={{
                     bgcolor: resp.userId._id === user._id ? 'rgba(0, 0, 0, 0.03)' : 'transparent',
                     borderRadius: 1,
-                    mb: 2 
+                    mb: 2
                   }}
                   ref={index === ticket.responses.length - 1 ? responseRef : null}
                 >
@@ -579,10 +583,10 @@ const ViewTicket = () => {
                     primary={
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="subtitle1">
-                          {resp.userId.name} 
-                          <Chip 
-                            size="small" 
-                            label={resp.userId.role} 
+                          {resp.userId.name}
+                          <Chip
+                            size="small"
+                            label={resp.userId.role}
                             sx={{ ml: 1, fontSize: '0.7rem' }}
                             color={resp.userId.role === 'admin' ? 'primary' : 'success'}
                           />
@@ -598,14 +602,14 @@ const ViewTicket = () => {
                           component="span"
                           variant="body2"
                           color="text.primary"
-                          sx={{ 
+                          sx={{
                             display: 'inline',
                             whiteSpace: 'pre-line'
                           }}
                         >
                           {resp.message}
                         </Typography>
-                        
+
                         {resp.attachments && resp.attachments.length > 0 && (
                           <Box sx={{ mt: 1 }}>
                             <Typography variant="caption" color="text.secondary">
@@ -617,7 +621,7 @@ const ViewTicket = () => {
                                   key={idx}
                                   size="small"
                                   icon={<AttachmentIcon />}
-                                  label={attachment.split('-').slice(1).join('-')}
+                                  label={attachment.filename || `Attachment ${idx + 1}`}
                                   onClick={() => handleDownloadAttachment(attachment)}
                                   variant="outlined"
                                   clickable
@@ -658,7 +662,7 @@ const ViewTicket = () => {
               sx={{ mb: 2 }}
               required
             />
-            
+
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={6}>
                 <Button
@@ -715,7 +719,7 @@ const ViewTicket = () => {
               <MenuItem value="Reopened">Reopened</MenuItem>
             </Select>
           </FormControl>
-          
+
           <TextField
             label="Add a note (optional)"
             multiline
