@@ -44,14 +44,14 @@ const isHoliday = async (date) => {
         date.getUTCMonth(),
         date.getUTCDate()
     ));
-    
-    const holiday = await Holiday.findOne({ 
-        date: { 
-            $gte: holidayDate, 
+
+    const holiday = await Holiday.findOne({
+        date: {
+            $gte: holidayDate,
             $lt: new Date(holidayDate.getTime() + 24 * 60 * 60 * 1000)
-        } 
+        }
     });
-    
+
     return !!holiday;
 };
 
@@ -66,14 +66,14 @@ const calculateCredits = async (attendance, existingLeave = null) => {
     const date = new Date(attendance.date);
     const isDateWeekend = attendance.isWeekend || isWeekend(date);
     const isDateHoliday = attendance.isHoliday || await isHoliday(date);
-    
+
     // 1. If it's a weekend or holiday with no attendance, it's a Weekly Off (1 Credit)
     if ((isDateWeekend || isDateHoliday) && !attendance.clockIn) {
         attendance.status = "Weekly Off";
         attendance.credits = 1;
         return;
     }
-    
+
     // 2. If it's a weekend or holiday with attendance, it's Extra Work (1 Credit)
     if ((isDateWeekend || isDateHoliday) && attendance.clockIn) {
         attendance.status = "Extra Work";
@@ -85,12 +85,12 @@ const calculateCredits = async (attendance, existingLeave = null) => {
         }
         return;
     }
-    
+
     // 3. Check for leave status if existingLeave is provided
     if (existingLeave) {
         if (existingLeave.leaveType === "Half Leave") {
             attendance.isHalfDay = true;
-            
+
             // If the leave uses leave balance, it's Paid Half Leave
             if (existingLeave.useLeaveBalance) {
                 // If user has also clocked in/out, give full credit
@@ -124,7 +124,7 @@ const calculateCredits = async (attendance, existingLeave = null) => {
             return;
         }
     }
-    
+
     // 4. Regular weekday attendance scenarios
     if (attendance.clockIn) {
         if (!attendance.clockOut) {
@@ -182,9 +182,9 @@ export const clockIn = async (req, res) => {
         tomorrowUTC.setUTCDate(todayUTC.getUTCDate() + 1);
 
         // Check if already clocked in
-        const existingAttendance = await Attendance.findOne({ 
-            userId, 
-            date: { $gte: todayUTC, $lt: tomorrowUTC } 
+        const existingAttendance = await Attendance.findOne({
+            userId,
+            date: { $gte: todayUTC, $lt: tomorrowUTC }
         });
 
         if (existingAttendance) {
@@ -201,9 +201,9 @@ export const clockIn = async (req, res) => {
 
         // If there's a full-day approved leave, don't allow clock-in
         if (existingLeave && existingLeave.leaveType !== "Half Leave") {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Cannot clock in during an approved leave period." 
+            return res.status(400).json({
+                success: false,
+                error: "Cannot clock in during an approved leave period."
             });
         }
 
@@ -246,6 +246,25 @@ export const clockIn = async (req, res) => {
         await calculateCredits(newAttendance, existingLeave);
 
         await newAttendance.save();
+        // Add this before the return statement in the clockIn function
+        if (req.io) {
+            const eventData = {
+                type: 'clock-in',
+                userId: userId.toString(),
+                userName: req.user.name,
+                attendance: newAttendance,
+                timestamp: new Date()
+            };
+
+            // Emit to admins and managers
+            req.io.to('role:admin').emit('attendance_update', eventData);
+            req.io.to('role:manager').emit('attendance_update', eventData);
+
+            // Also emit to the user themselves
+            req.io.to(`user:${userId}`).emit('attendance_update', eventData);
+
+            logger.info(`Emitted attendance_update (clock-in) for user ${userId}`);
+        }
         logger.info(`User ${userId} successfully clocked in at ${new Date().toISOString()}`);
         return res.status(200).json({ success: true, attendance: newAttendance });
     } catch (error) {
@@ -291,7 +310,7 @@ export const clockOut = async (req, res) => {
 
         attendance.clockOut = new Date();
         attendance.tasksDone = tasksDone;
-        
+
         // Check for any approved leave for today
         const existingLeave = await Leave.findOne({
             userId,
@@ -304,6 +323,25 @@ export const clockOut = async (req, res) => {
         await calculateCredits(attendance, existingLeave);
 
         await attendance.save();
+        // Add this before the return statement in the clockOut function
+        if (req.io) {
+            const eventData = {
+                type: 'clock-out',
+                userId: userId.toString(),
+                userName: req.user.name,
+                attendance: attendance,
+                timestamp: new Date()
+            };
+
+            // Emit to admins and managers
+            req.io.to('role:admin').emit('attendance_update', eventData);
+            req.io.to('role:manager').emit('attendance_update', eventData);
+
+            // Also emit to the user themselves
+            req.io.to(`user:${userId}`).emit('attendance_update', eventData);
+
+            logger.info(`Emitted attendance_update (clock-out) for user ${userId}`);
+        }
         logger.info(`User ${userId} clocked out at ${new Date().toISOString()}. Hours worked: ${attendance.hoursWorked}`);
         return res.status(200).json({ success: true, attendance });
     } catch (error) {
@@ -362,6 +400,30 @@ export const approveAttendance = async (req, res) => {
         }
 
         await attendance.save();
+        // Add this before the return statement in the approveAttendance function
+        if (req.io) {
+            // Get the user name for the attendance record
+            const attendanceUser = await User.findById(attendance.userId);
+
+            const eventData = {
+                type: 'approval_status',
+                userId: attendance.userId.toString(),
+                userName: attendanceUser?.name || "Employee",
+                approvedBy: req.user.name,
+                status: approvalStatus,
+                attendance: attendance,
+                timestamp: new Date()
+            };
+
+            // Emit to admins and managers
+            req.io.to('role:admin').emit('attendance_update', eventData);
+            req.io.to('role:manager').emit('attendance_update', eventData);
+
+            // Also emit to the user who owns the attendance record
+            req.io.to(`user:${attendance.userId}`).emit('attendance_update', eventData);
+
+            logger.info(`Emitted attendance_update (approval) for attendance ${attendanceId}`);
+        }
         logger.info(`User ${userId} successfully processed attendance approval at ${new Date().toISOString()}`);
         return res.status(200).json({ success: true, attendance });
     } catch (error) {
@@ -548,7 +610,7 @@ export const getAttendanceReports = async (req, res) => {
             if (status === 'Incomplete Attendance') userAttendanceMap[record.userId].stats.totalIncompleteAttendance++;
             if (status === 'Weekly Off') userAttendanceMap[record.userId].stats.totalWeeklyOff++;
             if (record.isHalfDay) userAttendanceMap[record.userId].stats.totalHalfDay++;
-            
+
             userAttendanceMap[record.userId].stats.totalHoursWorked += record.hoursWorked || 0;
             userAttendanceMap[record.userId].stats.totalCredits += record.credits || 0;
         });
@@ -659,7 +721,7 @@ export const getCurrentStatus = async (req, res) => {
         // Using UserProfile + Employee to ensure we get the team info
         const userProfile = await UserProfile.findOne({ userId });
         let teamId = null;
-        
+
         // If we still need teamId, we need to query Employee collection
         if (!teamId) {
             const employee = await Employee.findOne({ userId }).populate('teamId');
@@ -675,7 +737,7 @@ export const getCurrentStatus = async (req, res) => {
                 todayAttendance.clockOut ? 'completed' : 'clocked-in',
             teamId: teamId
         };
-        
+
         logger.info(`User ${userId} checked attendance status.`);
         return res.status(200).json(response);
     } catch (error) {
@@ -975,10 +1037,10 @@ export const addAttendanceRecord = async (req, res) => {
         const year = parseInt(dateArray[0]);
         const month = parseInt(dateArray[1]) - 1; // Month is 0-indexed in JavaScript Date
         const day = parseInt(dateArray[2]);
-        
+
         // Create a UTC date at midnight
         const attendanceDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-        
+
         // Get user details to verify existence and retrieve team info if applicable
         const user = await User.findById(userId);
         if (!user) {
@@ -1021,11 +1083,11 @@ export const addAttendanceRecord = async (req, res) => {
 
         // Parse clock-in time
         const [clockInHours, clockInMinutes] = clockIn.split(':').map(Number);
-        
+
         // Create a local date object representing the attendance date at the specified clock-in time
         // This properly accounts for timezone differences as the Date constructor uses local time
         const clockInDate = new Date(year, month, day, clockInHours, clockInMinutes, 0, 0);
-        
+
         // Create new attendance record
         const newAttendance = new Attendance({
             userId,
@@ -1044,7 +1106,7 @@ export const addAttendanceRecord = async (req, res) => {
             leaveId: existingLeave?._id || null,
             approvedBy: req.user._id, // Admin who created the record
             comments: `Manually added by admin ${req.user.name} on ${new Date().toLocaleString()}`,
-            credits: credits !== undefined ? parseFloat(credits) : undefined 
+            credits: credits !== undefined ? parseFloat(credits) : undefined
         });
 
         // Add clock-out time if provided
@@ -1127,11 +1189,11 @@ export const deleteAttendanceRecord = async (req, res) => {
 export const getAllAttendanceRecords = async (req, res) => {
     try {
         // Extract query parameters for filtering
-        const { 
-            userId, 
-            dateFrom, 
-            dateTo, 
-            status, 
+        const {
+            userId,
+            dateFrom,
+            dateTo,
+            status,
             role,
             limit = 50,  // Default limit to 50 records
             page = 1     // Default to first page
@@ -1144,7 +1206,7 @@ export const getAllAttendanceRecords = async (req, res) => {
         if (userId) query.userId = userId;
         if (status) query.status = status;
         if (role) query.role = role;
-        
+
         // Date range filter
         if (dateFrom || dateTo) {
             query.date = {};
@@ -1158,7 +1220,7 @@ export const getAllAttendanceRecords = async (req, res) => {
 
         // Calculate pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
-        
+
         // Execute query with pagination
         const attendanceRecords = await Attendance.find(query)
             .sort({ date: -1 }) // Sort by date, newest first
@@ -1172,10 +1234,10 @@ export const getAllAttendanceRecords = async (req, res) => {
                 path: 'teamId',
                 select: 'name'
             });
-        
+
         // Get total count for pagination
         const totalRecords = await Attendance.countDocuments(query);
-        
+
         return res.status(200).json({
             success: true,
             attendanceRecords,
@@ -1186,12 +1248,12 @@ export const getAllAttendanceRecords = async (req, res) => {
                 pages: Math.ceil(totalRecords / parseInt(limit))
             }
         });
-        
+
     } catch (error) {
         logger.error(`Error fetching attendance records: ${error.message}`);
         console.error("Error fetching attendance records:", error);
         return res.status(500).json({
-            success: false, 
+            success: false,
             error: "Failed to fetch attendance records"
         });
     }

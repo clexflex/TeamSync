@@ -145,17 +145,16 @@ const AttendanceTable = ({ records, title, icon: Icon }) => {
                           {record.workLocation}
                         </Typography>
                         {record.workLocation === 'Remote' && record.location && (
-                          <Typography variant="caption" color="text.secondary" display="block">
+                          <Box sx={{ mt: 0.5 }}>
                             <a
                               href={`https://www.google.com/maps?q=${record.location.latitude},${record.location.longitude}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: '#2563EB', textDecoration: 'none' }}
+                              style={{ color: '#2563EB', textDecoration: 'none', fontSize: '0.75rem' }}
                             >
-                              Lat: {record.location.latitude},
-                              Lon: {record.location.longitude}
+                              Lat: {record.location.latitude}, Lon: {record.location.longitude}
                             </a>
-                          </Typography>
+                          </Box>
                         )}
                       </Box>
                     </Stack>

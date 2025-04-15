@@ -114,7 +114,6 @@ function App() {
             <Route path="document-center" element={<DocumentCenter />} />
             <Route path="tickets" element={<AdminTicketDashboard />} />
             <Route path="tickets/:id" element={<ViewTicket />} />
-
             <Route path="resignations/list" element={<ResignationList />} />
             <Route path="resignations/detail/:id" element={<ResignationDetail />} />
             <Route path="notifications" element={<NotificationsPage />} />

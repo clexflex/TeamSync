@@ -81,12 +81,11 @@ const LiveAttendanceDashboard = () => {
   
   useEffect(() => {
     if (socket) {
-      socket.on('team_attendance_update', handleAttendanceUpdate);
-      socket.on('admin_attendance_update', handleAttendanceUpdate);
+      // Listen for all attendance updates with a single event
+      socket.on('attendance_update', handleAttendanceUpdate);
       
       return () => {
-        socket.off('team_attendance_update');
-        socket.off('admin_attendance_update');
+        socket.off('attendance_update');
       };
     }
   }, [socket]);
@@ -137,7 +136,7 @@ const LiveAttendanceDashboard = () => {
           late: attendanceData.filter(record => {
             if (!record.clockIn) return false;
             const clockInTime = new Date(record.clockIn);
-            return clockInTime.getHours() >= 9 && clockInTime.getMinutes() > 30; // After 9:30 AM
+            return clockInTime.getHours() >= 10; // After 10:00 AM
           }).length,
           onsite: attendanceData.filter(record => record.workLocation === 'Onsite').length,
           remote: attendanceData.filter(record => record.workLocation === 'Remote').length

@@ -3,9 +3,6 @@ import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
 import UserProfile from "../models/UserProfile.js";
 import bcrypt from "bcrypt";
-
-import path from "path";
-import fs from "fs";
 import logger from "../utils/logger.js";
 import { uploadProfileImage } from '../utils/cloudinary.js';
 

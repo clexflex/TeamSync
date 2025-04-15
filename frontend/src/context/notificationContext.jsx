@@ -1,4 +1,3 @@
-// frontend/src/context/notificationContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';

@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.469.0",
+    "moment-timezone": "^0.5.48",
     "mongoose": "^8.9.7",
     "path": "^0.12.7",
     "react": "^18.3.1",

@@ -1,4 +1,3 @@
-// server/routes/notification.js
 import express from "express";
 import { verifyUser, verifyRole } from "../middleware/authMiddleware.js";
 import {
