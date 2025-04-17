@@ -60,6 +60,7 @@ const UserProfileList = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -74,7 +75,8 @@ const UserProfileList = () => {
     inactive: 0,
     managers: 0,
     employees: 0,
-    departments: []
+    departments: [],
+    companies: [] // Initialize companies array here
   });
 
   // Fetch user profiles
@@ -115,10 +117,12 @@ const UserProfileList = () => {
       inactive: 0,
       managers: 0,
       employees: 0,
-      departments: []
+      departments: [],
+      companies: [] // Initialize companies array
     };
     
     const departmentSet = new Set();
+    const companySet = new Set(); // Create a Set for companies
     
     profiles.forEach(profile => {
       if (profile.user.role === 'manager') {
@@ -136,13 +140,20 @@ const UserProfileList = () => {
       if (profile.department?.dep_name) {
         departmentSet.add(profile.department.dep_name);
       }
+      
+      // Add company to the set if it exists
+      if (profile.company) {
+        companySet.add(profile.company);
+      }
     });
     
     stats.departments = Array.from(departmentSet);
+    stats.companies = Array.from(companySet); // Convert Set to Array
+    
     setStatistics(stats);
   };
 
-  // Filter profiles based on search term, role, department, and status
+  // Filter profiles based on search term, role, department, status, and company
   const filteredProfiles = useMemo(() => {
     return userProfiles.filter(profile => {
       const matchesSearch = 
@@ -163,9 +174,13 @@ const UserProfileList = () => {
         statusFilter === 'all' || 
         profile.user.status === statusFilter;
       
-      return matchesSearch && matchesRole && matchesDepartment && matchesStatus;
+      const matchesCompany =
+        companyFilter === 'all' ||
+        profile.company === companyFilter;
+      
+      return matchesSearch && matchesRole && matchesDepartment && matchesStatus && matchesCompany;
     });
-  }, [userProfiles, searchTerm, roleFilter, departmentFilter, statusFilter]);
+  }, [userProfiles, searchTerm, roleFilter, departmentFilter, statusFilter, companyFilter]);
 
   // Handle pagination
   const handleChangePage = (event, newPage) => {
@@ -267,6 +282,11 @@ const UserProfileList = () => {
   const departments = useMemo(() => {
     return ['all', ...statistics.departments];
   }, [statistics.departments]);
+
+  // Companies list for filter
+  const companies = useMemo(() => {
+    return ['all', ...statistics.companies];
+  }, [statistics.companies]);
 
   // Handle user row click
   const handleUserRowClick = (userId) => {
@@ -468,6 +488,26 @@ const UserProfileList = () => {
             ))}
           </Box>
         )}
+
+        {/* Company filter */}
+        {statistics.companies.length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', borderTop: 1, borderColor: 'divider', pt: 2, mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Companies:
+            </Typography>
+            {companies.map((company) => (
+              <Chip
+                key={company}
+                label={company === 'all' ? 'All Companies' : company}
+                size="small"
+                clickable
+                color={companyFilter === company ? 'primary' : 'default'}
+                variant={companyFilter === company ? 'filled' : 'outlined'}
+                onClick={() => setCompanyFilter(company)}
+              />
+            ))}
+          </Box>
+        )}
       </Paper>
 
       {/* Users Table */}
@@ -479,6 +519,7 @@ const UserProfileList = () => {
                 <TableCell sx={{ fontWeight: 'bold' }}>User</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Department</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Company</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
@@ -541,6 +582,11 @@ const UserProfileList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
+                        <Typography variant="body2">
+                          {profile.company || 'Not assigned'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
                         <RoleBadge role={profile.user.role} />
                       </TableCell>
                       <TableCell>
@@ -600,13 +646,13 @@ const UserProfileList = () => {
                   ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                     <Stack spacing={1} alignItems="center">
                       <PersonIcon color="disabled" fontSize="large" />
                       <Typography variant="subtitle1" color="text.secondary">
                         No users found
                       </Typography>
-                      {searchTerm || roleFilter !== 'all' || departmentFilter !== 'all' || statusFilter !== 'all' ? (
+                      {searchTerm || roleFilter !== 'all' || departmentFilter !== 'all' || statusFilter !== 'all' || companyFilter !== 'all' ? (
                         <Button 
                           startIcon={<RefreshIcon />} 
                           variant="outlined" 
@@ -616,6 +662,7 @@ const UserProfileList = () => {
                             setRoleFilter('all');
                             setDepartmentFilter('all');
                             setStatusFilter('all');
+                            setCompanyFilter('all');
                           }}
                         >
                           Clear filters

@@ -30,15 +30,15 @@ const EmployeeDashboard = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/employee-dashboard' },
-    { text: 'Attendance Form', icon: <AttendanceIcon />, path: '/employee-dashboard/attendance-form' },
+    // { text: 'Attendance Form', icon: <AttendanceIcon />, path: '/employee-dashboard/attendance-form' },
+    { text: 'Real-Time Attendance', icon: <AccessTime />,    path: '/employee-dashboard/realtime-attendance' }, 
     { text: 'My Profile', icon: <ProfileIcon />, path: `/employee-dashboard/user-profile/${user?._id}` },
+    { text: 'Notifications', icon: <NotificationsIcon />, path: '/employee-dashboard/notifications' }, 
     { text: 'Leaves', icon: <LeaveIcon />, path: `/employee-dashboard/leaves/${user?._id}` },
     { text: 'Salary', icon: <SalaryIcon />, path: '/employee-dashboard/salary/history/' },
     { text: 'Document Center', icon: <FolderSpecial />, path: '/employee-dashboard/document-center' },
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/employee-dashboard/tickets' },
     { text: 'Resignation', icon: <ExitToApp />, path: '/employee-dashboard/submit-resignation' },
-    { text: 'Notifications', icon: <NotificationsIcon />, path: '/employee-dashboard/notifications' }, 
-    { text: 'Real-Time Attendance', icon: <AccessTime />,    path: '/employee-dashboard/realtime-attendance' }, 
   ];
 
   const drawer = (

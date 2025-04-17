@@ -27,7 +27,9 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  useMediaQuery, // Added for responsive design
+  IconButton, // Added for better mobile UI
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -49,7 +51,8 @@ import {
   Bloodtype as BloodtypeIcon,
   Flag as FlagIcon,
   Apartment as ApartmentIcon,
-  AccountBalance as AccountBalanceIcon
+  AccountBalance as AccountBalanceIcon,
+  Edit as EditIcon, // Added for mobile UI quick actions
 } from '@mui/icons-material';
 import { useAuth } from '../../context/authContext';
 
@@ -85,9 +88,13 @@ const ViewUserProfile = () => {
   const location = useLocation();
   const { user } = useAuth();
 
+  // Media queries for responsive design
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+
   // Determine if the current user is an admin
   const isAdmin = user?.role === 'admin';
-  
+
   // Determine if the user is viewing their own profile
   const isOwnProfile = user?._id === id;
 
@@ -104,7 +111,7 @@ const ViewUserProfile = () => {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }
         });
-        
+
         if (response.data.success) {
           setUserProfile(response.data.userProfile);
         }
@@ -114,7 +121,7 @@ const ViewUserProfile = () => {
         setLoading(false);
       }
     };
-    
+
     fetchUserProfile();
   }, [id]);
 
@@ -146,7 +153,7 @@ const ViewUserProfile = () => {
     );
   }
 
-  const { user: profileUser, joiningDate, leaveBalances } = userProfile;
+  const { user: profileUser, joiningDate, leaveBalances, company } = userProfile;
   const isEmployee = profileUser.role === 'employee';
   const isManager = profileUser.role === 'manager';
 
@@ -190,7 +197,7 @@ const ViewUserProfile = () => {
             sx={{ mt: 0.5 }}
           />
         ) : (
-          <Typography variant="body1" color="text.primary">
+          <Typography variant="body1" color="text.primary" sx={{ wordBreak: 'break-word' }}>
             {value || 'Not specified'}
           </Typography>
         )}
@@ -199,23 +206,45 @@ const ViewUserProfile = () => {
   );
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={navigateBack}
-        sx={{ mb: 3 }}
-      >
-        {isAdminDashboard 
-          ? `Back to ${isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}`
-          : 'Back to Dashboard'}
-      </Button>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: 1200, mx: 'auto' }}>
+      {/* Back button - hidden on small screens to save space */}
+      {!isMobile && (
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={navigateBack}
+          sx={{ mb: 3 }}
+        >
+          {isAdminDashboard
+            ? `Back to ${isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}`
+            : 'Back to Dashboard'}
+        </Button>
+      )}
+
+      {/* Mobile header with back button */}
+      {isMobile && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <IconButton onClick={navigateBack}>
+            <ArrowBackIcon />
+          </IconButton>
+
+          {/* Edit button (for admin) */}
+          {isAdmin && isAdminDashboard && (
+            <IconButton
+              color="primary"
+              onClick={() => navigate(`/admin-dashboard/user-profile/edit/${id}`)}
+            >
+              <EditIcon />
+            </IconButton>
+          )}
+        </Box>
+      )}
 
       <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         {/* Header Section */}
         <Box
           sx={{
             background: theme.palette.primary.main,
-            p: 4,
+            p: { xs: 2, sm: 3, md: 4 },
             color: 'white',
             position: 'relative',
             overflow: 'hidden',
@@ -232,32 +261,38 @@ const ViewUserProfile = () => {
               opacity: 0.7,
             }}
           />
-          
+
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={3}
-            alignItems="center"
+            alignItems={{ xs: 'center', sm: 'center' }}
             sx={{ position: 'relative', zIndex: 1 }}
           >
             <Avatar
-              src={profileUser.profileImage 
+              src={profileUser.profileImage
                 ? profileUser.profileImage
                 : `https://ui-avatars.com/api/?name=${encodeURIComponent(profileUser.name)}&background=random`}
               alt={profileUser.name}
-              sx={{ 
-                width: 100, 
-                height: 100,
+              sx={{
+                width: { xs: 80, sm: 100 },
+                height: { xs: 80, sm: 100 },
                 border: '4px solid white'
               }}
             />
-            <Box>
-              <Typography variant="h4" fontWeight="bold" sx={{ mb: 1 }}>
+            <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+              <Typography variant="h4" fontWeight="bold" sx={{
+                mb: 1,
+                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' }
+              }}>
                 {profileUser.name}
               </Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9 }}>
+              <Typography variant="h6" sx={{
+                opacity: 0.9,
+                fontSize: { xs: '1rem', sm: '1.25rem' }
+              }}>
                 {userProfile.designation || (isManager ? 'Team Manager' : 'Employee')}
               </Typography>
-              <Chip 
+              <Chip
                 label={profileUser.role.charAt(0).toUpperCase() + profileUser.role.slice(1)}
                 color="secondary"
                 size="small"
@@ -269,7 +304,20 @@ const ViewUserProfile = () => {
 
         {/* Tabs for different sections */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': {
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                minWidth: { xs: 'auto', sm: 100 },
+                py: { xs: 1, sm: 1.5 },
+                px: { xs: 1, sm: 2 }
+              }
+            }}
+          >
             <Tab label="Basic Info" />
             <Tab label="Contact & Address" />
             <Tab label="Employment" />
@@ -282,12 +330,12 @@ const ViewUserProfile = () => {
 
         {/* Basic Information Tab */}
         <TabPanel value={activeTab} index={0}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -296,7 +344,7 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Basic Information
                 </Typography>
-                
+
                 <Stack divider={<Divider />}>
                   <InfoItem
                     icon={<BadgeIcon />}
@@ -312,6 +360,11 @@ const ViewUserProfile = () => {
                     icon={<BusinessIcon />}
                     label="Department"
                     value={userProfile.department?.dep_name}
+                  />
+                  <InfoItem
+                    icon={<ApartmentIcon />}
+                    label="Company"
+                    value={userProfile.company || 'Maximize Market Research Pvt. Ltd.'}
                   />
                   <InfoItem
                     icon={<PersonIcon />}
@@ -337,7 +390,7 @@ const ViewUserProfile = () => {
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -346,7 +399,7 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Personal Information
                 </Typography>
-                
+
                 <Stack divider={<Divider />}>
                   {userProfile.dob && (
                     <InfoItem
@@ -401,12 +454,12 @@ const ViewUserProfile = () => {
 
         {/* Contact & Address Tab */}
         <TabPanel value={activeTab} index={1}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -415,7 +468,7 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Contact Information
                 </Typography>
-                
+
                 <Stack divider={<Divider />}>
                   <InfoItem
                     icon={<EmailIcon />}
@@ -451,7 +504,7 @@ const ViewUserProfile = () => {
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -460,22 +513,24 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Address Information
                 </Typography>
-                
+
                 {userProfile.address ? (
                   <Card variant="outlined">
-                    <CardContent>
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                       <Stack spacing={1}>
                         {userProfile.address.street && (
                           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                             <HomeIcon color="action" fontSize="small" sx={{ mt: 0.5 }} />
-                            <Typography variant="body1">{userProfile.address.street}</Typography>
+                            <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
+                              {userProfile.address.street}
+                            </Typography>
                           </Box>
                         )}
-                        
+
                         {(userProfile.address.city || userProfile.address.state || userProfile.address.postalCode) && (
                           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                             <LocationOnIcon color="action" fontSize="small" sx={{ mt: 0.5 }} />
-                            <Typography variant="body1">
+                            <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
                               {[
                                 userProfile.address.city,
                                 userProfile.address.state,
@@ -484,7 +539,7 @@ const ViewUserProfile = () => {
                             </Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.address.country && (
                           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                             <FlagIcon color="action" fontSize="small" sx={{ mt: 0.5 }} />
@@ -504,12 +559,12 @@ const ViewUserProfile = () => {
 
         {/* Employment Tab */}
         <TabPanel value={activeTab} index={2}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -518,7 +573,7 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Employment Details
                 </Typography>
-                
+
                 <Stack divider={<Divider />}>
                   <InfoItem
                     icon={<BadgeIcon />}
@@ -540,7 +595,7 @@ const ViewUserProfile = () => {
                     label="Joining Date"
                     value={formatDate(userProfile.joiningDate)}
                   />
-                  
+
                   {userProfile.confirmationDate && (
                     <InfoItem
                       icon={<CalendarMonthIcon />}
@@ -548,7 +603,7 @@ const ViewUserProfile = () => {
                       value={formatDate(userProfile.confirmationDate)}
                     />
                   )}
-                  
+
                   {userProfile.employmentStatus && (
                     <InfoItem
                       icon={<WorkIcon />}
@@ -556,7 +611,7 @@ const ViewUserProfile = () => {
                       value={userProfile.employmentStatus}
                     />
                   )}
-                  
+
                   {userProfile.noticePeriod && (
                     <InfoItem
                       icon={<UpdateIcon />}
@@ -572,7 +627,7 @@ const ViewUserProfile = () => {
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -581,7 +636,7 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Experience
                 </Typography>
-                
+
                 <Stack divider={<Divider />}>
                   {userProfile.currentCompanyExperience && (
                     <InfoItem
@@ -590,7 +645,7 @@ const ViewUserProfile = () => {
                       value={`${userProfile.currentCompanyExperience} years`}
                     />
                   )}
-                  
+
                   {userProfile.previousExperience && (
                     <InfoItem
                       icon={<WorkIcon />}
@@ -598,7 +653,7 @@ const ViewUserProfile = () => {
                       value={`${userProfile.previousExperience} years`}
                     />
                   )}
-                  
+
                   {userProfile.totalExperience && (
                     <InfoItem
                       icon={<WorkIcon />}
@@ -606,7 +661,7 @@ const ViewUserProfile = () => {
                       value={`${userProfile.totalExperience} years`}
                     />
                   )}
-                  
+
                   {isEmployee && userProfile.salary && (
                     <InfoItem
                       icon={<AttachMoneyIcon />}
@@ -614,7 +669,7 @@ const ViewUserProfile = () => {
                       value={`₹ ${userProfile.salary.toLocaleString()}`}
                     />
                   )}
-                  
+
                   {userProfile.probationPeriod && (
                     <InfoItem
                       icon={<UpdateIcon />}
@@ -632,7 +687,7 @@ const ViewUserProfile = () => {
                 <Paper
                   elevation={0}
                   sx={{
-                    p: 3,
+                    p: { xs: 2, sm: 3 },
                     bgcolor: 'grey.50',
                     borderRadius: 2,
                     mt: 2
@@ -643,9 +698,9 @@ const ViewUserProfile = () => {
                   </Typography>
                   <Grid container spacing={2}>
                     {userProfile.teams.map((team) => (
-                      <Grid item xs={12} key={team._id}>
+                      <Grid item xs={12} sm={6} key={team._id}>
                         <Card variant="outlined">
-                          <CardContent>
+                          <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                               <Box>
                                 <Typography variant="subtitle1" fontWeight="medium">
@@ -658,7 +713,7 @@ const ViewUserProfile = () => {
                                   </Typography>
                                 </Stack>
                               </Box>
-                              <Chip 
+                              <Chip
                                 label="Active"
                                 color="success"
                                 size="small"
@@ -680,7 +735,7 @@ const ViewUserProfile = () => {
           <Paper
             elevation={0}
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               bgcolor: 'grey.50',
               borderRadius: 2
             }}
@@ -688,25 +743,25 @@ const ViewUserProfile = () => {
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Education History
             </Typography>
-            
+
             {userProfile.education && userProfile.education.length > 0 ? (
               <Grid container spacing={2}>
                 {userProfile.education.map((edu, index) => (
                   <Grid item xs={12} md={6} key={index}>
                     <Card variant="outlined">
-                      <CardContent>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                         <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
                           {edu.degree || 'Degree/Certification'}
                         </Typography>
-                        
+
                         <Stack spacing={1} sx={{ mt: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <SchoolIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2">
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
                               {edu.institute || 'Institution not specified'}
                             </Typography>
                           </Box>
-                          
+
                           {(edu.startDate || edu.endDate) && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <CalendarMonthIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
@@ -715,7 +770,7 @@ const ViewUserProfile = () => {
                               </Typography>
                             </Box>
                           )}
-                          
+
                           {edu.grade && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <BadgeIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
@@ -741,7 +796,7 @@ const ViewUserProfile = () => {
           <Paper
             elevation={0}
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               bgcolor: 'grey.50',
               borderRadius: 2
             }}
@@ -749,18 +804,18 @@ const ViewUserProfile = () => {
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Previous Employment History
             </Typography>
-            
-            {userProfile.previousEmployment && userProfile.previousEmployment.length > 0 && 
-             userProfile.previousEmployment[0].company ? (
+
+            {userProfile.previousEmployment && userProfile.previousEmployment.length > 0 &&
+              userProfile.previousEmployment[0].company ? (
               <Grid container spacing={2}>
                 {userProfile.previousEmployment.map((job, index) => (
                   <Grid item xs={12} key={index}>
                     <Card variant="outlined">
-                      <CardContent>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                         <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
                           {job.designation || 'Position'} at {job.company || 'Company'}
                         </Typography>
-                        
+
                         <Stack spacing={1} sx={{ mt: 1 }}>
                           {(job.startDate || job.endDate) && (
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -770,13 +825,13 @@ const ViewUserProfile = () => {
                               </Typography>
                             </Box>
                           )}
-                          
+
                           {job.reasonForLeaving && (
                             <Box>
                               <Typography variant="body2" fontWeight="medium" sx={{ mt: 1 }}>
                                 Reason for Leaving:
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
                                 {job.reasonForLeaving}
                               </Typography>
                             </Box>
@@ -795,13 +850,13 @@ const ViewUserProfile = () => {
 
         {/* Salary & Bank Tab */}
         <TabPanel value={activeTab} index={5}>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {/* Salary Information */}
             <Grid item xs={12} md={6}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -810,7 +865,7 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Salary Information
                 </Typography>
-                
+
                 {userProfile.salaryInfo ? (
                   <>
                     <Typography variant="subtitle1" fontWeight="medium" sx={{ mt: 2 }}>
@@ -819,78 +874,78 @@ const ViewUserProfile = () => {
                     <Typography variant="body1" sx={{ mb: 2 }}>
                       ₹ {userProfile.salaryInfo.basicSalary?.toLocaleString() || '0'}
                     </Typography>
-                    
+
                     <Divider sx={{ my: 2 }} />
-                    
+
                     <Typography variant="subtitle1" fontWeight="medium">
                       Allowances
                     </Typography>
-                    <List dense>
+                    <List dense sx={{ py: 0 }}>
                       {Object.entries(userProfile.salaryInfo.allowances || {}).map(([key, value]) => (
                         value > 0 && (
-                          <ListItem key={key} disableGutters>
-                            <ListItemText 
-                              primary={key === 'DA' ? 'Dearness Allowance' : 
-                                      key === 'HRA' ? 'House Rent Allowance' : 
-                                      key.charAt(0).toUpperCase() + key.slice(1)}
-                              secondary={`₹ ${value.toLocaleString()}`} 
+                          <ListItem key={key} disableGutters sx={{ py: 1 }}>
+                            <ListItemText
+                              primary={key === 'DA' ? 'Dearness Allowance' :
+                                key === 'HRA' ? 'House Rent Allowance' :
+                                  key.charAt(0).toUpperCase() + key.slice(1)}
+                              secondary={`₹ ${value.toLocaleString()}`}
                             />
                           </ListItem>
                         )
                       ))}
                     </List>
-                    
+
                     <Divider sx={{ my: 2 }} />
-                    
+
                     <Typography variant="subtitle1" fontWeight="medium">
                       Deductions
                     </Typography>
-                    <List dense>
+                    <List dense sx={{ py: 0 }}>
                       {Object.entries(userProfile.salaryInfo.deductions || {}).map(([key, value]) => (
                         value > 0 && (
-                          <ListItem key={key} disableGutters>
-                            <ListItemText 
-                              primary={key === 'PF' ? 'Provident Fund' : 
-                                      key === 'ESI' ? 'Employee State Insurance' :
-                                      key === 'PT' ? 'Professional Tax' :
-                                      key === 'TDS' ? 'Tax Deducted at Source' :
+                          <ListItem key={key} disableGutters sx={{ py: 1 }}>
+                            <ListItemText
+                              primary={key === 'PF' ? 'Provident Fund' :
+                                key === 'ESI' ? 'Employee State Insurance' :
+                                  key === 'PT' ? 'Professional Tax' :
+                                    key === 'TDS' ? 'Tax Deducted at Source' :
                                       key === 'MLWF' ? 'Maharashtra Labor Welfare Fund' :
-                                      key.charAt(0).toUpperCase() + key.slice(1)}
-                              secondary={`₹ ${value.toLocaleString()}`} 
+                                        key.charAt(0).toUpperCase() + key.slice(1)}
+                              secondary={`₹ ${value.toLocaleString()}`}
                             />
                           </ListItem>
                         )
                       ))}
                     </List>
-                    
+
                     <Divider sx={{ my: 2 }} />
-                    
+
                     <Typography variant="subtitle1" fontWeight="medium">
                       Statutory Information
                     </Typography>
-                    <List dense>
+                    <List dense sx={{ py: 0 }}>
                       {userProfile.salaryInfo.PFNumber && (
-                        <ListItem disableGutters>
+                        <ListItem disableGutters sx={{ py: 1 }}>
                           <ListItemText primary="PF Number" secondary={userProfile.salaryInfo.PFNumber} />
                         </ListItem>
                       )}
                       {userProfile.salaryInfo.ESINumber && (
-                        <ListItem disableGutters>
+                        <ListItem disableGutters sx={{ py: 1 }}>
                           <ListItemText primary="ESI Number" secondary={userProfile.salaryInfo.ESINumber} />
                         </ListItem>
                       )}
                       {userProfile.salaryInfo.PAN && (
-                        <ListItem disableGutters>
+                        <ListItem disableGutters sx={{ py: 1 }}>
                           <ListItemText primary="PAN" secondary={userProfile.salaryInfo.PAN} />
                         </ListItem>
                       )}
                       {userProfile.salaryInfo.aadhaarNo && (
-                        <ListItem disableGutters>
+                        <ListItem disableGutters sx={{ py: 1 }}>
                           <ListItemText primary="Aadhaar Number" secondary={userProfile.salaryInfo.aadhaarNo} />
                         </ListItem>
                       )}
                       {userProfile.salaryInfo.passportNo && (
-                        <ListItem disableGutters>
+                        <ListItem disableGutters sx={{ py: 1 }}>
                           <ListItemText primary="Passport Number" secondary={userProfile.salaryInfo.passportNo} />
                         </ListItem>
                       )}
@@ -907,7 +962,7 @@ const ViewUserProfile = () => {
               <Paper
                 elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   height: '100%',
                   bgcolor: 'grey.50',
                   borderRadius: 2
@@ -916,13 +971,13 @@ const ViewUserProfile = () => {
                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
                   Bank Details
                 </Typography>
-                
+
                 {userProfile.salaryInfo?.bankDetails && (
-                  userProfile.salaryInfo.bankDetails.bankName || 
+                  userProfile.salaryInfo.bankDetails.bankName ||
                   userProfile.salaryInfo.bankDetails.accountNumber
                 ) ? (
                   <Card variant="outlined">
-                    <CardContent>
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                       <Stack spacing={2}>
                         {userProfile.salaryInfo.bankDetails.bankName && (
                           <Box>
@@ -930,7 +985,7 @@ const ViewUserProfile = () => {
                             <Typography variant="body1">{userProfile.salaryInfo.bankDetails.bankName}</Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.salaryInfo.bankDetails.accountNumber && (
                           <Box>
                             <Typography variant="body2" color="text.secondary">Account Number</Typography>
@@ -940,35 +995,35 @@ const ViewUserProfile = () => {
                             </Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.salaryInfo.bankDetails.accountType && (
                           <Box>
                             <Typography variant="body2" color="text.secondary">Account Type</Typography>
                             <Typography variant="body1">{userProfile.salaryInfo.bankDetails.accountType}</Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.salaryInfo.bankDetails.IFSCCode && (
                           <Box>
                             <Typography variant="body2" color="text.secondary">IFSC Code</Typography>
                             <Typography variant="body1">{userProfile.salaryInfo.bankDetails.IFSCCode}</Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.salaryInfo.bankDetails.branchName && (
                           <Box>
                             <Typography variant="body2" color="text.secondary">Branch</Typography>
                             <Typography variant="body1">{userProfile.salaryInfo.bankDetails.branchName}</Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.salaryInfo.bankDetails.nameAsPerBank && (
                           <Box>
                             <Typography variant="body2" color="text.secondary">Name as per Bank Records</Typography>
                             <Typography variant="body1">{userProfile.salaryInfo.bankDetails.nameAsPerBank}</Typography>
                           </Box>
                         )}
-                        
+
                         {userProfile.salaryInfo.bankDetails.paymentType && (
                           <Box>
                             <Typography variant="body2" color="text.secondary">Payment Method</Typography>
@@ -991,7 +1046,7 @@ const ViewUserProfile = () => {
           <Paper
             elevation={0}
             sx={{
-              p: 3,
+              p: { xs: 2, sm: 3 },
               bgcolor: 'grey.50',
               borderRadius: 2
             }}
@@ -999,46 +1054,48 @@ const ViewUserProfile = () => {
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
               Leave Balances
             </Typography>
-            
+
             {leaveBalances && leaveBalances.length > 0 ? (
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Leave Type</TableCell>
-                      <TableCell align="center">Available Balance</TableCell>
-                      <TableCell align="center">Used</TableCell>
-                      <TableCell align="center">Carry Forward</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {leaveBalances.map((leave, index) => (
-                      <TableRow key={index}>
-                        <TableCell component="th" scope="row">
-                          <Typography fontWeight="medium">{leave.leaveType}</Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip 
-                            label={leave.balance}
-                            color={leave.balance > 0 ? "success" : "default"}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="center">{leave.used}</TableCell>
-                        <TableCell align="center">{leave.carryForward}</TableCell>
+              <Box sx={{ overflowX: 'auto' }}>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Leave Type</TableCell>
+                        <TableCell align="center">Available Balance</TableCell>
+                        <TableCell align="center">Used</TableCell>
+                        <TableCell align="center">Carry Forward</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {leaveBalances.map((leave, index) => (
+                        <TableRow key={index}>
+                          <TableCell component="th" scope="row">
+                            <Typography fontWeight="medium">{leave.leaveType}</Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Chip
+                              label={leave.balance}
+                              color={leave.balance > 0 ? "success" : "default"}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell align="center">{leave.used}</TableCell>
+                          <TableCell align="center">{leave.carryForward}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
             ) : (
               <Alert severity="info">No leave balances available.</Alert>
             )}
           </Paper>
         </TabPanel>
 
-        {/* Action Buttons - Only show for admin users */}
-        {isAdmin && isAdminDashboard && (
+        {/* Action Buttons - Only show for admin users and not on mobile */}
+        {isAdmin && isAdminDashboard && !isMobile && (
           <Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             <Button
               variant="outlined"

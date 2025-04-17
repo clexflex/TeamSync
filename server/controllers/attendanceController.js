@@ -396,7 +396,7 @@ export const approveAttendance = async (req, res) => {
         } else if (approvalStatus === "Rejected") {
             // If rejected, set credits to 0
             attendance.credits = 0;
-            attendance.status = "Rejected";
+            attendance.approvalStatus = "Rejected";
         }
 
         await attendance.save();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, IconButton, Avatar, Menu, MenuItem, ListItemIcon,
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -8,7 +8,8 @@ import {
   Logout as LogoutIcon,
   Person as PersonIcon,
   Save as SaveIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/authContext';
 import { useNavigate } from 'react-router-dom';
@@ -29,9 +30,35 @@ const UserMenu = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+  const [userCompany, setUserCompany] = useState('');
+
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+ // Fetch user profile to get company
+ useEffect(() => {
+  const fetchUserProfile = async () => {
+    if (user && user._id) {
+      try {
+        const response = await axios.get(
+          `${config.API_URL}/api/user-profile/${user._id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+          }
+        );
+        
+        if (response.data.success) {
+          setUserCompany(response.data.userProfile.company || 'Maximize Market Research Pvt. Ltd.');
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    }
+  };
+  
+  fetchUserProfile();
+}, [user]);
 
   const handleProfileOpen = () => {
     setProfileData({
@@ -90,13 +117,24 @@ const UserMenu = () => {
         {/* NotificationBell  */}
         <NotificationBell />
         
-        <Typography 
-          variant="subtitle1" 
-          color="text.secondary"
-          sx={{ display: { xs: 'none', sm: 'block' } }}
-        >
-          Welcome, {user?.name}
-        </Typography>
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary"
+          >
+            Welcome, {user?.name}
+          </Typography>
+          {userCompany && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+            >
+              <BusinessIcon fontSize="inherit" />
+              {userCompany}
+            </Typography>
+          )}
+        </Box>
         
         <IconButton
           onClick={(e) => setAnchorEl(e.currentTarget)}

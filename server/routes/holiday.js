@@ -6,11 +6,13 @@ import {
     deleteHoliday,
     getHolidays,
     getHoliday,
+    getPublicHolidays
 } from "../controllers/holidayController.js";
 
 const router = express.Router();
 
 // Routes for holiday management
+router.get("/public", verifyUser, getPublicHolidays);
 router.post("/add", verifyUser, verifyRole(["admin"]), addHoliday);
 router.put("/update/:id", verifyUser, verifyRole(["admin"]), updateHoliday);
 router.delete("/delete/:id", verifyUser, verifyRole(["admin"]), deleteHoliday);

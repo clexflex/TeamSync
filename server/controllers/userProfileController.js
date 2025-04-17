@@ -63,6 +63,7 @@ const createUserProfile = async (req, res) => {
             salary,
             leavePolicy, // optional
             status = "active", // default to active
+            company,
 
             // Personal Information
             companyEmail,
@@ -141,6 +142,7 @@ const createUserProfile = async (req, res) => {
         // Create user profile with extended fields
         const newUserProfile = new UserProfile({
             userId: savedUser._id,
+            company, 
             leavePolicy: leavePolicy || null,
             leaveBalances: createDefaultLeaveBalances(),
             joiningDate: joiningDate || new Date(),
@@ -386,6 +388,7 @@ const getUserProfileById = async (req, res) => {
 
             // Include all additional fields from user profile
             joiningDate: userProfile.joiningDate,
+            company: userProfile.company,
 
             // Personal Information
             companyEmail: userProfile.companyEmail,
@@ -463,6 +466,7 @@ const updateUserProfile = async (req, res) => {
             leavePolicy,
             status,
             leaveBalances,
+            company,
 
             // Personal Information
             companyEmail,
@@ -556,6 +560,7 @@ const updateUserProfile = async (req, res) => {
         if (joiningDate) profileUpdates.joiningDate = joiningDate;
         if (leavePolicy) profileUpdates.leavePolicy = leavePolicy;
         if (leaveBalances) profileUpdates.leaveBalances = leaveBalances;
+        if (company !== undefined) profileUpdates.company = company; 
 
         // Personal Information
         if (companyEmail !== undefined) profileUpdates.companyEmail = companyEmail;

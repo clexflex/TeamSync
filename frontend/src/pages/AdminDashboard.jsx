@@ -12,7 +12,9 @@ import { Menu as MenuIcon, Dashboard as DashboardIcon, Group as GroupIcon,
          FolderSpecial, ConfirmationNumber,
          ExitToApp, Notifications as NotificationsIcon,
          NotificationsActive as CreateNotificationIcon,
-         AccessTime} from '@mui/icons-material';
+         AccessTime,
+         Timelapse,
+         RestoreRounded} from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
@@ -26,6 +28,7 @@ const AdminDashboard = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin-dashboard' },
+    { text: 'Live Attendance',icon: <AccessTime />, path: '/admin-dashboard/live-attendance'},
     { text: 'Users', icon: <GroupIcon />, path: '/admin-dashboard/user-profiles' },
     { text: 'Department', icon: <BusinessIcon />, path: '/admin-dashboard/departments' },
     { text: 'Teams', icon: <LayersIcon />, path: '/admin-dashboard/team' },
@@ -40,8 +43,7 @@ const AdminDashboard = () => {
     { text: 'Resignations', icon: <ExitToApp />, path: '/admin-dashboard/resignations/list' },
     { text: 'Notifications', icon: <NotificationsIcon />, path: '/admin-dashboard/notifications' },
     { text: 'Create Notification', icon: <CreateNotificationIcon />, path: '/admin-dashboard/create-notification' },
-    { text: 'Live Attendance',icon: <AccessTime />, path: '/admin-dashboard/live-attendance'},
-    { text: 'Manual Attendance',icon: <AccessTime />, path: '/admin-dashboard/attendance-management'},
+    { text: 'Attendance Management',icon: <RestoreRounded />, path: '/admin-dashboard/attendance-management'},
 
   ];
 

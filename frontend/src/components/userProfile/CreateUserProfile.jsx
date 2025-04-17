@@ -64,6 +64,7 @@ const CreateUserProfile = () => {
     salary: '',
     joiningDate: new Date().toISOString().split('T')[0],
     status: 'active',
+    company: 'Maximize Market Research Pvt. Ltd.',
 
     // Personal Information
     companyEmail: '',
@@ -78,7 +79,7 @@ const CreateUserProfile = () => {
     physicallyHandicapped: false,
     height: '',
     weight: '',
-    
+
     // Address
     address: {
       street: '',
@@ -87,7 +88,7 @@ const CreateUserProfile = () => {
       postalCode: '',
       country: 'India'
     },
-    
+
     // Education Information
     education: [{
       degree: '',
@@ -96,7 +97,7 @@ const CreateUserProfile = () => {
       endDate: '',
       grade: ''
     }],
-    
+
     // Employment & Job Information
     confirmationDate: '',
     noticePeriod: '',
@@ -105,7 +106,7 @@ const CreateUserProfile = () => {
     previousExperience: '',
     totalExperience: '',
     probationPeriod: '3',
-    
+
     // Previous Employment
     previousEmployment: [{
       company: '',
@@ -333,7 +334,7 @@ const CreateUserProfile = () => {
     try {
       setLoading(true);
       const formDataObj = new FormData();
-      
+
       // Flatten nested objects for FormData
       Object.keys(formData).forEach((key) => {
         if (formData[key] !== null && formData[key] !== undefined) {
@@ -426,7 +427,21 @@ const CreateUserProfile = () => {
           required
         />
       </Grid>
-
+      <Grid item xs={12} md={6}>
+        <FormControl fullWidth>
+          <InputLabel>Company</InputLabel>
+          <Select
+            name="company"
+            label="Company"
+            value={formData.company}
+            onChange={handleChange}
+            required
+          >
+            <MenuItem value="Maximize Market Research Pvt. Ltd.">Maximize Market Research Pvt. Ltd.</MenuItem>
+            <MenuItem value="Stellar Market Research Pvt. Ltd.">Stellar Market Research Pvt. Ltd.</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
       <Grid item xs={12} md={6}>
         <TextField
           fullWidth
@@ -849,15 +864,15 @@ const CreateUserProfile = () => {
       <TabPanel value={activeTab} index={2}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Education Information</Typography>
-          <Button 
-            variant="outlined" 
-            startIcon={<Add />} 
+          <Button
+            variant="outlined"
+            startIcon={<Add />}
             onClick={handleAddEducation}
           >
             Add Education
           </Button>
         </Box>
-        
+
         {formData.education.map((edu, index) => (
           <Card key={index} variant="outlined" sx={{ mb: 3 }}>
             <CardContent>
@@ -865,16 +880,16 @@ const CreateUserProfile = () => {
                 <Typography variant="subtitle1" fontWeight="bold">
                   Education #{index + 1}
                 </Typography>
-                <IconButton 
-                  size="small" 
-                  color="error" 
+                <IconButton
+                  size="small"
+                  color="error"
                   onClick={() => handleRemoveEducation(index)}
                   disabled={formData.education.length === 1}
                 >
                   <Delete />
                 </IconButton>
               </Box>
-              
+
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -929,15 +944,15 @@ const CreateUserProfile = () => {
       <TabPanel value={activeTab} index={3}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Previous Employment</Typography>
-          <Button 
-            variant="outlined" 
-            startIcon={<Add />} 
+          <Button
+            variant="outlined"
+            startIcon={<Add />}
             onClick={handleAddPreviousEmployment}
           >
             Add Employment
           </Button>
         </Box>
-        
+
         {formData.previousEmployment.map((emp, index) => (
           <Card key={index} variant="outlined" sx={{ mb: 3 }}>
             <CardContent>
@@ -945,15 +960,15 @@ const CreateUserProfile = () => {
                 <Typography variant="subtitle1" fontWeight="bold">
                   Previous Job #{index + 1}
                 </Typography>
-                <IconButton 
-                  size="small" 
-                  color="error" 
+                <IconButton
+                  size="small"
+                  color="error"
                   onClick={() => handleRemovePreviousEmployment(index)}
                 >
                   <Delete />
                 </IconButton>
               </Box>
-              
+
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -1123,6 +1138,72 @@ const CreateUserProfile = () => {
             />
           </Grid>
 
+          {/* Add new allowance fields */}
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Medical Allowance"
+              type="number"
+              value={formData.salaryInfo.allowances.medical}
+              onChange={(e) => handleSalaryChange('allowances', 'medical', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Education Allowance"
+              type="number"
+              value={formData.salaryInfo.allowances.education}
+              onChange={(e) => handleSalaryChange('allowances', 'education', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Performance Bonus"
+              type="number"
+              value={formData.salaryInfo.allowances.performance}
+              onChange={(e) => handleSalaryChange('allowances', 'performance', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Special Allowance"
+              type="number"
+              value={formData.salaryInfo.allowances.special}
+              onChange={(e) => handleSalaryChange('allowances', 'special', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Other Allowances"
+              type="number"
+              value={formData.salaryInfo.allowances.other}
+              onChange={(e) => handleSalaryChange('allowances', 'other', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
           {/* Deductions Section */}
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'medium' }}>
@@ -1164,6 +1245,72 @@ const CreateUserProfile = () => {
               type="number"
               value={formData.salaryInfo.deductions.PT}
               onChange={(e) => handleSalaryChange('deductions', 'PT', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          {/* Add new deduction fields */}
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Tax Deducted at Source (TDS)"
+              type="number"
+              value={formData.salaryInfo.deductions.TDS}
+              onChange={(e) => handleSalaryChange('deductions', 'TDS', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Labor Welfare Fund (MLWF)"
+              type="number"
+              value={formData.salaryInfo.deductions.MLWF}
+              onChange={(e) => handleSalaryChange('deductions', 'MLWF', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Advance Recovery"
+              type="number"
+              value={formData.salaryInfo.deductions.advance}
+              onChange={(e) => handleSalaryChange('deductions', 'advance', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Loan Recovery"
+              type="number"
+              value={formData.salaryInfo.deductions.loan}
+              onChange={(e) => handleSalaryChange('deductions', 'loan', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Other Deductions"
+              type="number"
+              value={formData.salaryInfo.deductions.other}
+              onChange={(e) => handleSalaryChange('deductions', 'other', e.target.value)}
               InputProps={{
                 startAdornment: <InputAdornment position="start">₹</InputAdornment>
               }}

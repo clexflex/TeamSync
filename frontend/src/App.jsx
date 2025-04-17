@@ -59,6 +59,8 @@ import AdminAttendanceAnalytics from "./components/dashboard/AdminAttendanceAnal
 import AdminAttendanceAnalytics2 from "./components/dashboard/AdminAttendanceAnalytics2";
 import LiveAttendanceDashboard from "./components/dashboard/LiveAttendanceDashboard";
 import RealTimeAttendanceForm from "./components/EmployeeDashboard/RealTimeAttendanceForm";
+import LandingPage from "./pages/LandingPage";
+import Documentation from "./pages/Documentation";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -66,9 +68,10 @@ function App() {
     <BrowserRouter>
       <NotificationProvider>
         <Routes>
-          <Route path="/" element={<Navigate to={DEFAULT_REDIRECT} />} />
+          {/* <Route path="/" element={<Navigate to={DEFAULT_REDIRECT} />} /> */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
-
+          <Route path="/documentation" element={<Documentation />} />
           {/* Admin Dashboard */}
           <Route
             path="/admin-dashboard"

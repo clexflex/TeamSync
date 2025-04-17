@@ -33,17 +33,17 @@ const ManagerDashboard = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/manager-dashboard' },
+    { text: 'Real-Time Attendance', icon: <AccessTime />, path: '/manager-dashboard/realtime-attendance'},
     { text: 'My Profile', icon: <ProfileIcon />, path: `/manager-dashboard/user-profile/${user?._id}` },
+    { text: 'Notifications', icon: <NotificationsIcon />, path: '/manager-dashboard/notifications' },
     { text: 'Manage Teams', icon: <TeamIcon />, path: '/manager-dashboard/team' },
-    { text: 'Attendance', icon: <AttendanceIcon />, path: '/manager-dashboard/attendance-form' },
-    { text: 'Employee Attendance', icon: <ApprovalIcon />, path: '/manager-dashboard/attendance-approval' },
+    // { text: 'Attendance', icon: <AttendanceIcon />, path: '/manager-dashboard/attendance-form' },
+    { text: 'Teams Attendance', icon: <ApprovalIcon />, path: '/manager-dashboard/attendance-approval' },
     { text: 'Leave', icon: <LeaveIcon />, path: `/manager-dashboard/leaves/${user?._id}` },
     { text: 'Salary', icon: <SalaryIcon />, path: `/manager-dashboard/salary/history` },
     { text: 'Document Center', icon: <FolderSpecial />, path: '/manager-dashboard/document-center' },
     { text: 'Tickets', icon: <ConfirmationNumber />, path: '/manager-dashboard/tickets' },
     { text: 'Resignation', icon: <ExitToApp />, path: '/manager-dashboard/submit-resignation' },
-    { text: 'Notifications', icon: <NotificationsIcon />, path: '/manager-dashboard/notifications' },
-    {        text: 'Real-Time Attendance',        icon: <AccessTime />,        path: '/manager-dashboard/realtime-attendance'     },
       ];
 
   const drawer = (

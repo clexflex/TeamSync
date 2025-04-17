@@ -67,6 +67,7 @@ const EditUserProfile = () => {
     password: '',
     userType: '',
     leaveBalances: [],
+    company: 'Maximize Market Research Pvt. Ltd.',
 
     // Personal Information
     companyEmail: '',
@@ -219,6 +220,8 @@ const EditUserProfile = () => {
             joiningDate: profileData.joiningDate?.split('T')[0] || '',
             password: '',
             leaveBalances: profileData.leaveBalances || [],
+            company: profileData.company , 
+
 
             // Personal Information (initialize with default values if not present)
             companyEmail: profileData.companyEmail || '',
@@ -663,7 +666,21 @@ const EditUserProfile = () => {
                   <MenuItem value="inactive">Inactive</MenuItem>
                 </TextField>
               </Grid>
-
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Company</InputLabel>
+                  <Select
+                    name="company"
+                    label="Company"
+                    value={userProfile.company || 'Maximize Market Research Pvt. Ltd.'}
+                    onChange={handleChange}
+                    variant="outlined"
+                  >
+                    <MenuItem value="Maximize Market Research Pvt. Ltd.">Maximize Market Research Pvt. Ltd.</MenuItem>
+                    <MenuItem value="Stellar Market Research Pvt. Ltd.">Stellar Market Research Pvt. Ltd.</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth

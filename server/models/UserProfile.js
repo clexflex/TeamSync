@@ -73,6 +73,7 @@ const salaryInfoSchema = new Schema({
 
 const userProfileSchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    company: { type: String,  enum: ['Maximize Market Research Pvt. Ltd.', 'Stellar Market Research Pvt. Ltd.'], default: 'Maximize Market Research Pvt. Ltd.'},
     leavePolicy: { type: Schema.Types.ObjectId, ref: "LeavePolicy" },
     leaveBalances: [{
         leaveType: {
@@ -114,8 +115,6 @@ const userProfileSchema = new Schema({
     previousExperience: { type: String },
     totalExperience: { type: String },
     probationPeriod: { type: String, default: '3' },
-    siteName: { type: String, enum: ['Maximize Market Research Pvt. Ltd.', 'Stellar Market Research Pvt. Ltd.'], default: 'Maximize Market Research Pvt. Ltd.' },
-
     
     // Previous Employment
     previousEmployment: { type: [previousEmploymentSchema], default: [] },

@@ -1701,7 +1701,7 @@ export const generatePayslip = async (req, res) => {
             <div class="container">
                 <!-- Company Header -->
                 <div class="header">
-                    <div class="company-name">Maximize Market Research Pvt. Ltd.</div>
+                    <div class="company-name">${userProfile?.company || 'Maximize Market Research Pvt. Ltd.'}</div>
                     <div class="payslip-title">SALARY SLIP</div>
                     <div>FOR THE MONTH OF ${month.toUpperCase()} ${year}</div>
                 </div>
@@ -1755,8 +1755,8 @@ export const generatePayslip = async (req, res) => {
                                     <tr>
                                         <td>Account Number</td>
                                         <td>${userProfile?.salaryInfo?.bankDetails?.accountNumber
-                                ? `XXXX${userProfile.salaryInfo.bankDetails.accountNumber.slice(-4)}`
-                                : 'N/A'}</td>
+                ? `XXXX${userProfile.salaryInfo.bankDetails.accountNumber.slice(-4)}`
+                : 'N/A'}</td>
                                     </tr>
                                 </table>
                             </div>
@@ -2061,7 +2061,7 @@ export const downloadPayslip = async (req, res) => {
         // Set the filename for download
         const filename = path.basename(salary.payslipPath);
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        
+
         // Redirect to the signed URL for download
         return res.redirect(signedUrl);
     } catch (error) {
@@ -2107,8 +2107,8 @@ export const getSalaryStats = async (req, res) => {
         });
 
         // Get the count of employees and managers
-        const employeeCount = await User.countDocuments({ role: 'employee' });
-        const managerCount = await User.countDocuments({ role: 'manager' });
+        const employeeCount = await User.countDocuments({ role: 'employee', status: 'active' });
+        const managerCount = await User.countDocuments({ role: 'manager', status: 'active' });
 
         return res.status(200).json({
             success: true,

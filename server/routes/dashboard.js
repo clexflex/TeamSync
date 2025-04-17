@@ -4,4 +4,5 @@ import { getSummary } from '../controllers/dashboardController.js';
 const router = express.Router();
 // Admin-only access for summary
 router.get('/summary', verifyUser, verifyRole(['admin', 'manager']), getSummary);
+
 export default router;

@@ -127,3 +127,32 @@ export const getHoliday = async (req, res) => {
         return res.status(500).json({ success: false, error: "Failed to fetch holiday." });
     }
 };
+
+// Get public holidays (accessible to all users)
+export const getPublicHolidays = async (req, res) => {
+    try {
+        // Get current date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Get holidays for next 365 days
+        const endDate = new Date(today);
+        endDate.setDate(endDate.getDate() + 365);
+        
+        // Find company-wide holidays and department-specific ones
+        const holidays = await Holiday.find({
+            date: { $gte: today, $lte: endDate },
+            $or: [
+                { isCompanyWide: true },
+                // Include department-specific holidays if user has a department
+                req.user.department ? { applicableDepartments: req.user.department } : {}
+            ]
+        }).sort({ date: 1 });
+        
+        logger.info("Fetched public holidays successfully");
+        return res.status(200).json({ success: true, holidays });
+    } catch (error) {
+        logger.error("Error fetching public holidays: " + error.message);
+        return res.status(500).json({ success: false, error: "Failed to fetch holidays." });
+    }
+};

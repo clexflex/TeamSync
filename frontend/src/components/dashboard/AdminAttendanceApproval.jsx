@@ -1,12 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, TextField, Alert, CircularProgress } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  TextField, 
+  Alert, 
+  CircularProgress,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
 import { PersonOutline, Groups } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
 import TaskDetailsModal from '../modal/TaskDetailsModal';
 import AttendanceTable from '../shared/AttendanceTable';
+import RejectionDialog from '../modal/RejectionDialog';
 
 const AdminAttendanceApproval = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [attendanceData, setAttendanceData] = useState([]);
   const [groupedAttendance, setGroupedAttendance] = useState({
     managers: [],
@@ -17,6 +30,8 @@ const AdminAttendanceApproval = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
+  const [recordToReject, setRecordToReject] = useState(null);
 
   useEffect(() => {
     fetchAllAttendance();
@@ -48,6 +63,7 @@ const AdminAttendanceApproval = () => {
       }
     } catch (err) {
       setError('Failed to fetch attendance data');
+      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -61,23 +77,60 @@ const AdminAttendanceApproval = () => {
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       fetchAllAttendance();
-    } catch {
+    } catch (err) {
       setError('Failed to update approval status');
+      console.error('Error:', err);
+    }
+  };
+
+  const handleRejection = (record) => {
+    setRecordToReject(record);
+    setRejectionDialogOpen(true);
+  };
+
+  const confirmRejection = async (comment) => {
+    try {
+      await axios.put(
+        `${config.API_URL}/api/attendance/approve`,
+        {
+          attendanceId: recordToReject._id,
+          approvalStatus: "Rejected",
+          comments: comment
+        },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      fetchAllAttendance();
+      setRejectionDialogOpen(false);
+      setRecordToReject(null);
+    } catch (err) {
+      setError('Failed to reject attendance');
+      console.error('Error:', err);
     }
   };
 
   return (
-    <Paper elevation={0} sx={{ p: 3, height: '100%' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h5" fontWeight="bold" color="text.primary">
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'flex-start' : 'center', 
+        mb: 3, 
+        pb: 2, 
+        gap: isMobile ? 2 : 0,
+        borderBottom: 1, 
+        borderColor: 'divider'
+      }}>
+        <Typography variant="h5" fontWeight="bold" color="text.primary" sx={{ mb: isMobile ? 1 : 0 }}>
           Attendance Approval
         </Typography>
         <TextField
           type="date"
           size="small"
+          fullWidth={isMobile}
           value={selectedDate.toISOString().split('T')[0]}
           onChange={(e) => setSelectedDate(new Date(e.target.value))}
-          sx={{ width: 200 }}
+          sx={{ width: isMobile ? '100%' : 200 }}
         />
       </Box>
 
@@ -97,9 +150,9 @@ const AdminAttendanceApproval = () => {
             <AttendanceTable
               records={groupedAttendance.managers.map(record => ({
                 ...record,
-                onApprove: handleApproval,
-                onReject: handleApproval,
-                onViewTasks: (record) => {
+                onApprove: (id, status) => handleApproval(id, status),
+                onReject: () => handleRejection(record),
+                onViewTasks: () => {
                   setSelectedRecord(record);
                   setIsModalOpen(true);
                 }
@@ -114,9 +167,9 @@ const AdminAttendanceApproval = () => {
               key={teamName}
               records={records.map(record => ({
                 ...record,
-                onApprove: handleApproval,
-                onReject: handleApproval,
-                onViewTasks: (record) => {
+                onApprove: (id, status) => handleApproval(id, status),
+                onReject: () => handleRejection(record),
+                onViewTasks: () => {
                   setSelectedRecord(record);
                   setIsModalOpen(true);
                 }
@@ -132,6 +185,16 @@ const AdminAttendanceApproval = () => {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         attendanceRecord={selectedRecord}
+      />
+
+      <RejectionDialog
+        open={rejectionDialogOpen}
+        onClose={() => {
+          setRejectionDialogOpen(false);
+          setRecordToReject(null);
+        }}
+        onConfirm={confirmRejection}
+        attendanceRecord={recordToReject}
       />
     </Paper>
   );
