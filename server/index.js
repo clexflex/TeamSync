@@ -164,15 +164,40 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Update the server startup (replace existing app.listen)
+// Update the server startup
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+const serverInstance = server.listen(PORT, () => {
     logger.info(`🌍 Server running on port ${PORT}`);
 });
-console.log("PORT from env:", process.env.PORT);
 
-// Handle unhandled rejections
+// Set keepAliveTimeout higher than Render's load balancer timeout
+serverInstance.keepAliveTimeout = 65000; // 65 seconds
+serverInstance.headersTimeout = 66000; // 66 seconds
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+    logger.info('SIGTERM signal received. Starting graceful shutdown...');
+    
+    // Stop accepting new connections
+    serverInstance.close(() => {
+        logger.info('HTTP server closed');
+        
+        // Close database connection
+        mongoose.connection.close(false, () => {
+            logger.info('MongoDB connection closed');
+            process.exit(0);
+        });
+    });
+    
+    // Force shutdown after 30 seconds if graceful shutdown fails
+    setTimeout(() => {
+        logger.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 30000);
+});
+
+// Handle unhandled rejections more gracefully
 process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-  // Don't crash the server, but log the error
+    logger.error('Unhandled Rejection:', err);
+    // Don't exit the process, just log the error
 });
