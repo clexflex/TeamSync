@@ -106,6 +106,35 @@ if (!process.env.RENDER_SERVICE_ID || process.env.RENDER_INSTANCE_ID === '0' || 
   logger.info(`Skipping cron jobs on instance ${process.env.RENDER_INSTANCE_ID}`);
 }
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      instance: process.env.RENDER_INSTANCE_ID || 'unknown',
+      mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      uptime: process.uptime()
+  });
+});
+
+// Detailed health check for cron jobs
+app.get('/health/cron', async (req, res) => {
+  try {
+      const cronJobs = await getScheduledJobsStatus(); // You need to implement this function
+      res.status(200).json({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          instance: process.env.RENDER_INSTANCE_ID || 'unknown',
+          isPrimaryCronInstance: !process.env.RENDER_INSTANCE_ID || process.env.RENDER_INSTANCE_ID === '0',
+          cronJobs: cronJobs
+      });
+  } catch (error) {
+      res.status(500).json({
+          status: 'error',
+          error: error.message
+      });
+  }
+});
 // Root directory route
 app.get('/', (req, res) => {
   res.status(200).json({
