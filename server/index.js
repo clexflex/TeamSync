@@ -99,7 +99,12 @@ app.use('/api/salary-export', salaryExportRouter);
 
 
 // Setup cron jobs
-setupCronJobs();
+if (!process.env.RENDER_SERVICE_ID || process.env.RENDER_INSTANCE_ID === '0' || !process.env.RENDER_INSTANCE_ID) {
+  setupCronJobs();
+  logger.info('Cron jobs initialized on primary instance');
+} else {
+  logger.info(`Skipping cron jobs on instance ${process.env.RENDER_INSTANCE_ID}`);
+}
 
 // Root directory route
 app.get('/', (req, res) => {
