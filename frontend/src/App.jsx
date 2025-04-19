@@ -61,6 +61,7 @@ import LiveAttendanceDashboard from "./components/dashboard/LiveAttendanceDashbo
 import RealTimeAttendanceForm from "./components/EmployeeDashboard/RealTimeAttendanceForm";
 import LandingPage from "./pages/LandingPage";
 import Documentation from "./pages/Documentation";
+import SalaryExport from "./components/salary/SalaryExport";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -122,6 +123,7 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="create-notification" element={<NotificationCreator />} />
             <Route path="live-attendance" element={<LiveAttendanceDashboard />} />
+            <Route path="salary/export" element={<SalaryExport />} />
 
           </Route>
 

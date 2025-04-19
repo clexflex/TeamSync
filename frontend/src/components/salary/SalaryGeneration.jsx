@@ -49,6 +49,9 @@ import config from '../../config';
 import { useNavigate } from 'react-router-dom';
 
 const SalaryGeneration = () => {
+  // Get the user's timezone from browser
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
   const [generationType, setGenerationType] = useState('all');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [employees, setEmployees] = useState([]);
@@ -204,13 +207,14 @@ const SalaryGeneration = () => {
       handleCloseConfirmDialog();
 
       if (generationType === 'individual') {
-        // Generate salary for single employee
+        // Generate salary for single employee - Include timezone
         const response = await axios.post(
           `${config.API_URL}/api/salary/generate`,
           {
             userId: selectedEmployee,
             periodStart,
-            periodEnd
+            periodEnd,
+            timezone: userTimezone // Include timezone information
           },
           {
             headers: {
@@ -235,13 +239,14 @@ const SalaryGeneration = () => {
           });
         }
       } else {
-        // Generate salary for all employees
+        // Generate salary for all employees - Include timezone
         const response = await axios.post(
           `${config.API_URL}/api/salary/generate-all`,
           {
             periodStart,
             periodEnd,
-            roleFilter: 'all' // Or you could add a dropdown to select 'employee', 'manager', etc.
+            roleFilter: 'all',
+            timezone: userTimezone // Include timezone information
           },
           {
             headers: {
@@ -430,6 +435,14 @@ const SalaryGeneration = () => {
                       : 'Not set'}
                   </Typography>
                 </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="textSecondary">
+                    Using Timezone:
+                  </Typography>
+                  <Typography variant="body1">
+                    {userTimezone}
+                  </Typography>
+                </Grid>
               </Grid>
             </Box>
           </Box>
@@ -590,6 +603,15 @@ const SalaryGeneration = () => {
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
                         {formatDate(periodEnd)}
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="textSecondary">
+                        Using Timezone:
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        {userTimezone}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -787,6 +809,9 @@ const SalaryGeneration = () => {
           <DialogContentText sx={{ mt: 2 }}>
             This action will calculate salaries based on attendance records. Please ensure that all attendance
             records for this period have been approved.
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2 }}>
+            <strong>Note:</strong> Calculations will be performed using your current timezone ({userTimezone}).
           </DialogContentText>
         </DialogContent>
         <DialogActions>

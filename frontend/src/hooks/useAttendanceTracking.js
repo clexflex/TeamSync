@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import config from '../config';
 
-export const useAttendanceTracking = () => {
+export const useAttendanceTracking = (timezone) => {
   const [attendance, setAttendance] = useState(null);
   const [attendanceStatus, setAttendanceStatus] = useState('loading');
   const [monthlyAttendance, setMonthlyAttendance] = useState({});
@@ -16,6 +16,9 @@ export const useAttendanceTracking = () => {
       const response = await axios.get(
         `${config.API_URL}/api/attendance/current-status`,
         {
+          params: {
+            timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+          },
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
             'Cache-Control': 'no-cache',
@@ -33,7 +36,7 @@ export const useAttendanceTracking = () => {
       setError(error.message);
       console.error('Error fetching attendance status:', error);
     }
-  }, [lastFetch]);
+  }, [lastFetch, timezone]);
 
   const fetchMonthlyAttendance = useCallback(async (date) => {
     try {
@@ -45,7 +48,8 @@ export const useAttendanceTracking = () => {
         {
           params: {
             startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
+            endDate: endDate.toISOString(),
+            timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
           },
           headers: { 
             Authorization: `Bearer ${localStorage.getItem('token')}` 
@@ -65,7 +69,7 @@ export const useAttendanceTracking = () => {
       setError(error.message);
       console.error('Error fetching monthly attendance:', error);
     }
-  }, []);
+  }, [timezone]);
 
   useEffect(() => {
     fetchCurrentStatus();

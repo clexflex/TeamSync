@@ -1,3 +1,84 @@
+/**
+ * Adjusts a date to respect the user's timezone boundaries
+ * @param {Date} date - The date to adjust
+ * @param {string} timezone - User's timezone
+ * @param {boolean} setToEndOfDay - If true, sets time to 23:59:59.999, otherwise 00:00:00.000
+ * @returns {Date} Adjusted date in UTC that represents the start/end of the user's local day
+ */
+const adjustDateForTimezone = (date, timezone, setToEndOfDay = false) => {
+    if (!timezone) return date;
+    
+    try {
+        // Convert the input date to user's timezone
+        const userDateString = date.toLocaleString('en-US', { timeZone: timezone });
+        const userDate = new Date(userDateString);
+        
+        // Get the date components in user's timezone
+        const year = userDate.getFullYear();
+        const month = userDate.getMonth();
+        const day = userDate.getDate();
+        
+        let localDate;
+        
+        if (setToEndOfDay) {
+            // End of day in user's timezone
+            localDate = new Date(year, month, day, 23, 59, 59, 999);
+        } else {
+            // Start of day in user's timezone
+            localDate = new Date(year, month, day, 0, 0, 0, 0);
+        }
+        
+        // Convert local date to UTC
+        const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        
+        // Calculate the offset and adjust
+        const timezoneOffset = localDate.getTime() - utcDate.getTime();
+        return new Date(localDate.getTime() - timezoneOffset);
+    } catch (error) {
+        logger.error(`Error adjusting date for timezone: ${error.message}`);
+        return date;
+    }
+};
+  
+  /**
+   * Convert UTC date to user's local date representation for display
+   * @param {Date} date - UTC date to convert
+   * @param {string} timezone - User's timezone
+   * @returns {string} Formatted date string in user's timezone
+   */
+  const formatDateInTimezone = (date, timezone) => {
+    if (!date) return '';
+    
+    try {
+      return date.toLocaleString('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      logger.error(`Error formatting date in timezone: ${error.message}`);
+      return date.toISOString().split('T')[0];
+    }
+  };
+  
+  /**
+   * Check if a date is a weekend in the user's timezone
+   * @param {Date} date - Date to check
+   * @param {string} timezone - User's timezone
+   * @returns {boolean} True if date is a weekend in user's timezone
+   */
+  const isWeekendInTimezone = (date, timezone) => {
+    try {
+      const dayOfWeek = new Date(date.toLocaleString('en-US', { timeZone: timezone }))
+        .getDay();
+      return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+    } catch (error) {
+      logger.error(`Error checking weekend in timezone: ${error.message}`);
+      return isWeekend(date); // Fall back to regular function
+    }
+  };
+
 import puppeteer from 'puppeteer';
 import Salary from '../models/Salary.js';
 import User from '../models/User.js';
@@ -39,7 +120,7 @@ const isHoliday = async (date, departmentId = null) => {
 // Generate salary draft for a specific user for a specific period
 export const generateSalaryDraft = async (req, res) => {
     try {
-        const { userId, periodStart, periodEnd } = req.body;
+        const { userId, periodStart, periodEnd, timezone } = req.body;
 
         if (!userId || !periodStart || !periodEnd) {
             return res.status(400).json({
@@ -49,8 +130,8 @@ export const generateSalaryDraft = async (req, res) => {
         }
 
         // Validate period dates
-        const startDate = new Date(periodStart);
-        const endDate = new Date(periodEnd);
+        let startDate = new Date(periodStart);
+        let endDate = new Date(periodEnd);
 
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
             return res.status(400).json({
@@ -64,6 +145,13 @@ export const generateSalaryDraft = async (req, res) => {
                 success: false,
                 error: 'Period end date must be after start date'
             });
+        }
+
+        if (timezone) {
+            logger.info(`Adjusting dates for timezone: ${timezone}`);
+            startDate = adjustDateForTimezone(startDate, timezone, false);
+            endDate = adjustDateForTimezone(endDate, timezone, true);
+            logger.info(`Adjusted date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
         }
 
         // Check if a salary record already exists for this user and period
@@ -134,7 +222,7 @@ export const generateSalaryDraft = async (req, res) => {
         // Calculate total credits for the period
         let totalCredits = 0;
 
-        // Get all the attendance records for the user for the period
+        // Get all the attendance records for the user for the period using timezone-adjusted dates
         const attendanceRecords = await Attendance.find({
             userId,
             date: { $gte: startDate, $lte: endDate }
@@ -153,14 +241,17 @@ export const generateSalaryDraft = async (req, res) => {
             });
         }
 
-        // Process each day in the period
+        // Process each day in the period, respecting the user's timezone if provided
         let currentDate = new Date(startDate);
         while (currentDate <= endDate) {
             let dayCheck1Credit = 0; // Default for working day
             let dayCheck2Credit = 0;
 
             // Check 1: Type of day
-            const isWeekendDay = isWeekend(currentDate);
+            const isWeekendDay = timezone ? 
+                isWeekendInTimezone(currentDate, timezone) : 
+                isWeekend(currentDate);
+                
             const isHolidayDay = await isHoliday(currentDate, departmentId);
 
             if (isWeekendDay) {
@@ -178,6 +269,7 @@ export const generateSalaryDraft = async (req, res) => {
             }
 
             // Find attendance record for this day
+            // Note: This requires attendance records to be stored with timezone-aware day boundaries too
             const attendance = attendanceRecords.find(record =>
                 isSameDay(new Date(record.date), currentDate)
             );
@@ -256,8 +348,10 @@ export const generateSalaryDraft = async (req, res) => {
         // Net Salary = Gross Salary - Total Deductions - Attendance Adjustment
         const netSalary = grossSalary - totalDeductions - attendanceAdjustment;
 
-        // Format the pay period (e.g., "March 2025")
-        const payPeriod = `${format(startDate, 'MMMM yyyy')}`;
+        // Format the pay period (e.g., "March 2025") using the timezone if available
+        const payPeriod = timezone ? 
+            formatDateInTimezone(startDate, timezone).split(' ').slice(0, 2).join(' ') : 
+            `${format(startDate, 'MMMM yyyy')}`;
 
         // Create new salary record
         const newSalary = new Salary({
@@ -290,7 +384,7 @@ export const generateSalaryDraft = async (req, res) => {
             auditLog: [{
                 action: 'Salary Draft Generated',
                 userId: req.user._id,
-                notes: `Salary draft for ${payPeriod} generated automatically`
+                notes: `Salary draft for ${payPeriod} generated automatically with timezone ${timezone || 'UTC'}`
             }]
         });
 
@@ -314,7 +408,6 @@ export const generateSalaryDraft = async (req, res) => {
         });
     }
 };
-
 // Generate salary drafts for all users for a specific period
 export const generateAllSalaryDrafts = async (req, res) => {
     try {
@@ -435,11 +528,12 @@ export const generateAllSalaryDrafts = async (req, res) => {
 };
 
 // Helper function to generate salary draft for a user without using req/res
-async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creatorId) {
+
+async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creatorId, timezone) {
     try {
         // Validate period dates
-        const startDate = new Date(periodStart);
-        const endDate = new Date(periodEnd);
+        let startDate = new Date(periodStart);
+        let endDate = new Date(periodEnd);
 
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
             return {
@@ -453,6 +547,12 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
                 success: false,
                 error: 'Period end date must be after start date'
             };
+        }
+
+        // Apply timezone adjustments if provided
+        if (timezone) {
+            startDate = adjustDateForTimezone(startDate, timezone, false);
+            endDate = adjustDateForTimezone(endDate, timezone, true);
         }
 
         // Check if a salary record already exists for this user and period
@@ -523,7 +623,7 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
         // Calculate total credits for the period
         let totalCredits = 0;
 
-        // Get all the attendance records for the user for the period
+        // Get all the attendance records for the user for the period using timezone-adjusted dates
         const attendanceRecords = await Attendance.find({
             userId,
             date: { $gte: startDate, $lte: endDate }
@@ -549,7 +649,10 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
             let dayCheck2Credit = 0;
 
             // Check 1: Type of day
-            const isWeekendDay = isWeekend(currentDate);
+            const isWeekendDay = timezone ? 
+                isWeekendInTimezone(currentDate, timezone) : 
+                isWeekend(currentDate);
+                
             const isHolidayDay = await isHoliday(currentDate, departmentId);
 
             if (isWeekendDay) {
@@ -645,8 +748,10 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
         // Net Salary = Gross Salary - Total Deductions - Attendance Adjustment
         const netSalary = grossSalary - totalDeductions - attendanceAdjustment;
 
-        // Format the pay period (e.g., "March 2025")
-        const payPeriod = `${format(startDate, 'MMMM yyyy')}`;
+        // Format the pay period (e.g., "March 2025") using the timezone if available
+        const payPeriod = timezone ? 
+            formatDateInTimezone(startDate, timezone).split(' ').slice(0, 2).join(' ') : 
+            `${format(startDate, 'MMMM yyyy')}`;
 
         // Create new salary record
         const newSalary = new Salary({
@@ -679,7 +784,7 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
             auditLog: [{
                 action: 'Salary Draft Generated',
                 userId: creatorId,
-                notes: `Salary draft for ${payPeriod} generated automatically`
+                notes: `Salary draft for ${payPeriod} generated automatically with timezone ${timezone || 'UTC'}`
             }]
         });
 
@@ -705,9 +810,11 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
 }
 
 // Function to regenerate a salary draft
+
 export const regenerateSalaryDraft = async (req, res) => {
     try {
         const { id } = req.params;
+        const { timezone } = req.body; // Accept timezone parameter
 
         // Find the existing salary record
         const existingSalary = await Salary.findById(id);
@@ -729,8 +836,15 @@ export const regenerateSalaryDraft = async (req, res) => {
 
         // Extract user ID and period dates from the existing record
         const userId = existingSalary.userId;
-        const periodStart = existingSalary.periodStart;
-        const periodEnd = existingSalary.periodEnd;
+        let startDate = existingSalary.periodStart;
+        let endDate = existingSalary.periodEnd;
+
+        // Apply timezone adjustments if provided
+        if (timezone) {
+            // Adjust dates to respect the user's timezone day boundaries
+            startDate = adjustDateForTimezone(startDate, timezone, false); // Start of day
+            endDate = adjustDateForTimezone(endDate, timezone, true);     // End of day
+        }
 
         // Get user information
         const user = await User.findById(userId);
@@ -768,8 +882,6 @@ export const regenerateSalaryDraft = async (req, res) => {
         }
 
         // Calculate days in the period
-        const startDate = new Date(periodStart);
-        const endDate = new Date(periodEnd);
         const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
         // Initialize attendance breakdown
@@ -811,8 +923,11 @@ export const regenerateSalaryDraft = async (req, res) => {
             let dayCheck1Credit = 0; // Default for working day
             let dayCheck2Credit = 0;
 
-            // Check 1: Type of day
-            const isWeekendDay = isWeekend(currentDate);
+            // Check 1: Type of day - use timezone-aware weekend check if timezone provided
+            const isWeekendDay = timezone ? 
+                isWeekendInTimezone(currentDate, timezone) : 
+                isWeekend(currentDate);
+                
             const isHolidayDay = await isHoliday(currentDate, departmentId);
 
             if (isWeekendDay) {
@@ -933,7 +1048,7 @@ export const regenerateSalaryDraft = async (req, res) => {
         existingSalary.auditLog.push({
             action: 'Salary Draft Regenerated',
             userId: req.user._id,
-            notes: `Salary draft for ${format(startDate, 'MMMM yyyy')} regenerated with updated attendance data`
+            notes: `Salary draft for ${format(startDate, 'MMMM yyyy')} regenerated with updated attendance data using timezone ${timezone || 'UTC'}`
         });
 
         await existingSalary.save();

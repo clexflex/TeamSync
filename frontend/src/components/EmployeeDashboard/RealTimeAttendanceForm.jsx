@@ -38,7 +38,10 @@ import {
 } from '@mui/icons-material';
 
 const RealTimeAttendanceForm = () => {
-  const { attendance, attendanceStatus, error: attendanceError, refetch } = useAttendanceTracking();
+  // Get the user's timezone from the browser
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  const { attendance, attendanceStatus, error: attendanceError, refetch } = useAttendanceTracking(userTimezone);
   const { socket, connected: socketConnected } = useSocket();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [monthlyAttendance, setMonthlyAttendance] = useState({});
@@ -112,7 +115,11 @@ const RealTimeAttendanceForm = () => {
       const response = await axios.get(
         `${config.API_URL}/api/attendance/monthly`,
         {
-          params: { month, year },
+          params: { 
+            month, 
+            year,
+            timezone: userTimezone // Add user timezone
+          },
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }
       );
@@ -123,7 +130,7 @@ const RealTimeAttendanceForm = () => {
     } catch (err) {
       logger.error('Error fetching monthly attendance:', err);
     }
-  }, []);
+  }, [userTimezone]);
 
   useEffect(() => {
     fetchMonthlyAttendance(selectedDate);
@@ -204,11 +211,12 @@ const RealTimeAttendanceForm = () => {
         }
       }
 
+      // Include timezone information in the request
       await axios.post(
         `${config.API_URL}/api/attendance/clock-in`,
         {
           workLocation: form.workLocation,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezone: userTimezone,
           location,
         },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
@@ -233,11 +241,12 @@ const RealTimeAttendanceForm = () => {
       setLoading(true);
       logger.info('Clock-out attempt started');
 
+      // Include timezone in the clock-out request
       await axios.post(
         `${config.API_URL}/api/attendance/clock-out`,
         {
           tasksDone: form.tasksDone,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          timezone: userTimezone
         },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
@@ -267,6 +276,9 @@ const RealTimeAttendanceForm = () => {
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Display the user's current local time and timezone for debugging
+  const userLocalTime = new Date().toLocaleString('en-US', { timeZone: userTimezone });
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
@@ -294,7 +306,7 @@ const RealTimeAttendanceForm = () => {
               />
             )}
             <Typography variant="body2" color="text.secondary">
-              {new Date().toLocaleDateString()}
+              {userLocalTime} ({userTimezone})
             </Typography>
           </Box>
         </Box>
@@ -511,6 +523,7 @@ const RealTimeAttendanceForm = () => {
               setShowModal(true);
             }
           }}
+          userTimezone={userTimezone}
         />
 
         {showModal && selectedAttendance && (

@@ -1,4 +1,85 @@
-import logger from '../utils/logger.js';
+/**
+ * Adjusts a date to respect the user's timezone boundaries
+ * @param {Date} date - The date to adjust
+ * @param {string} timezone - User's timezone
+ * @param {boolean} setToEndOfDay - If true, sets time to 23:59:59.999, otherwise 00:00:00.000
+ * @returns {Date} Adjusted date in UTC that represents the start/end of the user's local day
+ */
+const adjustDateForTimezone = (date, timezone, setToEndOfDay = false) => {
+    if (!timezone) return date;
+    
+    try {
+        // Convert the input date to user's timezone
+        const userDateString = date.toLocaleString('en-US', { timeZone: timezone });
+        const userDate = new Date(userDateString);
+        
+        // Get the date components in user's timezone
+        const year = userDate.getFullYear();
+        const month = userDate.getMonth();
+        const day = userDate.getDate();
+        
+        let localDate;
+        
+        if (setToEndOfDay) {
+            // End of day in user's timezone
+            localDate = new Date(year, month, day, 23, 59, 59, 999);
+        } else {
+            // Start of day in user's timezone
+            localDate = new Date(year, month, day, 0, 0, 0, 0);
+        }
+        
+        // Convert local date to UTC
+        const utcDate = new Date(localDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+        
+        // Calculate the offset and adjust
+        const timezoneOffset = localDate.getTime() - utcDate.getTime();
+        return new Date(localDate.getTime() - timezoneOffset);
+    } catch (error) {
+        logger.error(`Error adjusting date for timezone: ${error.message}`);
+        return date;
+    }
+};
+  
+  /**
+   * Convert UTC date to user's local date representation for display
+   * @param {Date} date - UTC date to convert
+   * @param {string} timezone - User's timezone
+   * @returns {string} Formatted date string in user's timezone
+   */
+  const formatDateInTimezone = (date, timezone) => {
+    if (!date) return '';
+    
+    try {
+      return date.toLocaleString('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      logger.error(`Error formatting date in timezone: ${error.message}`);
+      return date.toISOString().split('T')[0];
+    }
+  };
+  
+  /**
+   * Check if a date is a weekend in the user's timezone
+   * @param {Date} date - Date to check
+   * @param {string} timezone - User's timezone
+   * @returns {boolean} True if date is a weekend in user's timezone
+   */
+  const isWeekendInTimezone = (date, timezone) => {
+    try {
+      const dayOfWeek = new Date(date.toLocaleString('en-US', { timeZone: timezone }))
+        .getDay();
+      return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+    } catch (error) {
+      logger.error(`Error checking weekend in timezone: ${error.message}`);
+      return isWeekend(date); // Fall back to regular function
+    }
+  };
+
+  import logger from '../utils/logger.js';
 import Attendance from "../models/Attendance.js";
 import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
@@ -143,6 +224,7 @@ const calculateCredits = async (attendance, existingLeave = null) => {
     }
 };
 
+// Updated clockIn function in attendanceController.js
 export const clockIn = async (req, res) => {
     try {
         const userId = req.user?._id;
@@ -150,7 +232,7 @@ export const clockIn = async (req, res) => {
             return res.status(400).json({ success: false, error: "User ID is missing." });
         }
 
-        const { workLocation, location } = req.body;
+        const { workLocation, location, timezone } = req.body;
 
         // Handle Remote Employees: Capture location
         if (workLocation === "Remote" && !location) {
@@ -170,33 +252,56 @@ export const clockIn = async (req, res) => {
             }
         }
 
-        // Create today's date in UTC
-        const today = new Date();
-        const todayUTC = new Date(Date.UTC(
-            today.getUTCFullYear(),
-            today.getUTCMonth(),
-            today.getUTCDate()
-        ));
+        // Get current user time based on their timezone
+        let userLocalDate = new Date();
+        
+        // If timezone is provided, use it to calculate user's local date
+        if (timezone) {
+            // Create user's local date based on their timezone
+            userLocalDate = new Date(new Date().toLocaleString('en-US', { timeZone: timezone }));
+            logger.info(`Using user timezone ${timezone}, local date: ${userLocalDate.toISOString()}`);
+        }
 
-        const tomorrowUTC = new Date(todayUTC);
-        tomorrowUTC.setUTCDate(todayUTC.getUTCDate() + 1);
+        // Create the start and end of day in user's local time, then convert to UTC for DB queries
+        const userLocalStartOfDay = new Date(
+            userLocalDate.getFullYear(),
+            userLocalDate.getMonth(),
+            userLocalDate.getDate(),
+            0, 0, 0, 0
+        );
+        
+        const userLocalEndOfDay = new Date(
+            userLocalDate.getFullYear(),
+            userLocalDate.getMonth(),
+            userLocalDate.getDate(),
+            23, 59, 59, 999
+        );
 
-        // Check if already clocked in
+        // Convert to UTC for database query
+        const userLocalStartOfDayUTC = new Date(userLocalStartOfDay.toISOString());
+        const userLocalEndOfDayUTC = new Date(userLocalEndOfDay.toISOString());
+
+        logger.info(`User local day boundaries: ${userLocalStartOfDayUTC.toISOString()} to ${userLocalEndOfDayUTC.toISOString()}`);
+
+        // Check if already clocked in for the user's current day
         const existingAttendance = await Attendance.findOne({
             userId,
-            date: { $gte: todayUTC, $lt: tomorrowUTC }
+            date: { 
+                $gte: userLocalStartOfDayUTC, 
+                $lt: userLocalEndOfDayUTC 
+            }
         });
 
         if (existingAttendance) {
             return res.status(400).json({ success: false, error: "Already clocked in for today." });
         }
 
-        // Check for any approved leave for today
+        // Check for any approved leave for the user's current day
         const existingLeave = await Leave.findOne({
             userId,
             status: "Approved",
-            startDate: { $lte: todayUTC },
-            endDate: { $gte: todayUTC }
+            startDate: { $lte: userLocalStartOfDayUTC },
+            endDate: { $gte: userLocalStartOfDayUTC }
         });
 
         // If there's a full-day approved leave, don't allow clock-in
@@ -210,19 +315,21 @@ export const clockIn = async (req, res) => {
         // Get team info from Employee collection
         const employee = await Employee.findOne({ userId }).populate("teamId");
 
-        // Check if today is a weekend or holiday
-        const dayOfWeek = todayUTC.getUTCDay();
+        // Check if today is a weekend or holiday in user's local time
+        const dayOfWeek = userLocalDate.getDay();
         const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6; // Sunday (0) or Saturday (6)
-        const isHolidayDay = await isHoliday(todayUTC);
+        const isHolidayDay = await isHoliday(userLocalStartOfDayUTC);
 
+        // Create attendance record with the current local date converted to UTC
+        // Store the date as the beginning of the user's day in UTC
         const newAttendance = new Attendance({
             userId,
             teamId: employee?.teamId?._id || null,
-            date: todayUTC,
-            clockIn: new Date(),
+            date: userLocalStartOfDayUTC, // Store the date as the start of user's local day in UTC
+            clockIn: new Date(), // Current UTC time
             status: "Present", // Initial status, will be updated on approval
             workLocation: workLocation,
-            location: {
+            location: location ? {
                 accuracy: location.accuracy,
                 latitude: location.latitude,
                 longitude: location.longitude,
@@ -230,7 +337,7 @@ export const clockIn = async (req, res) => {
                 altitudeAccuracy: location.altitudeAccuracy,
                 heading: location.heading,
                 speed: location.speed
-            },
+            } : undefined,
             role: req.user.role,
             isWeekend: isWeekendDay,
             isHoliday: isHolidayDay,
@@ -246,7 +353,8 @@ export const clockIn = async (req, res) => {
         await calculateCredits(newAttendance, existingLeave);
 
         await newAttendance.save();
-        // Add this before the return statement in the clockIn function
+        
+        // Handle socket notifications
         if (req.io) {
             const eventData = {
                 type: 'clock-in',
@@ -265,7 +373,8 @@ export const clockIn = async (req, res) => {
 
             logger.info(`Emitted attendance_update (clock-in) for user ${userId}`);
         }
-        logger.info(`User ${userId} successfully clocked in at ${new Date().toISOString()}`);
+        
+        logger.info(`User ${userId} successfully clocked in at ${new Date().toISOString()}, local time: ${userLocalDate.toISOString()}`);
         return res.status(200).json({ success: true, attendance: newAttendance });
     } catch (error) {
         logger.error(`Error during clock-in: ${error.message}`);
@@ -274,6 +383,7 @@ export const clockIn = async (req, res) => {
     }
 };
 
+// Updated clockOut function with timezone support
 export const clockOut = async (req, res) => {
     try {
         const userId = req.user?._id;
@@ -282,20 +392,46 @@ export const clockOut = async (req, res) => {
             return res.status(400).json({ success: false, error: "User ID is missing." });
         }
 
-        const { tasksDone } = req.body;
+        const { tasksDone, timezone } = req.body;
 
         if (!tasksDone) {
             return res.status(400).json({ success: false, error: "Tasks done must be provided for clock-out." });
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Get current user time based on their timezone
+        let userLocalDate = new Date();
+        
+        // If timezone is provided, use it to calculate user's local date
+        if (timezone) {
+            // Create user's local date based on their timezone
+            userLocalDate = new Date(new Date().toLocaleString('en-US', { timeZone: timezone }));
+            logger.info(`Using user timezone ${timezone}, local date: ${userLocalDate.toISOString()}`);
+        }
+
+        // Create the start and end of day in user's local time, then convert to UTC for DB queries
+        const userLocalStartOfDay = new Date(
+            userLocalDate.getFullYear(),
+            userLocalDate.getMonth(),
+            userLocalDate.getDate(),
+            0, 0, 0, 0
+        );
+        
+        const userLocalEndOfDay = new Date(
+            userLocalDate.getFullYear(),
+            userLocalDate.getMonth(),
+            userLocalDate.getDate(),
+            23, 59, 59, 999
+        );
+
+        // Convert to UTC for database query
+        const userLocalStartOfDayUTC = new Date(userLocalStartOfDay.toISOString());
+        const userLocalEndOfDayUTC = new Date(userLocalEndOfDay.toISOString());
 
         const attendance = await Attendance.findOne({
             userId,
             date: {
-                $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+                $gte: userLocalStartOfDayUTC,
+                $lt: userLocalEndOfDayUTC,
             },
         });
 
@@ -315,15 +451,16 @@ export const clockOut = async (req, res) => {
         const existingLeave = await Leave.findOne({
             userId,
             status: "Approved",
-            startDate: { $lte: today },
-            endDate: { $gte: today }
+            startDate: { $lte: userLocalStartOfDayUTC },
+            endDate: { $gte: userLocalStartOfDayUTC }
         });
 
         // Recalculate credits based on complete attendance
         await calculateCredits(attendance, existingLeave);
 
         await attendance.save();
-        // Add this before the return statement in the clockOut function
+        
+        // Handle socket notifications
         if (req.io) {
             const eventData = {
                 type: 'clock-out',
@@ -342,12 +479,292 @@ export const clockOut = async (req, res) => {
 
             logger.info(`Emitted attendance_update (clock-out) for user ${userId}`);
         }
-        logger.info(`User ${userId} clocked out at ${new Date().toISOString()}. Hours worked: ${attendance.hoursWorked}`);
+        
+        logger.info(`User ${userId} clocked out at ${new Date().toISOString()}, local time: ${userLocalDate.toISOString()}. Hours worked: ${attendance.hoursWorked}`);
         return res.status(200).json({ success: true, attendance });
     } catch (error) {
         logger.error(`Error during clock-out for user ${req.user?._id}: ${error.message}`);
         console.error("Error during clock-out:", error);
         return res.status(500).json({ success: false, error: "Failed to clock out." });
+    }
+};
+
+// Update getCurrentStatus to respect user's timezone
+export const getCurrentStatus = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(400).json({ success: false, error: "User ID is missing." });
+        }
+
+        const { timezone } = req.query;
+
+        // Get current user time based on their timezone
+        let userLocalDate = new Date();
+        
+        // If timezone is provided, use it to calculate user's local date
+        if (timezone) {
+            // Create user's local date based on their timezone
+            userLocalDate = new Date(new Date().toLocaleString('en-US', { timeZone: timezone }));
+            logger.info(`Using user timezone ${timezone}, local date: ${userLocalDate.toISOString()}`);
+        }
+
+        // Create the start and end of day in user's local time, then convert to UTC for DB queries
+        const userLocalStartOfDay = new Date(
+            userLocalDate.getFullYear(),
+            userLocalDate.getMonth(),
+            userLocalDate.getDate(),
+            0, 0, 0, 0
+        );
+        
+        const userLocalEndOfDay = new Date(
+            userLocalDate.getFullYear(),
+            userLocalDate.getMonth(),
+            userLocalDate.getDate(),
+            23, 59, 59, 999
+        );
+
+        // Convert to UTC for database query
+        const userLocalStartOfDayUTC = new Date(userLocalStartOfDay.toISOString());
+        const userLocalEndOfDayUTC = new Date(userLocalEndOfDay.toISOString());
+
+        // Get today's attendance based on user's local day
+        const todayAttendance = await Attendance.findOne({
+            userId,
+            date: {
+                $gte: userLocalStartOfDayUTC,
+                $lt: userLocalEndOfDayUTC
+            }
+        });
+
+        // Check for holiday
+        const holiday = await Holiday.findOne({
+            date: {
+                $gte: userLocalStartOfDayUTC,
+                $lt: userLocalEndOfDayUTC
+            },
+            $or: [
+                { isCompanyWide: true },
+                { applicableDepartments: req.user.department }
+            ]
+        });
+
+        // Get employee details for team info
+        const userProfile = await UserProfile.findOne({ userId });
+        let teamId = null;
+
+        // If we still need teamId, we need to query Employee collection
+        if (!teamId) {
+            const employee = await Employee.findOne({ userId }).populate('teamId');
+            teamId = employee?.teamId?._id || null;
+        }
+
+        const response = {
+            success: true,
+            isHoliday: !!holiday,
+            holidayDetails: holiday,
+            attendance: todayAttendance,
+            status: !todayAttendance ? 'not-started' :
+                todayAttendance.clockOut ? 'completed' : 'clocked-in',
+            teamId: teamId,
+            userLocalDate: userLocalDate.toISOString()
+        };
+
+        logger.info(`User ${userId} checked attendance status. Local date: ${userLocalDate.toISOString()}`);
+        return res.status(200).json(response);
+    } catch (error) {
+        logger.error(`Error fetching current status for user ${req.user?._id}: ${error.message}`);
+        console.error("Error fetching current status:", error);
+        return res.status(500).json({ success: false, error: "Failed to fetch current status." });
+    }
+};
+
+export const getMonthlyAttendance = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        const { month, year, timezone } = req.query;
+
+        if (!userId || !month || !year) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing required parameters"
+            });
+        }
+
+        // Create date range for the month in user's timezone
+        let startDate, endDate;
+
+        if (timezone) {
+            // Create start and end dates for the month in user's timezone
+            const userLocalStartDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+            const userLocalEndDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
+            
+            // Adjust for timezone
+            startDate = adjustDateForTimezone(userLocalStartDate, timezone, false);
+            endDate = adjustDateForTimezone(userLocalEndDate, timezone, true);
+        } else {
+            // Fallback to UTC if no timezone provided
+            startDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1, 0, 0, 0));
+            endDate = new Date(Date.UTC(parseInt(year), parseInt(month), 0, 23, 59, 59));
+        }
+
+        logger.info(`Fetching monthly attendance for ${userId} from ${startDate.toISOString()} to ${endDate.toISOString()}, timezone: ${timezone}`);
+
+        // Find all attendance records for the user in this month
+        const attendance = await Attendance.find({
+            userId,
+            date: {
+                $gte: startDate,
+                $lte: endDate
+            }
+        }).sort({ date: 1 });
+
+        logger.info(`Found ${attendance.length} attendance records`);
+
+        // Get holidays for the month
+        const holidays = await Holiday.find({
+            date: {
+                $gte: startDate,
+                $lte: endDate
+            },
+            $or: [
+                { isCompanyWide: true },
+                { applicableDepartments: req.user.department }
+            ]
+        });
+
+        // Create a map of attendance records with dates in user's timezone
+        const attendanceMap = {};
+
+        // Initialize each day of the month
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            // Format the date in user's timezone for consistent display
+            const userLocalDateStr = currentDate.toLocaleDateString('en-US', {
+                timeZone: timezone || 'UTC',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).split('/');
+            
+            // Format as YYYY-MM-DD
+            const localDateStr = `${userLocalDateStr[2]}-${userLocalDateStr[0].padStart(2, '0')}-${userLocalDateStr[1].padStart(2, '0')}`;
+            
+            // Get day of week in user's timezone
+            const dayOfWeek = currentDate.toLocaleDateString('en-US', {
+                timeZone: timezone || 'UTC',
+                weekday: 'long'
+            });
+            const isWeekend = ['Saturday', 'Sunday'].includes(dayOfWeek);
+
+            // Check if it's a holiday
+            const holiday = holidays.find(h => {
+                const holidayDateStr = h.date.toLocaleDateString('en-US', {
+                    timeZone: timezone || 'UTC',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).split('/');
+                const holidayLocalDateStr = `${holidayDateStr[2]}-${holidayDateStr[0].padStart(2, '0')}-${holidayDateStr[1].padStart(2, '0')}`;
+                return holidayLocalDateStr === localDateStr;
+            });
+
+            // Store attendance data for this day
+            attendanceMap[localDateStr] = {
+                date: currentDate,
+                isWeekend,
+                isHoliday: !!holiday,
+                holidayName: holiday?.name || null,
+                attendance: null // Will be populated below
+            };
+
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Populate attendance records
+        for (const record of attendance) {
+            // Convert the attendance date to user's local date string
+            const recordLocalDateStr = new Date(record.date).toLocaleDateString('en-US', {
+                timeZone: timezone || 'UTC',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).split('/');
+            
+            const localDateStr = `${recordLocalDateStr[2]}-${recordLocalDateStr[0].padStart(2, '0')}-${recordLocalDateStr[1].padStart(2, '0')}`;
+            
+            // Add the attendance record to the correct date
+            if (attendanceMap[localDateStr]) {
+                attendanceMap[localDateStr].attendance = {
+                    _id: record._id,
+                    clockIn: record.clockIn,
+                    clockOut: record.clockOut,
+                    status: record.status,
+                    approvalStatus: record.approvalStatus,
+                    hoursWorked: record.hoursWorked,
+                    tasksDone: record.tasksDone,
+                    managerApproval: record.managerApproval,
+                    adminApproval: record.adminApproval,
+                    comments: record.comments,
+                    workLocation: record.workLocation,
+                    date: record.date // Keep the original date for reference
+                };
+            }
+        }
+
+        // Special handling for today
+        const today = new Date();
+        const todayLocalStr = today.toLocaleDateString('en-US', {
+            timeZone: timezone || 'UTC',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).split('/');
+        const todayStr = `${todayLocalStr[2]}-${todayLocalStr[0].padStart(2, '0')}-${todayLocalStr[1].padStart(2, '0')}`;
+        
+        if (attendanceMap[todayStr]) {
+            // Get today's attendance directly if not already present
+            if (!attendanceMap[todayStr].attendance) {
+                const todayAttendance = await Attendance.findOne({
+                    userId,
+                    date: {
+                        $gte: adjustDateForTimezone(new Date(today.setHours(0, 0, 0, 0)), timezone, false),
+                        $lt: adjustDateForTimezone(new Date(today.setHours(23, 59, 59, 999)), timezone, true)
+                    }
+                });
+                
+                if (todayAttendance) {
+                    logger.info(`Found today's attendance with ID ${todayAttendance._id}`);
+                    attendanceMap[todayStr].attendance = {
+                        _id: todayAttendance._id,
+                        clockIn: todayAttendance.clockIn,
+                        clockOut: todayAttendance.clockOut,
+                        status: todayAttendance.status,
+                        approvalStatus: todayAttendance.approvalStatus,
+                        hoursWorked: todayAttendance.hoursWorked,
+                        tasksDone: todayAttendance.tasksDone,
+                        managerApproval: todayAttendance.managerApproval,
+                        adminApproval: todayAttendance.adminApproval,
+                        comments: todayAttendance.comments,
+                        workLocation: todayAttendance.workLocation,
+                        date: todayAttendance.date
+                    };
+                }
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            attendance: attendanceMap
+        });
+
+    } catch (error) {
+        logger.error(`Error fetching monthly attendance: ${error.message}`);
+        return res.status(500).json({
+            success: false,
+            error: "Failed to fetch monthly attendance"
+        });
     }
 };
 
@@ -684,164 +1101,6 @@ export const getAttendanceReports = async (req, res) => {
     }
 };
 
-export const getCurrentStatus = async (req, res) => {
-    try {
-        const userId = req.user?._id;
-        if (!userId) {
-            return res.status(400).json({ success: false, error: "User ID is missing." });
-        }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Get today's attendance
-        const todayAttendance = await Attendance.findOne({
-            userId,
-            date: {
-                $gte: today,
-                $lt: tomorrow
-            }
-        });
-
-        // Check for holiday
-        const holiday = await Holiday.findOne({
-            date: {
-                $gte: today,
-                $lt: tomorrow
-            },
-            $or: [
-                { isCompanyWide: true },
-                { applicableDepartments: req.user.department }
-            ]
-        });
-
-        // Get employee details for team info
-        // Using UserProfile + Employee to ensure we get the team info
-        const userProfile = await UserProfile.findOne({ userId });
-        let teamId = null;
-
-        // If we still need teamId, we need to query Employee collection
-        if (!teamId) {
-            const employee = await Employee.findOne({ userId }).populate('teamId');
-            teamId = employee?.teamId?._id || null;
-        }
-
-        const response = {
-            success: true,
-            isHoliday: !!holiday,
-            holidayDetails: holiday,
-            attendance: todayAttendance,
-            status: !todayAttendance ? 'not-started' :
-                todayAttendance.clockOut ? 'completed' : 'clocked-in',
-            teamId: teamId
-        };
-
-        logger.info(`User ${userId} checked attendance status.`);
-        return res.status(200).json(response);
-    } catch (error) {
-        logger.error(`Error fetching current status for user ${req.user?._id}: ${error.message}`);
-        console.error("Error fetching current status:", error);
-        return res.status(500).json({ success: false, error: "Failed to fetch current status." });
-    }
-};
-
-
-export const getMonthlyAttendance = async (req, res) => {
-    try {
-        const userId = req.user?._id;
-        const { month, year } = req.query;
-
-        if (!userId || !month || !year) {
-            return res.status(400).json({
-                success: false,
-                error: "Missing required parameters"
-            });
-        }
-
-        // Create dates in UTC to avoid timezone issues
-        const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-        const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
-
-        const attendance = await Attendance.find({
-            userId,
-            date: {
-                $gte: startDate,
-                $lte: endDate
-            }
-        }).sort({ date: 1 });
-
-        // Get holidays for the month
-        const holidays = await Holiday.find({
-            date: {
-                $gte: startDate,
-                $lte: endDate
-            },
-            $or: [
-                { isCompanyWide: true },
-                { applicableDepartments: req.user.department }
-            ]
-        });
-
-        // Create a map of attendance records
-        const attendanceMap = {};
-
-        // Initialize each day of the month
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const currentDate = new Date(d);
-            const dateStr = currentDate.toISOString().split('T')[0];
-
-            // Get day of week in local time (0 = Sunday, 6 = Saturday)
-            const dayOfWeek = currentDate.getUTCDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
-
-            const holiday = holidays.find(h =>
-                new Date(h.date).toISOString().split('T')[0] === dateStr
-            );
-
-            attendanceMap[dateStr] = {
-                date: currentDate,
-                isWeekend,
-                isHoliday: !!holiday,
-                holidayName: holiday?.name || null,
-                attendance: null
-            };
-        }
-
-        // Populate attendance records
-        attendance.forEach(record => {
-            const dateStr = new Date(record.date).toISOString().split('T')[0];
-            if (attendanceMap[dateStr]) {
-                attendanceMap[dateStr].attendance = {
-                    _id: record._id,
-                    clockIn: record.clockIn,
-                    clockOut: record.clockOut,
-                    status: record.status,
-                    approvalStatus: record.approvalStatus,
-                    hoursWorked: record.hoursWorked,
-                    tasksDone: record.tasksDone,
-                    managerApproval: record.managerApproval,
-                    adminApproval: record.adminApproval,
-                    comments: record.comments,
-                    workLocation: record.workLocation
-                };
-            }
-        });
-
-        return res.status(200).json({
-            success: true,
-            attendance: attendanceMap
-        });
-
-    } catch (error) {
-        console.error("Error fetching monthly attendance:", error);
-        return res.status(500).json({
-            success: false,
-            error: "Failed to fetch monthly attendance"
-        });
-    }
-};
 
 // Fetch Attendance for a User
 export const getMyAttendance = async (req, res) => {

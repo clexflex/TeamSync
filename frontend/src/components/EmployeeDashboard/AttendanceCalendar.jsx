@@ -7,15 +7,19 @@ import config from "../../config";
 
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const AttendanceCalendar = ({ onDateSelect }) => {
+const AttendanceCalendar = ({ onDateSelect, currentDate, monthlyAttendance, userTimezone }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [attendanceData, setAttendanceData] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [calendarDays, setCalendarDays] = useState([]);
+    const [todaysAttendance, setTodaysAttendance] = useState(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+    // Use browser timezone as fallback
+    const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     useEffect(() => {
         const generateCalendarDays = () => {
@@ -29,7 +33,76 @@ const AttendanceCalendar = ({ onDateSelect }) => {
 
         generateCalendarDays();
         fetchMonthlyAttendance(currentMonth);
-    }, [currentMonth]);
+    }, [currentMonth, timezone]);
+
+    useEffect(() => {
+        // Update calendar when passed monthlyAttendance changes
+        if (monthlyAttendance && Object.keys(monthlyAttendance).length > 0) {
+            setAttendanceData(monthlyAttendance);
+            
+            // Get today's attendance from the data
+            const today = new Date();
+            const todayStr = formatDateForTimezone(today, timezone);
+            
+            if (monthlyAttendance[todayStr] && monthlyAttendance[todayStr].attendance) {
+                console.log("Found today's attendance:", monthlyAttendance[todayStr].attendance);
+                setTodaysAttendance(monthlyAttendance[todayStr].attendance);
+            } else {
+                console.log("Today's attendance not found in data", {
+                    todayStr,
+                    availableDates: Object.keys(monthlyAttendance)
+                });
+            }
+        }
+    }, [monthlyAttendance]);
+
+    // Helper function to format date in user's timezone for key lookup
+    const formatDateForTimezone = (date, tz) => {
+        // Create a date object in user's timezone
+        const tzDate = new Date(date.toLocaleString('en-US', { timeZone: tz }));
+        
+        // Format as YYYY-MM-DD
+        const year = tzDate.getFullYear();
+        const month = String(tzDate.getMonth() + 1).padStart(2, '0');
+        const day = String(tzDate.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+    };
+
+    // Directly fetch today's attendance if needed
+    useEffect(() => {
+        const fetchTodayAttendance = async () => {
+            try {
+                const today = new Date();
+                const response = await axios.get(
+                    `${config.API_URL}/api/attendance/current-status`,
+                    {
+                        params: { timezone },
+                        headers: { 
+                            Authorization: `Bearer ${localStorage.getItem('token')}`,
+                            'Cache-Control': 'no-cache'
+                        }
+                    }
+                );
+                
+                if (response.data.success && response.data.attendance) {
+                    console.log("Fetched today's attendance:", response.data.attendance);
+                    setTodaysAttendance(response.data.attendance);
+                }
+            } catch (error) {
+                console.error("Error fetching today's attendance:", error);
+            }
+        };
+        
+        // If today's month is displayed and we don't have today's attendance
+        if (
+            currentMonth.getMonth() === new Date().getMonth() && 
+            currentMonth.getFullYear() === new Date().getFullYear() &&
+            !todaysAttendance
+        ) {
+            fetchTodayAttendance();
+        }
+    }, [currentMonth, timezone, todaysAttendance]);
 
     const fetchMonthlyAttendance = async (date) => {
         try {
@@ -39,7 +112,8 @@ const AttendanceCalendar = ({ onDateSelect }) => {
                 {
                     params: {
                         month: date.getMonth() + 1,
-                        year: date.getFullYear()
+                        year: date.getFullYear(),
+                        timezone: timezone
                     },
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -48,7 +122,17 @@ const AttendanceCalendar = ({ onDateSelect }) => {
             );
 
             if (response.data.success) {
+                console.log("Fetched attendance data:", response.data.attendance);
                 setAttendanceData(response.data.attendance);
+                
+                // Check for today's attendance
+                const today = new Date();
+                const todayStr = formatDateForTimezone(today, timezone);
+                
+                if (response.data.attendance[todayStr] && response.data.attendance[todayStr].attendance) {
+                    console.log("Found today's attendance in monthly data:", response.data.attendance[todayStr].attendance);
+                    setTodaysAttendance(response.data.attendance[todayStr].attendance);
+                }
             }
         } catch (err) {
             setError('Failed to fetch attendance data');
@@ -81,9 +165,27 @@ const AttendanceCalendar = ({ onDateSelect }) => {
     const getAttendanceInfo = (date) => {
         if (!date) return null;
 
-        const dateStr = format(date, 'yyyy-MM-dd');
-        const dayData = attendanceData[dateStr];
+        const dateStr = formatDateForTimezone(date, timezone);
+        
+        // Special case for today
+        if (isToday(date) && todaysAttendance) {
+            return {
+                icon: Clock,
+                label: todaysAttendance.status,
+                subLabel: todaysAttendance.approvalStatus,
+                time: todaysAttendance.clockIn ? 
+                    new Date(todaysAttendance.clockIn).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        timeZone: timezone
+                    }) : null,
+                hoursWorked: todaysAttendance.hoursWorked
+            };
+        }
 
+        // Normal case for other days
+        const dayData = attendanceData[dateStr];
+        
         if (!dayData) return null;
 
         if (dayData.isHoliday) {
@@ -118,7 +220,12 @@ const AttendanceCalendar = ({ onDateSelect }) => {
             icon: Clock,
             label: attendance.status,
             subLabel: attendance.approvalStatus,
-            time: attendance.clockIn ? format(new Date(attendance.clockIn), 'HH:mm') : null,
+            time: attendance.clockIn ? 
+                new Date(attendance.clockIn).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    timeZone: timezone 
+                }) : null,
             hoursWorked: attendance.hoursWorked
         };
     };
@@ -139,144 +246,238 @@ const AttendanceCalendar = ({ onDateSelect }) => {
         );
     }
 
-    const MobileCalendarDay = ({ day, dayData, attendanceInfo, isCurrentDay, isCurrentMonth, isPastDate }) => (
-        <Box
-            onClick={() => isPastDate && onDateSelect(day, dayData?.attendance)}
-            sx={{
-                display: 'flex',
-                p: 2,
-                bgcolor: getStatusColor(dayData),
-                opacity: isCurrentMonth ? 1 : 0.5,
-                cursor: isPastDate ? 'pointer' : 'default',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                mb: 1,
-                transition: 'all 0.2s',
-                '&:hover': isPastDate ? {
-                    transform: 'scale(1.01)',
-                    bgcolor: theme => getStatusColor(dayData) === 'transparent'
-                        ? theme.palette.action.hover
-                        : getStatusColor(dayData),
-                } : {}
-            }}
-        >
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <Typography
-                    variant="subtitle2"
-                    sx={{
-                        fontWeight: isCurrentDay ? 'bold' : 'medium',
-                        color: isCurrentDay ? 'primary.main' : 'text.primary'
-                    }}
-                >
-                    {format(day, 'EEE, MMM d')}
-                </Typography>
-
-                {attendanceInfo && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
-                        <attendanceInfo.icon size={16} />
-                        <Typography variant="body2">
-                            {attendanceInfo.label}
-                            {attendanceInfo.subLabel && ` - ${attendanceInfo.subLabel}`}
-                        </Typography>
-                        {attendanceInfo.time && (
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    ml: 'auto',
-                                    bgcolor: 'background.paper',
-                                    px: 1,
-                                    py: 0.5,
-                                    borderRadius: 1,
-                                    border: '1px solid',
-                                    borderColor: 'divider'
-                                }}
-                            >
-                                {attendanceInfo.time}
-                            </Typography>
-                        )}
-                    </Box>
-                )}
-            </Box>
-        </Box>
-    );
-
-    const DesktopCalendarDay = ({ day, dayData, attendanceInfo, isCurrentDay, isCurrentMonth, isPastDate }) => (
-        <Box
-            onClick={() => isPastDate && onDateSelect(day, dayData?.attendance)}
-            sx={{
-                position: 'relative',
-                pt: '100%',
-                bgcolor: getStatusColor(dayData),
-                opacity: isCurrentMonth ? 1 : 0.5,
-                cursor: isPastDate ? 'pointer' : 'default',
-                border: isCurrentDay ? '2px solid' : '1px solid',
-                borderColor: isCurrentDay ? 'primary.main' : 'divider',
-                transition: 'all 0.2s',
-                '&:hover': isPastDate ? {
-                    transform: 'scale(1.02)',
-                    bgcolor: theme => getStatusColor(dayData) === 'transparent'
-                        ? theme.palette.action.hover
-                        : getStatusColor(dayData),
-                } : {}
-            }}
-        >
+    const MobileCalendarDay = ({ day, dayData, attendanceInfo, isCurrentDay, isCurrentMonth, isPastDate }) => {
+        // Special handling for today
+        const showTodayInfo = isCurrentDay && todaysAttendance;
+        
+        return (
             <Box
+                onClick={() => {
+                    if (isPastDate) {
+                        if (isCurrentDay && todaysAttendance) {
+                            onDateSelect(day, todaysAttendance);
+                        } else if (dayData?.attendance) {
+                            onDateSelect(day, dayData.attendance);
+                        } else {
+                            onDateSelect(day, null);
+                        }
+                    }
+                }}
                 sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    p: 1,
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center'
+                    p: 2,
+                    bgcolor: showTodayInfo ? '#E8F5E9' : getStatusColor(dayData),
+                    opacity: isCurrentMonth ? 1 : 0.5,
+                    cursor: isPastDate ? 'pointer' : 'default',
+                    border: '1px solid',
+                    borderColor: isCurrentDay ? 'primary.main' : 'divider',
+                    borderWidth: isCurrentDay ? 2 : 1,
+                    borderRadius: 1,
+                    mb: 1,
+                    transition: 'all 0.2s',
+                    '&:hover': isPastDate ? {
+                        transform: 'scale(1.01)',
+                        bgcolor: theme => getStatusColor(dayData) === 'transparent'
+                            ? theme.palette.action.hover
+                            : getStatusColor(dayData),
+                    } : {}
                 }}
             >
-                <Typography
-                    variant="caption"
+                <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <Typography
+                        variant="subtitle2"
+                        sx={{
+                            fontWeight: isCurrentDay ? 'bold' : 'medium',
+                            color: isCurrentDay ? 'primary.main' : 'text.primary'
+                        }}
+                    >
+                        {format(day, 'EEE, MMM d')}
+                    </Typography>
+
+                    {(attendanceInfo || showTodayInfo) && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 1 }}>
+                            {showTodayInfo ? (
+                                <>
+                                    <Clock size={16} />
+                                    <Typography variant="body2">
+                                        {todaysAttendance.status}
+                                        {todaysAttendance.approvalStatus && ` - ${todaysAttendance.approvalStatus}`}
+                                    </Typography>
+                                    {todaysAttendance.clockIn && (
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                ml: 'auto',
+                                                bgcolor: 'background.paper',
+                                                px: 1,
+                                                py: 0.5,
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor: 'divider'
+                                            }}
+                                        >
+                                            {new Date(todaysAttendance.clockIn).toLocaleTimeString('en-US', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                timeZone: timezone
+                                            })}
+                                        </Typography>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <attendanceInfo.icon size={16} />
+                                    <Typography variant="body2">
+                                        {attendanceInfo.label}
+                                        {attendanceInfo.subLabel && ` - ${attendanceInfo.subLabel}`}
+                                    </Typography>
+                                    {attendanceInfo.time && (
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                ml: 'auto',
+                                                bgcolor: 'background.paper',
+                                                px: 1,
+                                                py: 0.5,
+                                                borderRadius: 1,
+                                                border: '1px solid',
+                                                borderColor: 'divider'
+                                            }}
+                                        >
+                                            {attendanceInfo.time}
+                                        </Typography>
+                                    )}
+                                </>
+                            )}
+                        </Box>
+                    )}
+                </Box>
+            </Box>
+        );
+    };
+
+    const DesktopCalendarDay = ({ day, dayData, attendanceInfo, isCurrentDay, isCurrentMonth, isPastDate }) => {
+        // Special handling for today
+        const showTodayInfo = isCurrentDay && todaysAttendance;
+        
+        return (
+            <Box
+                onClick={() => {
+                    if (isPastDate) {
+                        if (isCurrentDay && todaysAttendance) {
+                            onDateSelect(day, todaysAttendance);
+                        } else if (dayData?.attendance) {
+                            onDateSelect(day, dayData.attendance);
+                        } else {
+                            onDateSelect(day, null);
+                        }
+                    }
+                }}
+                sx={{
+                    position: 'relative',
+                    pt: '100%',
+                    bgcolor: showTodayInfo ? '#E8F5E9' : getStatusColor(dayData),
+                    opacity: isCurrentMonth ? 1 : 0.5,
+                    cursor: isPastDate ? 'pointer' : 'default',
+                    border: isCurrentDay ? '2px solid' : '1px solid',
+                    borderColor: isCurrentDay ? 'primary.main' : 'divider',
+                    transition: 'all 0.2s',
+                    '&:hover': isPastDate ? {
+                        transform: 'scale(1.02)',
+                        bgcolor: theme => getStatusColor(dayData) === 'transparent'
+                            ? theme.palette.action.hover
+                            : getStatusColor(dayData),
+                    } : {}
+                }}
+            >
+                <Box
                     sx={{
                         position: 'absolute',
-                        top: 4,
-                        left: 4,
-                        fontWeight: isCurrentDay ? 'bold' : 'medium',
-                        color: isCurrentDay ? 'primary.main' : 'text.primary'
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        p: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center'
                     }}
                 >
-                    {format(day, 'd')}
-                </Typography>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            position: 'absolute',
+                            top: 4,
+                            left: 4,
+                            fontWeight: isCurrentDay ? 'bold' : 'medium',
+                            color: isCurrentDay ? 'primary.main' : 'text.primary'
+                        }}
+                    >
+                        {format(day, 'd')}
+                    </Typography>
 
-                {attendanceInfo && (
-                    <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                        <attendanceInfo.icon size={16} />
-                        <Typography variant="caption" sx={{ textAlign: 'center', lineHeight: 1.2 }}>
-                            {attendanceInfo.label}
-                        </Typography>
-                        {attendanceInfo.subLabel && (
+                    {showTodayInfo ? (
+                        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                            <Clock size={16} />
                             <Typography variant="caption" sx={{ textAlign: 'center', lineHeight: 1.2 }}>
-                                {attendanceInfo.subLabel}
+                                {todaysAttendance.status}
                             </Typography>
-                        )}
-                        {attendanceInfo.time && (
-                            <Box sx={{
-                                mt: 0.5,
-                                px: 1,
-                                py: 0.25,
-                                bgcolor: 'background.paper',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                borderRadius: 4,
-                                fontSize: '0.75rem'
-                            }}>
-                                {attendanceInfo.time}
-                            </Box>
-                        )}
-                    </Box>
-                )}
+                            {todaysAttendance.approvalStatus && (
+                                <Typography variant="caption" sx={{ textAlign: 'center', lineHeight: 1.2 }}>
+                                    {todaysAttendance.approvalStatus}
+                                </Typography>
+                            )}
+                            {todaysAttendance.clockIn && (
+                                <Box sx={{
+                                    mt: 0.5,
+                                    px: 1,
+                                    py: 0.25,
+                                    bgcolor: 'background.paper',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 4,
+                                    fontSize: '0.75rem'
+                                }}>
+                                    {new Date(todaysAttendance.clockIn).toLocaleTimeString('en-US', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        timeZone: timezone
+                                    })}
+                                </Box>
+                            )}
+                        </Box>
+                    ) : attendanceInfo && (
+                        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                            <attendanceInfo.icon size={16} />
+                            <Typography variant="caption" sx={{ textAlign: 'center', lineHeight: 1.2 }}>
+                                {attendanceInfo.label}
+                            </Typography>
+                            {attendanceInfo.subLabel && (
+                                <Typography variant="caption" sx={{ textAlign: 'center', lineHeight: 1.2 }}>
+                                    {attendanceInfo.subLabel}
+                                </Typography>
+                            )}
+                            {attendanceInfo.time && (
+                                <Box sx={{
+                                    mt: 0.5,
+                                    px: 1,
+                                    py: 0.25,
+                                    bgcolor: 'background.paper',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 4,
+                                    fontSize: '0.75rem'
+                                }}>
+                                    {attendanceInfo.time}
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+                </Box>
             </Box>
-        </Box>
-    );
+        );
+    };
+
     return (
         <Paper elevation={1} sx={{ p: 3, maxWidth: '100%', overflow: 'hidden' }}>
             {/* Calendar Header */}
@@ -361,7 +562,7 @@ const AttendanceCalendar = ({ onDateSelect }) => {
             {isMobile ? (
                 <Box sx={{ mt: 2 }}>
                     {calendarDays.map((day, index) => {
-                        const dateStr = format(day, 'yyyy-MM-dd');
+                        const dateStr = formatDateForTimezone(day, timezone);
                         const dayData = attendanceData[dateStr];
                         const attendanceInfo = getAttendanceInfo(day);
                         const isCurrentDay = isToday(day);
@@ -411,7 +612,7 @@ const AttendanceCalendar = ({ onDateSelect }) => {
                     ))}
 
                     {calendarDays.map((day, index) => {
-                        const dateStr = format(day, 'yyyy-MM-dd');
+                        const dateStr = formatDateForTimezone(day, timezone);
                         const dayData = attendanceData[dateStr];
                         const attendanceInfo = getAttendanceInfo(day);
                         const isCurrentDay = isToday(day);
@@ -434,5 +635,6 @@ const AttendanceCalendar = ({ onDateSelect }) => {
             )}
         </Paper>
     );
-}
+};
+
 export default AttendanceCalendar;

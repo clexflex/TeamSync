@@ -14,7 +14,8 @@ import { Menu as MenuIcon, Dashboard as DashboardIcon, Group as GroupIcon,
          NotificationsActive as CreateNotificationIcon,
          AccessTime,
          Timelapse,
-         RestoreRounded} from '@mui/icons-material';
+         RestoreRounded,
+         DownloadForOffline} from '@mui/icons-material';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
@@ -44,6 +45,7 @@ const AdminDashboard = () => {
     { text: 'Notifications', icon: <NotificationsIcon />, path: '/admin-dashboard/notifications' },
     { text: 'Create Notification', icon: <CreateNotificationIcon />, path: '/admin-dashboard/create-notification' },
     { text: 'Attendance Management',icon: <RestoreRounded />, path: '/admin-dashboard/attendance-management'},
+    { text: 'Salary Export', icon: <DownloadForOffline />, path: '/admin-dashboard/salary/export' },
 
   ];
 

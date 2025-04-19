@@ -14,23 +14,40 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 
-const TaskDetailsModal = ({ open, onClose, attendanceRecord }) => {
+const TaskDetailsModal = ({ open, onClose, attendanceRecord, userTimezone }) => {
   if (!attendanceRecord) return null;
 
+  // Use browser timezone as fallback
+  const timezone = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: timezone // Use the user's timezone for displaying time
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid Time';
+    }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: timezone // Use the user's timezone for displaying date
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
 
   const getStatusColor = (status) => {

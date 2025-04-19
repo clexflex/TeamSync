@@ -19,6 +19,7 @@ import userProfileRouter from './routes/userProfile.js';
 import documentRouter from './routes/document.js';
 import ticketRouter from './routes/ticket.js';
 import resignationRouter from './routes/resignation.js';
+import salaryExportRouter from './routes/salaryExport.js';
 import path from 'path';
 import http from 'http';
 import setupSocket from './socket.js';
@@ -94,6 +95,7 @@ app.use('/api/tickets', ticketRouter);
 app.use('/api/resignation', resignationRouter);
 app.use('/api/notifications', notificationRouter);
 app.use('/api/seed-admin', seedAdminRouter);
+app.use('/api/salary-export', salaryExportRouter);
 
 
 // Setup cron jobs
