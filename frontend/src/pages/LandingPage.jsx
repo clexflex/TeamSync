@@ -20,7 +20,9 @@ import {
 } from '@mui/icons-material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContext';
-
+import { Helmet } from 'react-helmet-async';
+import { useCallback } from 'react';
+import DevSignature from '../components/shared/DevSignature';
 // Core features of TeamSync
 const coreFeatures = [
   {
@@ -77,7 +79,8 @@ const LandingPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [currentSection, setCurrentSection] = useState('hero');
-  
+  const [devSignatureOpen, setDevSignatureOpen] = useState(false);
+const [keySequence, setKeySequence] = useState([]);
   // Handle scroll events for navbar appearance and section detection
   useEffect(() => {
     const handleScroll = () => {
@@ -105,7 +108,44 @@ const LandingPage = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+  useEffect(() => {
+    const keyHandler = (e) => {
+      // Only capture alphabetic keys
+      if (!/^[a-zA-Z]$/.test(e.key)) return;
+      
+      const newSequence = [...keySequence, e.key.toLowerCase()];
+      // Keep only the last 8 keys (length of "clexflex")
+      if (newSequence.length > 8) newSequence.shift();
+      setKeySequence(newSequence);
+      
+      // Check if the sequence spells "clexflex"
+      const targetSequence = ['c', 'l', 'e', 'x', 'f', 'l', 'e', 'x'];
+      if (JSON.stringify(newSequence) === JSON.stringify(targetSequence)) {
+        setDevSignatureOpen(true);
+      }
+    };
+    
+    window.addEventListener('keydown', keyHandler);
+    return () => window.removeEventListener('keydown', keyHandler);
+  }, [keySequence]);
+  // Add this to your existing main useEffect in LandingPage.jsx
+useEffect(() => {
+  // Existing code...
   
+  // Console signature
+  console.log(`
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║                                                                  ║
+  ║   TeamSync EMS - The Complete HR Solution for MMR                ║
+  ║                                                                  ║
+  ║   Designed & Developed by Yashraj Ghosalkar                      ║
+  ║   GitHub: https://github.com/clexflex                            ║
+  ║                                                                  ║
+  ║   Try typing 'clexflex' anywhere on this page for a surprise!    ║
+  ║                                                                  ║
+  ╚══════════════════════════════════════════════════════════════════╝
+  `);
+}, []);
   // Determine which dashboard to navigate to based on user role
   const navigateToDashboard = () => {
     if (!user) {
@@ -140,6 +180,7 @@ const LandingPage = () => {
   const navItems = [
     { name: 'Features', href: '#features' },
     { name: 'Platform', href: '#platform' },
+    { name: 'About', href: '/about' },
     { name: 'Roles', href: '#roles' },
     { name: 'Documentation', href: '/documentation' }
   ];
@@ -244,6 +285,59 @@ const LandingPage = () => {
 
   return (
     <Box sx={{ overflow: 'hidden' }}>
+       <Helmet>
+              <title>TeamSync - Employee Management System for Maximize Market Research</title>
+              <meta name="description" content="TeamSync EMS streamlines workforce management for Maximize Market Research with attendance tracking, leave management, payroll processing, and more." />
+              <meta name="keywords" content="employee management system, EMS, Maximize Market Research,Maximize Market Research EMS, MMR EMS, MMR attendance tracking,MMR leave management,MMR payroll system, HR software MMR, workforce management by yashraj, Employee Management System Yashraj" />
+              
+              {/* Canonical URL */}
+              <link rel="canonical" href="https://mmrems.com" />
+              
+              {/* Open Graph tags for social sharing */}
+              <meta property="og:type" content="website" />
+              <meta property="og:title" content="TeamSync - Complete Employee Management System for MMR" />
+              <meta property="og:description" content="Streamline workforce management at Maximize Market Research with TeamSync's comprehensive suite of HR tools." />
+              <meta property="og:url" content="https://mmrems.com" />
+              <meta property="og:image" content="https://mmrems.com/images/teamsync-preview.png" />
+              
+              {/* Twitter card */}
+              <meta name="twitter:card" content="summary_large_image" />
+              <meta name="twitter:title" content="TeamSync EMS - Maximize Market Research" />
+              <meta name="twitter:description" content="All-in-one employee management solution designed for Maximize Market Research." />
+              <meta name="twitter:image" content="https://mmrems.com/images/teamsync-preview.png" />
+              
+              {/* Structured data using JSON-LD */}
+              <script type="application/ld+json">
+                {`
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "SoftwareApplication",
+                    "name": "TeamSync EMS",
+                    "applicationCategory": "BusinessApplication",
+                    "operatingSystem": "Web",
+                    "offers": {
+                      "@type": "Offer",
+                      "price": "0",
+                      "priceCurrency": "USD"
+                    },
+                    "description": "Comprehensive Employee Management System for Maximize Market Research",
+                    "keywords": "attendance tracking, leave management, payroll, employee management",
+                    "author": {
+                      "@type": "Person",
+                      "name": "Yashraj Ghosalkar"
+                    },
+                    "publisher": {
+                      "@type": "Organization",
+                      "name": "Maximize Market Research",
+                      "logo": {
+                        "@type": "ImageObject",
+                        "url": "https://mmrems.com/images/mmr-logo.png"
+                      }
+                    }
+                  }
+                `}
+              </script>
+            </Helmet>
       {/* Header/Navbar */}
       <AppBar 
         position="fixed" 
@@ -555,7 +649,7 @@ const LandingPage = () => {
                         fontSize: { xs: '2.5rem', sm: '3rem', md: '3.75rem' }
                       }}
                     >
-                      Streamline Your Workforce Management
+TeamSync: Employee Management System for Maximize Market Research
                     </Typography>
                     <Typography 
                       variant="h5" 
@@ -568,8 +662,8 @@ const LandingPage = () => {
                         opacity: 0.9
                       }}
                     >
-                      A powerful platform designed for Maximize Market Research to simplify attendance tracking, leave management, and salary processing.
-                    </Typography>
+  A complete platform designed specifically for Maximize Market Research to streamline attendance tracking, leave management, and salary processing with built-in analytics.
+  </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                       <Button
                         variant="contained"
@@ -1450,7 +1544,59 @@ const LandingPage = () => {
           </Grid>
         </Container>
       </Box>
+      {/* Add this section to LandingPage.jsx before the CTA section */}
+<Box 
+  sx={{ 
+    py: { xs: 10, md: 14 },
+    bgcolor: '#f8f9fa'
+  }}
+>
+  <Container maxWidth="lg">
+    <Typography 
+      variant="h4" 
+      component="h2" 
+      fontWeight={700}
+      textAlign="center"
+      sx={{ mb: 8 }}
+    >
+      Why Choose TeamSync for Your Employee Management Needs
+    </Typography>
+    
+    <Grid container spacing={6}>
+      <Grid item xs={12} md={6}>
+        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
+          Built Specifically for Maximize Market Research
+        </Typography>
+        <Typography variant="body1" paragraph>
+          TeamSync is not a generic solution - it's tailored to the unique workflows and requirements of Maximize Market Research. Every feature has been designed with MMR's specific processes in mind.
+        </Typography>
+        
+        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
+          Comprehensive Attendance Management
+        </Typography>
+        <Typography variant="body1" paragraph>
+          Track attendance with geolocation verification, automated time calculations, leave integration, and detailed reporting. The system automatically accounts for weekends, holidays, and approved leaves.
+        </Typography>
+      </Grid>
       
+      <Grid item xs={12} md={6}>
+        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
+          Integrated Leave & Salary Processing
+        </Typography>
+        <Typography variant="body1" paragraph>
+          The leave management system integrates directly with attendance tracking and payroll processing. Leave balances are automatically updated, and salary calculations take attendance and leaves into account.
+        </Typography>
+        
+        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
+          Role-Based Access for Everyone
+        </Typography>
+        <Typography variant="body1" paragraph>
+          Whether you're an admin managing the entire organization, a team manager overseeing your department, or an employee tracking your own records, TeamSync provides the perfect interface tailored to your needs.
+        </Typography>
+      </Grid>
+    </Grid>
+  </Container>
+</Box>
       {/* CTA Section */}
       <Box 
         sx={{ 
@@ -1504,38 +1650,95 @@ const LandingPage = () => {
       </Box>
       
       {/* Footer */}
-      <Box 
-        component="footer" 
-        sx={{ 
-          py: 6,
-          bgcolor: 'background.paper',
+<Box 
+  component="footer" 
+  sx={{ 
+    py: 6,
+    bgcolor: 'background.paper',
+    borderTop: '1px solid',
+    borderColor: 'divider'
+  }}
+>
+  <Container maxWidth="lg">
+    <Grid container spacing={4} alignItems="center">
+      <Grid item xs={12} md={6}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <CompanyIcon sx={{ mr: 1.5, fontSize: 28, color: 'primary.main' }} />
+          <Typography variant="h6" component="div" fontWeight={600}>
+            TeamSync
+          </Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          The complete workforce management solution for Maximize Market Research.
+        </Typography>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+          <Typography variant="body2" color="text.secondary">
+            © {new Date().getFullYear()} Maximize Market Research Pvt. Ltd. All rights reserved.
+          </Typography>
+        </Box>
+      </Grid>
+      
+      {/* Developer Signature */}
+      <Grid item xs={12}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          mt: 2,
+          pt: 2,
           borderTop: '1px solid',
-          borderColor: 'divider'
-        }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CompanyIcon sx={{ mr: 1.5, fontSize: 28, color: 'primary.main' }} />
-                <Typography variant="h6" component="div" fontWeight={600}>
-                  TeamSync
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                The complete workforce management solution for Maximize Market Research.
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-                <Typography variant="body2" color="text.secondary">
-                  © {new Date().getFullYear()} Maximize Market Research Pvt. Ltd. All rights reserved.
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
+          borderColor: 'divider',
+          opacity: 0.6
+        }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+            Crafted with
+            <Box 
+              component="span" 
+              sx={{ 
+                display: 'inline-flex', 
+                mx: 0.5, 
+                color: 'error.main',
+                animation: 'pulse 1.5s infinite',
+                '@keyframes pulse': {
+                  '0%': { opacity: 0.6 },
+                  '50%': { opacity: 1 },
+                  '100%': { opacity: 0.6 }
+                }
+              }}
+            >
+              ❤️
+            </Box>
+            by <Box 
+              component="a" 
+              href="https://github.com/clexflex" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              sx={{ 
+                ml: 0.5,
+                color: 'inherit', 
+                textDecoration: 'none',
+                borderBottom: '1px dotted',
+                borderColor: 'text.disabled',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  color: 'primary.main',
+                  borderColor: 'primary.main'
+                }
+              }}
+            >
+              Yashraj Ghosalkar
+            </Box>
+          </Typography>
+        </Box>
+      </Grid>
+    </Grid>
+  </Container>
+</Box>
+  <DevSignature 
+  open={devSignatureOpen} 
+  onClose={() => setDevSignatureOpen(false)} 
+/>
     </Box>
   );
 };

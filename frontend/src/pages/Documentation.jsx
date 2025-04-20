@@ -8464,16 +8464,6 @@ const sampleContent = {
     lastUpdated: "April 16, 2025",
     content: <Typography>Overview of leave system.</Typography>
   },
-  "leave-policies": {
-    title: "Leave Policies",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>Details about leave policies.</Typography>
-  },
-  "leave-application": {
-    title: "Leave Application Process",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>How to apply for leave.</Typography>
-  },
   "leave-approval": {
     title: "Leave Approval Workflow",
     lastUpdated: "April 16, 2025",
@@ -8502,17 +8492,6 @@ const sampleContent = {
     content: <Typography>Difference between holiday types.</Typography>
   },
 
-  // Salary
-  "salary-overview": {
-    title: "Salary Overview",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>Salary module overview.</Typography>
-  },
-  "salary-calculation": {
-    title: "Salary Calculation",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>How salary is calculated.</Typography>
-  },
   "salary-generation": {
     title: "Generating Salary Records",
     lastUpdated: "April 16, 2025",
@@ -8528,18 +8507,6 @@ const sampleContent = {
     lastUpdated: "April 16, 2025",
     content: <Typography>Download and view payslips.</Typography>
   },
-
-  // Documents
-  "document-overview": {
-    title: "Document Overview",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>Document module overview.</Typography>
-  },
-  "document-categories": {
-    title: "Document Categories",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>Types of document categories.</Typography>
-  },
   "uploading-documents": {
     title: "Uploading Documents",
     lastUpdated: "April 16, 2025",
@@ -8552,11 +8519,6 @@ const sampleContent = {
   },
 
   // Ticket
-  "ticket-overview": {
-    title: "Ticket Overview",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>Ticket module overview.</Typography>
-  },
   "creating-tickets": {
     title: "Creating Support Tickets",
     lastUpdated: "April 16, 2025",
@@ -8578,11 +8540,6 @@ const sampleContent = {
     title: "Resignation Overview",
     lastUpdated: "April 16, 2025",
     content: <Typography>Overview of resignation process.</Typography>
-  },
-  "resignation-process": {
-    title: "Resignation Process",
-    lastUpdated: "April 16, 2025",
-    content: <Typography>Steps to resign from organization.</Typography>
   },
   // Settings
   "account-settings": {

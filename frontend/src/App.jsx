@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
@@ -62,17 +63,21 @@ import RealTimeAttendanceForm from "./components/EmployeeDashboard/RealTimeAtten
 import LandingPage from "./pages/LandingPage";
 import Documentation from "./pages/Documentation";
 import SalaryExport from "./components/salary/SalaryExport";
+import AboutPage from "./pages/AboutPage";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
+
   return (
     <BrowserRouter>
+     <HelmetProvider>
       <NotificationProvider>
         <Routes>
           {/* <Route path="/" element={<Navigate to={DEFAULT_REDIRECT} />} /> */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/documentation" element={<Documentation />} />
+          <Route path="/about" element={<AboutPage />} />
           {/* Admin Dashboard */}
           <Route
             path="/admin-dashboard"
@@ -190,7 +195,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </NotificationProvider>
-
+      </HelmetProvider>
     </BrowserRouter>
   );
 }
