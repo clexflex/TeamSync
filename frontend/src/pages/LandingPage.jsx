@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, Container, Typography, Button, Grid, Card, CardContent, 
+import {
+  Box, Container, Typography, Button, Grid, Card, CardContent,
   AppBar, Toolbar, IconButton, useTheme, useMediaQuery,
-  Drawer, List, ListItem, ListItemText, Divider, 
+  Drawer, List, ListItem, ListItemText, Divider,
   Paper, Fade, Slide, Chip
 } from '@mui/material';
-import { 
+import {
   Menu as MenuIcon,
   Close as CloseIcon,
   AccessTime as TimeIcon,
@@ -75,28 +75,28 @@ const LandingPage = () => {
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [currentSection, setCurrentSection] = useState('hero');
   const [devSignatureOpen, setDevSignatureOpen] = useState(false);
-const [keySequence, setKeySequence] = useState([]);
+  const [keySequence, setKeySequence] = useState([]);
   // Handle scroll events for navbar appearance and section detection
   useEffect(() => {
     const handleScroll = () => {
       // Navbar appearance
       setScrolled(window.scrollY > 50);
-      
+
       // Section detection
       const sections = ['hero', 'features', 'roles', 'platform'];
       const currentPosition = window.scrollY + window.innerHeight / 2;
-      
+
       for (const section of sections) {
         const element = document.getElementById(section);
         if (element) {
           const { top, bottom } = element.getBoundingClientRect();
           const offset = element.offsetTop;
-          
+
           if (currentPosition >= offset && currentPosition <= offset + element.offsetHeight) {
             setCurrentSection(section);
             break;
@@ -104,55 +104,19 @@ const [keySequence, setKeySequence] = useState([]);
         }
       }
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  useEffect(() => {
-    const keyHandler = (e) => {
-      // Only capture alphabetic keys
-      if (!/^[a-zA-Z]$/.test(e.key)) return;
-      
-      const newSequence = [...keySequence, e.key.toLowerCase()];
-      // Keep only the last 8 keys (length of "clexflex")
-      if (newSequence.length > 8) newSequence.shift();
-      setKeySequence(newSequence);
-      
-      // Check if the sequence spells "clexflex"
-      const targetSequence = ['c', 'l', 'e', 'x', 'f', 'l', 'e', 'x'];
-      if (JSON.stringify(newSequence) === JSON.stringify(targetSequence)) {
-        setDevSignatureOpen(true);
-      }
-    };
-    
-    window.addEventListener('keydown', keyHandler);
-    return () => window.removeEventListener('keydown', keyHandler);
-  }, [keySequence]);
-  // Add this to your existing main useEffect in LandingPage.jsx
-useEffect(() => {
-  // Existing code...
-  
-  // Console signature
-  console.log(`
-  ╔══════════════════════════════════════════════════════════════════╗
-  ║                                                                  ║
-  ║   TeamSync EMS - The Complete HR Solution for MMR                ║
-  ║                                                                  ║
-  ║   Designed & Developed by Yashraj Ghosalkar                      ║
-  ║   GitHub: https://github.com/clexflex                            ║
-  ║                                                                  ║
-  ║   Try typing 'clexflex' anywhere on this page for a surprise!    ║
-  ║                                                                  ║
-  ╚══════════════════════════════════════════════════════════════════╝
-  `);
-}, []);
+
+
   // Determine which dashboard to navigate to based on user role
   const navigateToDashboard = () => {
     if (!user) {
       navigate('/login');
       return;
     }
-    
+
     switch (user.role) {
       case 'admin':
         navigate('/admin-dashboard');
@@ -167,7 +131,7 @@ useEffect(() => {
         navigate('/login');
     }
   };
-  
+
   // Redirect if user is already logged in and has accessed the app before
   useEffect(() => {
     const hasUsedApp = localStorage.getItem('hasUsedTeamSync');
@@ -175,7 +139,7 @@ useEffect(() => {
       navigateToDashboard();
     }
   }, [user]);
-  
+
   // Navigation items
   const navItems = [
     { name: 'Features', href: '#features' },
@@ -184,11 +148,11 @@ useEffect(() => {
     { name: 'Roles', href: '#roles' },
     { name: 'Documentation', href: '/documentation' }
   ];
-  
+
   // Core Feature Card Component
   const FeatureCard = ({ title, description, icon, color }) => (
-    <Card 
-      sx={{ 
+    <Card
+      sx={{
         height: '100%',
         borderRadius: 4,
         border: 'none',
@@ -205,8 +169,8 @@ useEffect(() => {
       }}
       elevation={0}
     >
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           position: 'absolute',
           top: -20,
           left: 20,
@@ -233,7 +197,7 @@ useEffect(() => {
       </CardContent>
     </Card>
   );
-  
+
   // Role Feature Item
   const RoleFeature = ({ icon, title, items, bgColor }) => (
     <Paper
@@ -267,11 +231,11 @@ useEffect(() => {
       </Box>
       <Box component="ul" sx={{ pl: 4, mb: 0 }}>
         {items.map((item, index) => (
-          <Typography 
-            component="li" 
-            variant="body1" 
-            key={index} 
-            sx={{ 
+          <Typography
+            component="li"
+            variant="body1"
+            key={index}
+            sx={{
               mb: 1.5,
               color: 'rgba(255, 255, 255, 0.9)'
             }}
@@ -285,30 +249,30 @@ useEffect(() => {
 
   return (
     <Box sx={{ overflow: 'hidden' }}>
-       <Helmet>
-              <title>TeamSync - Employee Management System for Maximize Market Research</title>
-              <meta name="description" content="TeamSync EMS streamlines workforce management for Maximize Market Research with attendance tracking, leave management, payroll processing, and more." />
-              <meta name="keywords" content="employee management system, EMS, Maximize Market Research,Maximize Market Research EMS, MMR EMS, MMR attendance tracking,MMR leave management,MMR payroll system, HR software MMR, workforce management by yashraj, Employee Management System Yashraj" />
-              
-              {/* Canonical URL */}
-              <link rel="canonical" href="https://mmrems.com" />
-              
-              {/* Open Graph tags for social sharing */}
-              <meta property="og:type" content="website" />
-              <meta property="og:title" content="TeamSync - Complete Employee Management System for MMR" />
-              <meta property="og:description" content="Streamline workforce management at Maximize Market Research with TeamSync's comprehensive suite of HR tools." />
-              <meta property="og:url" content="https://mmrems.com" />
-              <meta property="og:image" content="https://mmrems.com/images/teamsync-preview.png" />
-              
-              {/* Twitter card */}
-              <meta name="twitter:card" content="summary_large_image" />
-              <meta name="twitter:title" content="TeamSync EMS - Maximize Market Research" />
-              <meta name="twitter:description" content="All-in-one employee management solution designed for Maximize Market Research." />
-              <meta name="twitter:image" content="https://mmrems.com/images/teamsync-preview.png" />
-              
-              {/* Structured data using JSON-LD */}
-              <script type="application/ld+json">
-                {`
+      <Helmet>
+        <title>TeamSync - Employee Management System for Maximize Market Research</title>
+        <meta name="description" content="TeamSync EMS streamlines workforce management for Maximize Market Research with attendance tracking, leave management, payroll processing, and more." />
+        <meta name="keywords" content="employee management system, EMS, Maximize Market Research,Maximize Market Research EMS, MMR EMS, MMR attendance tracking,MMR leave management,MMR payroll system, HR software MMR, workforce management by yashraj, Employee Management System Yashraj" />
+
+        {/* Canonical URL */}
+        <link rel="canonical" href="https://mmrems.com" />
+
+        {/* Open Graph tags for social sharing */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="TeamSync - Complete Employee Management System for MMR" />
+        <meta property="og:description" content="Streamline workforce management at Maximize Market Research with TeamSync's comprehensive suite of HR tools." />
+        <meta property="og:url" content="https://mmrems.com" />
+        <meta property="og:image" content="https://mmrems.com/images/teamsync-preview.png" />
+
+        {/* Twitter card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="TeamSync EMS - Maximize Market Research" />
+        <meta name="twitter:description" content="All-in-one employee management solution designed for Maximize Market Research." />
+        <meta name="twitter:image" content="https://mmrems.com/images/teamsync-preview.png" />
+
+        {/* Structured data using JSON-LD */}
+        <script type="application/ld+json">
+          {`
                   {
                     "@context": "https://schema.org",
                     "@type": "SoftwareApplication",
@@ -336,13 +300,13 @@ useEffect(() => {
                     }
                   }
                 `}
-              </script>
-            </Helmet>
+        </script>
+      </Helmet>
       {/* Header/Navbar */}
-      <AppBar 
-        position="fixed" 
-        elevation={scrolled ? 1 : 0} 
-        sx={{ 
+      <AppBar
+        position="fixed"
+        elevation={scrolled ? 1 : 0}
+        sx={{
           backgroundColor: scrolled ? 'rgba(255, 255, 255, 0.9)' : 'transparent',
           backdropFilter: scrolled ? 'blur(20px)' : 'none',
           borderBottom: scrolled ? '1px solid rgba(0, 0, 0, 0.05)' : 'none',
@@ -351,18 +315,18 @@ useEffect(() => {
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar 
-            sx={{ 
-              py: { xs: 1.5, md: 1 }, 
+          <Toolbar
+            sx={{
+              py: { xs: 1.5, md: 1 },
               px: { xs: 1, md: 2 },
               justifyContent: 'space-between'
             }}
             disableGutters
           >
             {/* Logo */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
+            <Box
+              sx={{
+                display: 'flex',
                 alignItems: 'center',
                 cursor: 'pointer'
               }}
@@ -370,26 +334,26 @@ useEffect(() => {
               to="/"
               style={{ textDecoration: 'none', color: 'inherit' }}
             >
-              <CompanyIcon 
-                sx={{ 
-                  mr: 1.5, 
+              <CompanyIcon
+                sx={{
+                  mr: 1.5,
                   fontSize: 28,
                   color: scrolled ? 'primary.main' : 'white'
-                }} 
+                }}
               />
-              <Typography 
-                variant="h5" 
-                component="div" 
+              <Typography
+                variant="h5"
+                component="div"
                 fontWeight={600}
                 letterSpacing={-0.5}
-                sx={{ 
+                sx={{
                   color: scrolled ? 'text.primary' : 'white'
                 }}
               >
                 TeamSync
               </Typography>
             </Box>
-            
+
             {/* Desktop Navigation */}
             {!isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -398,7 +362,7 @@ useEffect(() => {
                     key={index}
                     component="a"
                     href={item.href}
-                    sx={{ 
+                    sx={{
                       mx: 1,
                       color: scrolled ? 'text.primary' : 'white',
                       fontWeight: 500,
@@ -413,14 +377,14 @@ useEffect(() => {
                     {item.name}
                   </Button>
                 ))}
-                
+
                 {user ? (
                   <Button
                     onClick={navigateToDashboard}
                     variant="contained"
                     disableElevation
-                    sx={{ 
-                      ml: 2, 
+                    sx={{
+                      ml: 2,
                       px: 3,
                       py: 1,
                       borderRadius: '12px',
@@ -442,8 +406,8 @@ useEffect(() => {
                     variant="contained"
                     disableElevation
                     startIcon={<LoginIcon />}
-                    sx={{ 
-                      ml: 2, 
+                    sx={{
+                      ml: 2,
                       px: 3,
                       py: 1,
                       borderRadius: '12px',
@@ -461,12 +425,12 @@ useEffect(() => {
                 )}
               </Box>
             )}
-            
+
             {/* Mobile Navigation Icon */}
             {isMobile && (
-              <IconButton 
-                edge="end" 
-                color="inherit" 
+              <IconButton
+                edge="end"
+                color="inherit"
                 aria-label="menu"
                 onClick={() => setMenuOpen(true)}
                 sx={{ p: 1 }}
@@ -477,23 +441,23 @@ useEffect(() => {
           </Toolbar>
         </Container>
       </AppBar>
-      
+
       {/* Mobile Menu Drawer */}
       <Drawer
         anchor="right"
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         PaperProps={{
-          sx: { 
-            width: '100%', 
+          sx: {
+            width: '100%',
             maxWidth: 350,
             px: 2
           }
         }}
       >
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           py: 2
         }}>
@@ -515,7 +479,7 @@ useEffect(() => {
               component="a"
               href={item.href}
               onClick={() => setMenuOpen(false)}
-              sx={{ 
+              sx={{
                 py: 2,
                 borderRadius: 2,
                 '&:hover': {
@@ -523,9 +487,9 @@ useEffect(() => {
                 }
               }}
             >
-              <ListItemText 
-                primary={item.name} 
-                primaryTypographyProps={{ 
+              <ListItemText
+                primary={item.name}
+                primaryTypographyProps={{
                   fontWeight: 500,
                   fontSize: '1.1rem'
                 }}
@@ -542,7 +506,7 @@ useEffect(() => {
                 variant="contained"
                 disableElevation
                 fullWidth
-                sx={{ 
+                sx={{
                   py: 1.5,
                   borderRadius: '12px',
                   textTransform: 'none',
@@ -559,7 +523,7 @@ useEffect(() => {
                 disableElevation
                 fullWidth
                 startIcon={<LoginIcon />}
-                sx={{ 
+                sx={{
                   py: 1.5,
                   borderRadius: '12px',
                   textTransform: 'none',
@@ -572,11 +536,11 @@ useEffect(() => {
           </ListItem>
         </List>
       </Drawer>
-      
+
       {/* Hero Section */}
-      <Box 
+      <Box
         id="hero"
-        sx={{ 
+        sx={{
           pt: { xs: 15, md: 20 },
           pb: { xs: 12, md: 16 },
           minHeight: '90vh',
@@ -591,7 +555,7 @@ useEffect(() => {
         }}
       >
         {/* Abstract shapes in background */}
-        <Box 
+        <Box
           sx={{
             position: 'absolute',
             top: 0,
@@ -622,55 +586,55 @@ useEffect(() => {
             }
           }}
         />
-        
+
         <Container maxWidth="lg">
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={7}>
               <Box sx={{ position: 'relative', zIndex: 1 }}>
                 <Fade in={true} timeout={1000}>
                   <Box>
-                    <Chip 
-                      label="Employee Management System" 
-                      sx={{ 
-                        mb: 3, 
-                        fontWeight: 500, 
+                    <Chip
+                      label="Employee Management System"
+                      sx={{
+                        mb: 3,
+                        fontWeight: 500,
                         color: 'white',
                         backgroundColor: 'rgba(255, 255, 255, 0.15)'
-                      }} 
+                      }}
                     />
-                    <Typography 
-                      component="h1" 
-                      variant="h2" 
-                      fontWeight={700} 
-                      sx={{ 
+                    <Typography
+                      component="h1"
+                      variant="h2"
+                      fontWeight={700}
+                      sx={{
                         mb: 3,
                         letterSpacing: '-1px',
                         lineHeight: 1.1,
                         fontSize: { xs: '2.5rem', sm: '3rem', md: '3.75rem' }
                       }}
                     >
-TeamSync: Employee Management System for Maximize Market Research
+                      TeamSync: Employee Management System for Maximize Market Research
                     </Typography>
-                    <Typography 
-                      variant="h5" 
-                      sx={{ 
-                        mb: 6, 
-                        fontWeight: 400, 
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        mb: 6,
+                        fontWeight: 400,
                         maxWidth: '85%',
                         lineHeight: 1.5,
                         fontSize: { xs: '1.1rem', sm: '1.25rem' },
                         opacity: 0.9
                       }}
                     >
-  A complete platform designed specifically for Maximize Market Research to streamline attendance tracking, leave management, and salary processing with built-in analytics.
-  </Typography>
+                      A complete platform designed specifically for Maximize Market Research to streamline attendance tracking, leave management, and salary processing with built-in analytics.
+                    </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                       <Button
                         variant="contained"
                         size="large"
                         onClick={navigateToDashboard}
-                        sx={{ 
-                          px: 4, 
+                        sx={{
+                          px: 4,
                           py: 1.5,
                           bgcolor: 'white',
                           color: 'primary.main',
@@ -690,8 +654,8 @@ TeamSync: Employee Management System for Maximize Market Research
                         size="large"
                         component={RouterLink}
                         to="/documentation"
-                        sx={{ 
-                          px: 4, 
+                        sx={{
+                          px: 4,
                           py: 1.5,
                           color: 'white',
                           borderColor: 'rgba(255, 255, 255, 0.5)',
@@ -712,11 +676,11 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Fade>
               </Box>
             </Grid>
-            
+
             <Grid item xs={12} md={5}>
               <Slide direction="left" in={true} timeout={700} mountOnEnter>
-                <Box 
-                  sx={{ 
+                <Box
+                  sx={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -753,8 +717,8 @@ TeamSync: Employee Management System for Maximize Market Research
                     }}
                   >
                     {/* This would be an image in a real implementation */}
-                    <Box 
-                      sx={{ 
+                    <Box
+                      sx={{
                         width: '100%',
                         height: '100%',
                         display: 'flex',
@@ -764,19 +728,19 @@ TeamSync: Employee Management System for Maximize Market Research
                       }}
                     >
                       {/* Header bar */}
-                      <Box sx={{ 
-                        bgcolor: 'primary.main', 
-                        color: 'white', 
+                      <Box sx={{
+                        bgcolor: 'primary.main',
+                        color: 'white',
                         p: 1.5,
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
                       }}>
                         <Typography variant="subtitle1" fontWeight={600}>TeamSync</Typography>
-                        <Box sx={{ 
-                          width: 32, 
-                          height: 32, 
-                          borderRadius: '50%', 
+                        <Box sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
                           bgcolor: 'rgba(255,255,255,0.2)',
                           display: 'flex',
                           alignItems: 'center',
@@ -786,17 +750,17 @@ TeamSync: Employee Management System for Maximize Market Research
                           U
                         </Box>
                       </Box>
-                      
+
                       {/* Dashboard content */}
                       <Box sx={{ flex: 1, p: 2, bgcolor: '#f8f9fa' }}>
                         <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Welcome, User</Typography>
-                        
+
                         {/* Cards */}
-                        <Box sx={{ 
-                          display: 'grid', 
-                          gridTemplateColumns: 'repeat(2, 1fr)', 
+                        <Box sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, 1fr)',
                           gap: 1.5,
-                          mb: 2 
+                          mb: 2
                         }}>
                           <Paper sx={{ p: 1.5, bgcolor: '#e3f2fd', borderRadius: 2 }}>
                             <Typography variant="caption" color="primary.dark">Attendance</Typography>
@@ -815,13 +779,13 @@ TeamSync: Employee Management System for Maximize Market Research
                             <Typography variant="h6" sx={{ mt: 0.5 }}>5 pending</Typography>
                           </Paper>
                         </Box>
-                        
+
                         {/* Activity */}
                         <Paper sx={{ p: 2, borderRadius: 2, mb: 1.5 }}>
                           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>Today's Activity</Typography>
-                          <Box sx={{ 
-                            height: 8, 
-                            borderRadius: 4, 
+                          <Box sx={{
+                            height: 8,
+                            borderRadius: 4,
                             bgcolor: '#e0e0e0',
                             position: 'relative',
                             overflow: 'hidden',
@@ -840,7 +804,7 @@ TeamSync: Employee Management System for Maximize Market Research
                             65% Complete
                           </Typography>
                         </Paper>
-                        
+
                         {/* Quick Access */}
                         <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>Quick Access</Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -855,23 +819,23 @@ TeamSync: Employee Management System for Maximize Market Research
               </Slide>
             </Grid>
           </Grid>
-          
+
           {/* Core Features Preview */}
           <Box sx={{ mt: { xs: 10, md: 16 }, textAlign: 'center' }}>
-            <Typography 
-              variant="h3" 
-              fontWeight={700} 
-              sx={{ 
+            <Typography
+              variant="h3"
+              fontWeight={700}
+              sx={{
                 mb: 1.5,
                 fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' }
               }}
             >
               Everything You Need
             </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                mb: 6, 
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 6,
                 opacity: 0.9,
                 maxWidth: 700,
                 mx: 'auto',
@@ -880,10 +844,10 @@ TeamSync: Employee Management System for Maximize Market Research
             >
               The complete solution for workforce management at Maximize Market Research
             </Typography>
-            
+
             <Grid container spacing={3} justifyContent="center">
               <Grid item xs={6} sm={4} md={2}>
-                <Box sx={{ 
+                <Box sx={{
                   textAlign: 'center',
                   transition: 'transform 0.3s',
                   '&:hover': { transform: 'translateY(-5px)' }
@@ -910,7 +874,7 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Box>
               </Grid>
               <Grid item xs={6} sm={4} md={2}>
-                <Box sx={{ 
+                <Box sx={{
                   textAlign: 'center',
                   transition: 'transform 0.3s',
                   '&:hover': { transform: 'translateY(-5px)' }
@@ -937,7 +901,7 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Box>
               </Grid>
               <Grid item xs={6} sm={4} md={2}>
-                <Box sx={{ 
+                <Box sx={{
                   textAlign: 'center',
                   transition: 'transform 0.3s',
                   '&:hover': { transform: 'translateY(-5px)' }
@@ -964,7 +928,7 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Box>
               </Grid>
               <Grid item xs={6} sm={4} md={2}>
-                <Box sx={{ 
+                <Box sx={{
                   textAlign: 'center',
                   transition: 'transform 0.3s',
                   '&:hover': { transform: 'translateY(-5px)' }
@@ -991,7 +955,7 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Box>
               </Grid>
               <Grid item xs={6} sm={4} md={2}>
-                <Box sx={{ 
+                <Box sx={{
                   textAlign: 'center',
                   transition: 'transform 0.3s',
                   '&:hover': { transform: 'translateY(-5px)' }
@@ -1021,22 +985,22 @@ TeamSync: Employee Management System for Maximize Market Research
           </Box>
         </Container>
       </Box>
-      
+
       {/* Features Section */}
-      <Box 
-        id="features" 
-        sx={{ 
+      <Box
+        id="features"
+        sx={{
           py: { xs: 10, md: 14 },
           backgroundColor: 'background.default'
         }}
       >
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography 
-              variant="overline" 
+            <Typography
+              variant="overline"
               component="p"
-              sx={{ 
-                color: 'primary.main', 
+              sx={{
+                color: 'primary.main',
                 fontWeight: 600,
                 letterSpacing: 2,
                 mb: 1
@@ -1044,18 +1008,18 @@ TeamSync: Employee Management System for Maximize Market Research
             >
               CORE FEATURES
             </Typography>
-            <Typography 
-              variant="h3" 
-              component="h2" 
+            <Typography
+              variant="h3"
+              component="h2"
               fontWeight={700}
               sx={{ mb: 2 }}
             >
               Powerful Tools for Your Team
             </Typography>
-            <Typography 
-              variant="body1" 
+            <Typography
+              variant="body1"
               color="text.secondary"
-              sx={{ 
+              sx={{
                 maxWidth: 700,
                 mx: 'auto',
                 fontSize: '1.1rem',
@@ -1065,11 +1029,11 @@ TeamSync: Employee Management System for Maximize Market Research
               TeamSync provides comprehensive tools to streamline HR processes, boost productivity, and enhance collaboration.
             </Typography>
           </Box>
-          
+
           <Grid container spacing={4} justifyContent="center">
             {coreFeatures.map((feature, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
-                <FeatureCard 
+                <FeatureCard
                   title={feature.title}
                   description={feature.description}
                   icon={feature.icon}
@@ -1080,11 +1044,11 @@ TeamSync: Employee Management System for Maximize Market Research
           </Grid>
         </Container>
       </Box>
-      
+
       {/* Roles Section */}
-      <Box 
-        id="roles" 
-        sx={{ 
+      <Box
+        id="roles"
+        sx={{
           py: { xs: 10, md: 14 },
           bgcolor: '#f5f7fa',
           position: 'relative',
@@ -1093,11 +1057,11 @@ TeamSync: Employee Management System for Maximize Market Research
       >
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography 
-              variant="overline" 
+            <Typography
+              variant="overline"
               component="p"
-              sx={{ 
-                color: 'primary.main', 
+              sx={{
+                color: 'primary.main',
                 fontWeight: 600,
                 letterSpacing: 2,
                 mb: 1
@@ -1105,18 +1069,18 @@ TeamSync: Employee Management System for Maximize Market Research
             >
               TAILORED FOR EVERYONE
             </Typography>
-            <Typography 
-              variant="h3" 
-              component="h2" 
+            <Typography
+              variant="h3"
+              component="h2"
               fontWeight={700}
               sx={{ mb: 2 }}
             >
               Role-Based Experience
             </Typography>
-            <Typography 
-              variant="body1" 
+            <Typography
+              variant="body1"
               color="text.secondary"
-              sx={{ 
+              sx={{
                 maxWidth: 700,
                 mx: 'auto',
                 fontSize: '1.1rem',
@@ -1126,7 +1090,7 @@ TeamSync: Employee Management System for Maximize Market Research
               TeamSync adapts to different roles with customized interfaces and permissions for administrators, managers, and employees.
             </Typography>
           </Box>
-          
+
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
               <RoleFeature
@@ -1179,22 +1143,22 @@ TeamSync: Employee Management System for Maximize Market Research
           </Grid>
         </Container>
       </Box>
-      
+
       {/* Platform Overview */}
-      <Box 
-        id="platform" 
-        sx={{ 
+      <Box
+        id="platform"
+        sx={{
           py: { xs: 10, md: 14 }
         }}
       >
         <Container maxWidth="lg">
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Typography 
-                variant="overline" 
+              <Typography
+                variant="overline"
                 component="p"
-                sx={{ 
-                  color: 'primary.main', 
+                sx={{
+                  color: 'primary.main',
                   fontWeight: 600,
                   letterSpacing: 2,
                   mb: 1
@@ -1202,18 +1166,18 @@ TeamSync: Employee Management System for Maximize Market Research
               >
                 THE COMPLETE PLATFORM
               </Typography>
-              <Typography 
-                variant="h3" 
-                component="h2" 
+              <Typography
+                variant="h3"
+                component="h2"
                 fontWeight={700}
                 sx={{ mb: 3 }}
               >
                 Designed for Maximize Market Research
               </Typography>
-              <Typography 
-                variant="body1" 
+              <Typography
+                variant="body1"
                 color="text.secondary"
-                sx={{ 
+                sx={{
                   mb: 4,
                   fontSize: '1.1rem',
                   lineHeight: 1.7
@@ -1221,16 +1185,16 @@ TeamSync: Employee Management System for Maximize Market Research
               >
                 TeamSync is tailored to the specific needs of Maximize Market Research, integrating seamlessly with your existing workflows and enhancing organizational efficiency.
               </Typography>
-              
+
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', mb: 3 }}>
-                    <Box 
-                      sx={{ 
-                        minWidth: 48, 
-                        height: 48, 
-                        borderRadius: 2, 
-                        bgcolor: '#e3f2fd', 
+                    <Box
+                      sx={{
+                        minWidth: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: '#e3f2fd',
                         color: 'primary.main',
                         display: 'flex',
                         alignItems: 'center',
@@ -1252,12 +1216,12 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', mb: 3 }}>
-                    <Box 
-                      sx={{ 
-                        minWidth: 48, 
-                        height: 48, 
-                        borderRadius: 2, 
-                        bgcolor: '#fff8e1', 
+                    <Box
+                      sx={{
+                        minWidth: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: '#fff8e1',
                         color: '#f57f17',
                         display: 'flex',
                         alignItems: 'center',
@@ -1279,12 +1243,12 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', mb: 3 }}>
-                    <Box 
-                      sx={{ 
-                        minWidth: 48, 
-                        height: 48, 
-                        borderRadius: 2, 
-                        bgcolor: '#fce4ec', 
+                    <Box
+                      sx={{
+                        minWidth: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: '#fce4ec',
                         color: '#d81b60',
                         display: 'flex',
                         alignItems: 'center',
@@ -1306,12 +1270,12 @@ TeamSync: Employee Management System for Maximize Market Research
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: 'flex', mb: 3 }}>
-                    <Box 
-                      sx={{ 
-                        minWidth: 48, 
-                        height: 48, 
-                        borderRadius: 2, 
-                        bgcolor: '#e8f5e9', 
+                    <Box
+                      sx={{
+                        minWidth: 48,
+                        height: 48,
+                        borderRadius: 2,
+                        bgcolor: '#e8f5e9',
                         color: '#388e3c',
                         display: 'flex',
                         alignItems: 'center',
@@ -1332,16 +1296,16 @@ TeamSync: Employee Management System for Maximize Market Research
                   </Box>
                 </Grid>
               </Grid>
-              
+
               <Button
                 variant="contained"
                 size="large"
                 onClick={navigateToDashboard}
                 disableElevation
-                sx={{ 
+                sx={{
                   mt: 4,
                   px: 4,
-                  py: 1.5, 
+                  py: 1.5,
                   borderRadius: 3,
                   textTransform: 'none',
                   fontWeight: 600,
@@ -1351,7 +1315,7 @@ TeamSync: Employee Management System for Maximize Market Research
                 {user ? 'Go to Dashboard' : 'Get Started'} <ArrowIcon sx={{ ml: 1 }} />
               </Button>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               {/* Platform features visualization - Could be a statistics dashboard image */}
               <Box sx={{ position: 'relative' }}>
@@ -1381,7 +1345,7 @@ TeamSync: Employee Management System for Maximize Market Research
                     <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
                       Admin Dashboard
                     </Typography>
-                    
+
                     {/* Mock statistics overview */}
                     <Grid container spacing={2} sx={{ mb: 4 }}>
                       <Grid item xs={6} sm={3}>
@@ -1410,17 +1374,17 @@ TeamSync: Employee Management System for Maximize Market Research
                       </Grid>
                     </Grid>
                   </Box>
-                  
+
                   {/* Mock chart section */}
                   <Box sx={{ mb: 4 }}>
                     <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
                       Attendance Overview
                     </Typography>
-                    <Paper 
-                      sx={{ 
-                        p: 2, 
-                        borderRadius: 2, 
-                        height: 200, 
+                    <Paper
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        height: 200,
                         bgcolor: '#f9f9f9',
                         display: 'flex',
                         flexDirection: 'column'
@@ -1447,7 +1411,7 @@ TeamSync: Employee Management System for Maximize Market Research
                       </Box>
                     </Paper>
                   </Box>
-                  
+
                   {/* Mock recent activity */}
                   <Box>
                     <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
@@ -1455,11 +1419,11 @@ TeamSync: Employee Management System for Maximize Market Research
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       <Paper sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center' }}>
-                        <Box sx={{ 
-                          width: 36, 
-                          height: 36, 
-                          borderRadius: 18, 
-                          bgcolor: '#e3f2fd', 
+                        <Box sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          bgcolor: '#e3f2fd',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1473,11 +1437,11 @@ TeamSync: Employee Management System for Maximize Market Research
                         </Box>
                       </Paper>
                       <Paper sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center' }}>
-                        <Box sx={{ 
-                          width: 36, 
-                          height: 36, 
-                          borderRadius: 18, 
-                          bgcolor: '#fff8e1', 
+                        <Box sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          bgcolor: '#fff8e1',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1491,11 +1455,11 @@ TeamSync: Employee Management System for Maximize Market Research
                         </Box>
                       </Paper>
                       <Paper sx={{ p: 1.5, borderRadius: 2, display: 'flex', alignItems: 'center' }}>
-                        <Box sx={{ 
-                          width: 36, 
-                          height: 36, 
-                          borderRadius: 18, 
-                          bgcolor: '#e8f5e9', 
+                        <Box sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          bgcolor: '#e8f5e9',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1511,7 +1475,7 @@ TeamSync: Employee Management System for Maximize Market Research
                     </Box>
                   </Box>
                 </Paper>
-                
+
                 {/* Decorative elements */}
                 <Box
                   sx={{
@@ -1545,61 +1509,61 @@ TeamSync: Employee Management System for Maximize Market Research
         </Container>
       </Box>
       {/* Add this section to LandingPage.jsx before the CTA section */}
-<Box 
-  sx={{ 
-    py: { xs: 10, md: 14 },
-    bgcolor: '#f8f9fa'
-  }}
->
-  <Container maxWidth="lg">
-    <Typography 
-      variant="h4" 
-      component="h2" 
-      fontWeight={700}
-      textAlign="center"
-      sx={{ mb: 8 }}
-    >
-      Why Choose TeamSync for Your Employee Management Needs
-    </Typography>
-    
-    <Grid container spacing={6}>
-      <Grid item xs={12} md={6}>
-        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
-          Built Specifically for Maximize Market Research
-        </Typography>
-        <Typography variant="body1" paragraph>
-          TeamSync is not a generic solution - it's tailored to the unique workflows and requirements of Maximize Market Research. Every feature has been designed with MMR's specific processes in mind.
-        </Typography>
-        
-        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
-          Comprehensive Attendance Management
-        </Typography>
-        <Typography variant="body1" paragraph>
-          Track attendance with geolocation verification, automated time calculations, leave integration, and detailed reporting. The system automatically accounts for weekends, holidays, and approved leaves.
-        </Typography>
-      </Grid>
-      
-      <Grid item xs={12} md={6}>
-        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
-          Integrated Leave & Salary Processing
-        </Typography>
-        <Typography variant="body1" paragraph>
-          The leave management system integrates directly with attendance tracking and payroll processing. Leave balances are automatically updated, and salary calculations take attendance and leaves into account.
-        </Typography>
-        
-        <Typography variant="h5" component="h3" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
-          Role-Based Access for Everyone
-        </Typography>
-        <Typography variant="body1" paragraph>
-          Whether you're an admin managing the entire organization, a team manager overseeing your department, or an employee tracking your own records, TeamSync provides the perfect interface tailored to your needs.
-        </Typography>
-      </Grid>
-    </Grid>
-  </Container>
-</Box>
+      <Box
+        sx={{
+          py: { xs: 10, md: 14 },
+          bgcolor: '#f8f9fa'
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography
+            variant="h4"
+            component="h2"
+            fontWeight={700}
+            textAlign="center"
+            sx={{ mb: 8 }}
+          >
+            Why Choose TeamSync for Your Employee Management Needs
+          </Typography>
+
+          <Grid container spacing={6}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
+                Built Specifically for Maximize Market Research
+              </Typography>
+              <Typography variant="body1" paragraph>
+                TeamSync is not a generic solution - it's tailored to the unique workflows and requirements of Maximize Market Research. Every feature has been designed with MMR's specific processes in mind.
+              </Typography>
+
+              <Typography variant="h5" component="h3" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
+                Comprehensive Attendance Management
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Track attendance with geolocation verification, automated time calculations, leave integration, and detailed reporting. The system automatically accounts for weekends, holidays, and approved leaves.
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
+                Integrated Leave & Salary Processing
+              </Typography>
+              <Typography variant="body1" paragraph>
+                The leave management system integrates directly with attendance tracking and payroll processing. Leave balances are automatically updated, and salary calculations take attendance and leaves into account.
+              </Typography>
+
+              <Typography variant="h5" component="h3" fontWeight={600} gutterBottom sx={{ mt: 4 }}>
+                Role-Based Access for Everyone
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Whether you're an admin managing the entire organization, a team manager overseeing your department, or an employee tracking your own records, TeamSync provides the perfect interface tailored to your needs.
+              </Typography>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
       {/* CTA Section */}
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           py: { xs: 8, md: 10 },
           background: 'linear-gradient(120deg, #1a237e 0%, #3949ab 100%)',
           color: 'white',
@@ -1617,7 +1581,7 @@ TeamSync: Employee Management System for Maximize Market Research
           </Typography>
           <Typography
             variant="h6"
-            sx={{ 
+            sx={{
               mb: 4,
               opacity: 0.9,
               fontWeight: 400,
@@ -1630,7 +1594,7 @@ TeamSync: Employee Management System for Maximize Market Research
             variant="contained"
             size="large"
             onClick={navigateToDashboard}
-            sx={{ 
+            sx={{
               px: 6,
               py: 1.5,
               bgcolor: 'white',
@@ -1648,97 +1612,97 @@ TeamSync: Employee Management System for Maximize Market Research
           </Button>
         </Container>
       </Box>
-      
+
       {/* Footer */}
-<Box 
-  component="footer" 
-  sx={{ 
-    py: 6,
-    bgcolor: 'background.paper',
-    borderTop: '1px solid',
-    borderColor: 'divider'
-  }}
->
-  <Container maxWidth="lg">
-    <Grid container spacing={4} alignItems="center">
-      <Grid item xs={12} md={6}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <CompanyIcon sx={{ mr: 1.5, fontSize: 28, color: 'primary.main' }} />
-          <Typography variant="h6" component="div" fontWeight={600}>
-            TeamSync
-          </Typography>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          The complete workforce management solution for Maximize Market Research.
-        </Typography>
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-          <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} Maximize Market Research Pvt. Ltd. All rights reserved.
-          </Typography>
-        </Box>
-      </Grid>
-      
-      {/* Developer Signature */}
-      <Grid item xs={12}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          mt: 2,
-          pt: 2,
+      <Box
+        component="footer"
+        sx={{
+          py: 6,
+          bgcolor: 'background.paper',
           borderTop: '1px solid',
-          borderColor: 'divider',
-          opacity: 0.6
-        }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-            Crafted with
-            <Box 
-              component="span" 
-              sx={{ 
-                display: 'inline-flex', 
-                mx: 0.5, 
-                color: 'error.main',
-                animation: 'pulse 1.5s infinite',
-                '@keyframes pulse': {
-                  '0%': { opacity: 0.6 },
-                  '50%': { opacity: 1 },
-                  '100%': { opacity: 0.6 }
-                }
-              }}
-            >
-              ❤️
-            </Box>
-            by <Box 
-              component="a" 
-              href="https://github.com/clexflex" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              sx={{ 
-                ml: 0.5,
-                color: 'inherit', 
-                textDecoration: 'none',
-                borderBottom: '1px dotted',
-                borderColor: 'text.disabled',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  color: 'primary.main',
-                  borderColor: 'primary.main'
-                }
-              }}
-            >
-              Yashraj Ghosalkar
-            </Box>
-          </Typography>
-        </Box>
-      </Grid>
-    </Grid>
-  </Container>
-</Box>
-  <DevSignature 
-  open={devSignatureOpen} 
-  onClose={() => setDevSignatureOpen(false)} 
-/>
+          borderColor: 'divider'
+        }}
+      >
+        <Container maxWidth="lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CompanyIcon sx={{ mr: 1.5, fontSize: 28, color: 'primary.main' }} />
+                <Typography variant="h6" component="div" fontWeight={600}>
+                  TeamSync
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                The complete workforce management solution for Maximize Market Research.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+                <Typography variant="body2" color="text.secondary">
+                  © {new Date().getFullYear()} Maximize Market Research Pvt. Ltd. All rights reserved.
+                </Typography>
+              </Box>
+            </Grid>
+
+            {/* Developer Signature */}
+            <Grid item xs={12}>
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                mt: 2,
+                pt: 2,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+                opacity: 0.6
+              }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                  Crafted with
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'inline-flex',
+                      mx: 0.5,
+                      color: 'error.main',
+                      animation: 'pulse 1.5s infinite',
+                      '@keyframes pulse': {
+                        '0%': { opacity: 0.6 },
+                        '50%': { opacity: 1 },
+                        '100%': { opacity: 0.6 }
+                      }
+                    }}
+                  >
+                    ❤️
+                  </Box>
+                  by <Box
+                    component="a"
+                    href="https://github.com/clexflex"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      ml: 0.5,
+                      color: 'inherit',
+                      textDecoration: 'none',
+                      borderBottom: '1px dotted',
+                      borderColor: 'text.disabled',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        color: 'primary.main',
+                        borderColor: 'primary.main'
+                      }
+                    }}
+                  >
+                    Yashraj Ghosalkar
+                  </Box>
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+      <DevSignature
+        open={devSignatureOpen}
+        onClose={() => setDevSignatureOpen(false)}
+      />
     </Box>
   );
 };

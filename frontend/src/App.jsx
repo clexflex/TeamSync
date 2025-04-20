@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
+import { useState, useEffect } from 'react';
+import AppLoader from './components/shared/AppLoader';
+import ErrorBoundary from './components/shared/ErrorBoundary';
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
@@ -64,14 +67,32 @@ import LandingPage from "./pages/LandingPage";
 import Documentation from "./pages/Documentation";
 import SalaryExport from "./components/salary/SalaryExport";
 import AboutPage from "./pages/AboutPage";
+import HiddenSignature from "./components/shared/HiddenSignature";
+import KeySequenceDetector from "./components/shared/KeySequenceDetector";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    // Simulate loading time or wait for resources
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
 
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <AppLoader />;
+  }
   return (
+    <ErrorBoundary>
     <BrowserRouter>
      <HelmetProvider>
       <NotificationProvider>
+      <HiddenSignature />
+      <KeySequenceDetector />
+
         <Routes>
           {/* <Route path="/" element={<Navigate to={DEFAULT_REDIRECT} />} /> */}
           <Route path="/" element={<LandingPage />} />
@@ -197,6 +218,7 @@ function App() {
       </NotificationProvider>
       </HelmetProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

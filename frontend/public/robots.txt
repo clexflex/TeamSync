@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin-dashboard
+Disallow: /manager-dashboard
+Disallow: /employee-dashboard
+Disallow: /login
+
+Sitemap: https://mmrems.com/sitemap.xml
