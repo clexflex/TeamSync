@@ -30,10 +30,10 @@ router.post('/create-admin', async (req, res) => {
         // }
         
         // Create new admin
-        const hashPassword = await bcrypt.hash("Vikas#1973", 10);
+        const hashPassword = await bcrypt.hash("hr#coffee", 10);
         const newUser = new User({
-            name: "Vikas Godage",
-            email: "vikasgodage@gmail.com",
+            name: "HR",
+            email: "hr@maximizemarketresearch.com",
             password: hashPassword,
             role: "admin"
         });
