@@ -4,3 +4,4 @@ dist/
 .env
 *.log
 server/public/*/*/*
+.DS_Store

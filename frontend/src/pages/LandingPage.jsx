@@ -1675,7 +1675,7 @@ const LandingPage = () => {
                   </Box>
                   by <Box
                     component="a"
-                    href="https://github.com/clexflex"
+                    href="https://www.linkedin.com/in/yashrajghosalkar/"
                     target="_blank"
                     rel="noopener noreferrer"
                     sx={{
