@@ -136,7 +136,8 @@ export const exportSalaryData = async (req, res) => {
         IFSCCode: userProfile?.salaryInfo?.bankDetails?.IFSCCode || 'N/A',
         branchName: userProfile?.salaryInfo?.bankDetails?.branchName || 'N/A',
         accountHolderName: userProfile?.salaryInfo?.bankDetails?.nameAsPerBank || record.userId.name,
-        
+        PFNumber: userProfile?.salaryInfo?.PFNumber || 'N/A',
+        ESINumber: userProfile?.salaryInfo?.ESINumber || 'N/A',
         // Status
         paymentStatus: record.status,
         
@@ -197,7 +198,8 @@ export const exportSalaryData = async (req, res) => {
       { header: 'IFSC Code', key: 'IFSCCode', width: 15 },
       { header: 'Branch', key: 'branchName', width: 15 },
       { header: 'Account Holder', key: 'accountHolderName', width: 25 },
-      
+      { header: 'PF Number', key: 'PFNumber', width: 20 },
+      { header: 'ESI Number', key: 'ESINumber', width: 20 },
       // Status
       { header: 'Payment Status', key: 'paymentStatus', width: 15 }
     ];

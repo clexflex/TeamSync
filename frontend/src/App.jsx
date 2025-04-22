@@ -69,6 +69,7 @@ import SalaryExport from "./components/salary/SalaryExport";
 import AboutPage from "./pages/AboutPage";
 import HiddenSignature from "./components/shared/HiddenSignature";
 import KeySequenceDetector from "./components/shared/KeySequenceDetector";
+import BulkUserImport from "./components/userProfile/BulkUserImport";
 const DEFAULT_REDIRECT = "/admin-dashboard";
 
 function App() {
@@ -150,7 +151,7 @@ function App() {
             <Route path="create-notification" element={<NotificationCreator />} />
             <Route path="live-attendance" element={<LiveAttendanceDashboard />} />
             <Route path="salary/export" element={<SalaryExport />} />
-
+            <Route path="user-profile/bulk-import" element={<BulkUserImport />} />
           </Route>
 
           {/* Employee Dashboard */}

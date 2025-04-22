@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Employee from "../models/Employee.js";
 import Manager from "../models/Manager.js";
@@ -6,7 +7,14 @@ import bcrypt from "bcrypt";
 import { uploadProfileImage } from '../utils/firebase-multer.js';
 import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl } from '../config/firebase.js';
 import logger from "../utils/logger.js";
-
+import Attendance from "../models/Attendance.js";
+import Leave from "../models/Leave.js";
+import Salary from "../models/Salary.js";
+import Document from "../models/Document.js";
+import Ticket from "../models/Ticket.js";
+import Team from "../models/Team.js";
+import Notification from "../models/Notification.js";
+import ResignationRequest from "../models/ResignationRequest.js";
 export { uploadProfileImage as upload };
 
 // Helper to create default leave balances
@@ -285,6 +293,7 @@ const getUserProfiles = async (req, res) => {
                 },
                 ...additionalData,
                 hasLeavePolicy: !!profile.leavePolicy,
+                company: profile.company,
                 leavePolicyId: profile.leavePolicy?._id || null,
                 leavePolicyName: profile.leavePolicy?.name || null,
                 joiningDate: profile.joiningDate,
@@ -677,5 +686,343 @@ const deleteUserProfile = async (req, res) => {
         return res.status(500).json({ success: false, error: "Server error in deleting user profile" });
     }
 };
+const bulkDeleteUserProfiles = async (req, res) => {
+    try {
+        const { profileIds } = req.body;
+        
+        if (!profileIds || !Array.isArray(profileIds) || profileIds.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Please provide a valid array of profile IDs to delete" 
+            });
+        }
 
-export { createUserProfile, getUserProfiles, getUserProfileById, updateUserProfile, deleteUserProfile };
+        const results = {
+            success: true,
+            totalAttempted: profileIds.length,
+            totalDeleted: 0,
+            failed: []
+        };
+
+        // Process each profile ID
+        for (const profileId of profileIds) {
+            try {
+                const userProfile = await UserProfile.findById(profileId);
+                if (!userProfile) {
+                    results.failed.push({ id: profileId, error: "User profile not found" });
+                    continue;
+                }
+
+                const userId = userProfile.userId;
+                const user = await User.findById(userId);
+
+                if (!user) {
+                    results.failed.push({ id: profileId, error: "Associated user not found" });
+                    continue;
+                }
+
+                // Delete employee or manager related data
+                if (user.role === 'employee') {
+                    const employee = await Employee.findOne({ userId: userId });
+                    
+                    if (employee) {
+                        // Clean up team association if exists
+                        if (employee.teamId) {
+                            await Team.updateOne(
+                                { _id: employee.teamId },
+                                { $pull: { members: employee._id }}
+                            );
+                        }
+                        
+                        await Employee.deleteOne({ userId: userId });
+                    }
+                } else if (user.role === 'manager') {
+                    const manager = await Manager.findOne({ userId: userId });
+                    
+                    if (manager) {
+                        // Clean up any teams managed by this manager
+                        if (manager.teams && manager.teams.length > 0) {
+                            for (const teamId of manager.teams) {
+                                await Team.updateOne(
+                                    { _id: teamId },
+                                    { $set: { managerId: null }}
+                                );
+                            }
+                        }
+                        
+                        await Manager.deleteOne({ userId: userId });
+                    }
+                }
+
+                // Delete related records
+                await Attendance.deleteMany({ userId: userId });
+                await Leave.deleteMany({ userId: userId });
+                await Salary.deleteMany({ userId: userId });
+                await Document.deleteMany({ userId: userId });
+                await Ticket.deleteMany({ userId: userId });
+                await Notification.deleteMany({ userId: userId });
+                await ResignationRequest.deleteMany({ userId: userId });
+
+                // Delete profile image if exists
+                if (user.profileImagePath) {
+                    try {
+                        await deleteFileFromFirebase(user.profileImagePath);
+                    } catch (imageError) {
+                        logger.error(`Error deleting profile image for user ${userId}: ${imageError.message}`);
+                        // Continue with deletion even if image delete fails
+                    }
+                }
+
+                // Delete user profile and user
+                await UserProfile.deleteOne({ _id: profileId });
+                await User.deleteOne({ _id: userId });
+
+                // Increment success counter
+                results.totalDeleted++;
+                logger.info(`User profile ${profileId} deleted successfully during bulk operation.`);
+            } catch (profileError) {
+                logger.error(`Error deleting user profile ${profileId}: ${profileError.message}`);
+                results.failed.push({ id: profileId, error: profileError.message });
+            }
+        }
+
+        // Set overall success based on deletion results
+        if (results.totalDeleted === 0) {
+            results.success = false;
+        }
+
+        return res.status(200).json(results);
+    } catch (error) {
+        logger.error(`Error in bulk delete operation: ${error.message}`);
+        return res.status(500).json({ 
+            success: false, 
+            error: "Server error in bulk deleting user profiles",
+            message: error.message
+        });
+    }
+};
+
+// Function to change a user's role between employee and manager
+const changeUserRole = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { 
+            newRole,          // 'employee' or 'manager'
+            newId,            // New employee/manager ID
+            department,       // Department ID
+            designation,      // Job title
+            salary,           // Only needed when converting to employee
+            keepTeamAssignments = false  // Whether to preserve team relationships
+        } = req.body;
+
+        if (!newRole || !['employee', 'manager'].includes(newRole)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Invalid role specified. Must be 'employee' or 'manager'." 
+            });
+        }
+
+        if (!newId) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `New ${newRole === 'employee' ? 'employee' : 'manager'} ID is required` 
+            });
+        }
+
+        if (!department) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Department ID is required" 
+            });
+        }
+
+        // Get the user profile
+        const userProfile = await UserProfile.findById(id);
+        if (!userProfile) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "User profile not found" 
+            });
+        }
+
+        // Get the user
+        const user = await User.findById(userProfile.userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "User not found" 
+            });
+        }
+
+        // If current role is the same as new role, return error
+        if (user.role === newRole) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `User is already a ${newRole}` 
+            });
+        }
+
+        // Check if the new ID is already in use
+        if (newRole === 'employee') {
+            const existingEmployee = await Employee.findOne({ employeeId: newId });
+            if (existingEmployee && existingEmployee.userId.toString() !== user._id.toString()) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: "Employee ID already in use by another employee" 
+                });
+            }
+        } else {
+            const existingManager = await Manager.findOne({ managerId: newId });
+            if (existingManager && existingManager.userId.toString() !== user._id.toString()) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: "Manager ID already in use by another manager" 
+                });
+            }
+        }
+
+        // Check if salary is provided when converting to employee
+        if (newRole === 'employee' && !salary) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Salary is required when converting to employee" 
+            });
+        }
+
+        let result = {};
+
+        try {
+            // Case 1: Converting from Employee to Manager
+            if (user.role === 'employee' && newRole === 'manager') {
+                // Get current employee data
+                const employee = await Employee.findOne({ userId: user._id });
+                if (!employee) {
+                    throw new Error("Employee record not found");
+                }
+
+                // Create new manager record
+                const newManager = new Manager({
+                    userId: user._id,
+                    managerId: newId,
+                    department: department || employee.department,
+                    designation: designation || employee.designation || "Team Manager",
+                    teams: []
+                });
+                await newManager.save();
+
+                // Handle team assignments if user was part of a team
+                if (employee.teamId && !keepTeamAssignments) {
+                    // Remove from team
+                    await Team.updateOne(
+                        { _id: employee.teamId },
+                        { $pull: { members: employee._id } }
+                    );
+                }
+
+                // Delete employee record
+                await Employee.deleteOne({ _id: employee._id });
+
+                result = {
+                    previousRole: 'employee',
+                    previousId: employee.employeeId,
+                    newRole: 'manager',
+                    newId: newManager.managerId
+                };
+            }
+            // Case 2: Converting from Manager to Employee
+            else if (user.role === 'manager' && newRole === 'employee') {
+                // Get current manager data
+                const manager = await Manager.findOne({ userId: user._id });
+                if (!manager) {
+                    throw new Error("Manager record not found");
+                }
+
+                // Handle team assignments
+                if (manager.teams && manager.teams.length > 0 && !keepTeamAssignments) {
+                    // Option: remove manager from all teams
+                    for (const teamId of manager.teams) {
+                        await Team.updateOne(
+                            { _id: teamId },
+                            { $set: { managerId: null } }
+                        );
+                    }
+                }
+
+                // Create new employee record
+                const newEmployee = new Employee({
+                    userId: user._id,
+                    employeeId: newId,
+                    department: department || manager.department,
+                    designation: designation || manager.designation,
+                    salary: salary,
+                    dob: userProfile.dob,
+                    gender: userProfile.gender,
+                    maritalStatus: userProfile.maritalStatus
+                });
+                await newEmployee.save();
+
+                // Delete manager record
+                await Manager.deleteOne({ _id: manager._id });
+
+                result = {
+                    previousRole: 'manager',
+                    previousId: manager.managerId,
+                    newRole: 'employee',
+                    newId: newEmployee.employeeId
+                };
+            }
+
+            // Update user role
+            user.role = newRole;
+            await user.save();
+            
+            // Create notification for the user
+            const notification = new Notification({
+                userId: user._id,
+                title: "Role Change",
+                message: `Your role has been changed from ${result.previousRole} to ${result.newRole}. Please log out and log back in for changes to take effect.`,
+                type: "system",
+                isGlobal: false
+            });
+            await notification.save();
+            
+            // Also notify admins
+            const admins = await User.find({ role: 'admin' });
+            if (admins.length > 0) {
+                const adminNotification = new Notification({
+                    userId: admins[0]._id, // Send to first admin
+                    title: "User Role Change",
+                    message: `${user.name}'s role has been changed from ${result.previousRole} to ${result.newRole}.`,
+                    type: "system",
+                    isGlobal: false
+                });
+                await adminNotification.save();
+            }
+            
+            logger.info(`User ${user.name} (ID: ${user._id}) role changed from ${result.previousRole} to ${result.newRole}`);
+            
+            return res.status(200).json({
+                success: true,
+                message: `User role changed successfully from ${result.previousRole} to ${result.newRole}`,
+                data: result
+            });
+        } catch (error) {
+            logger.error(`Error in role change process: ${error.message}`);
+            return res.status(500).json({ 
+                success: false, 
+                error: `Error changing user role: ${error.message}` 
+            });
+        }
+    } catch (error) {
+        logger.error(`Error changing user role: ${error.message}`);
+        return res.status(500).json({ 
+            success: false, 
+            error: `Server error in changing user role: ${error.message}` 
+        });
+    }
+};
+
+// Add the import for mongoose if not already present
+// import mongoose from "mongoose";
+
+export { createUserProfile, getUserProfiles,changeUserRole ,getUserProfileById, updateUserProfile, deleteUserProfile, bulkDeleteUserProfiles };

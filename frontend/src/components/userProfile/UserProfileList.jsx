@@ -30,7 +30,15 @@ import {
   Alert,
   CircularProgress,
   Badge,
-  Stack
+  Stack,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -46,10 +54,15 @@ import {
   Person as PersonIcon,
   VerifiedUser as VerifiedUserIcon,
   NotInterested as InactiveIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  CloudUpload,
+  DeleteSweep,
+  DeleteSweepOutlined,
+  SwapHoriz as SwapHorizIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
+import ChangeRoleDialog from './ChangeRoleDialog';
 
 const UserProfileList = () => {
   const navigate = useNavigate();
@@ -67,7 +80,12 @@ const UserProfileList = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
+  const [selectedProfiles, setSelectedProfiles] = useState([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [bulkDeleteResult, setBulkDeleteResult] = useState(null);
+  const [changeRoleDialogOpen, setChangeRoleDialogOpen] = useState(false);
+  const [selectedProfileForRoleChange, setSelectedProfileForRoleChange] = useState(null);
   // Meta statistics
   const [statistics, setStatistics] = useState({
     total: 0,
@@ -85,13 +103,13 @@ const UserProfileList = () => {
       try {
         setLoading(true);
         setError('');
-        
+
         const response = await axios.get(`${config.API_URL}/api/user-profile`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }
         });
-        
+
         if (response.data.success) {
           setUserProfiles(response.data.userProfiles);
           processStatistics(response.data.userProfiles);
@@ -105,10 +123,103 @@ const UserProfileList = () => {
         setLoading(false);
       }
     };
-    
+
     fetchUserProfiles();
   }, [refreshTrigger]);
+  // Toggle selection of a profile
+  const handleProfileSelection = (profileId, event) => {
+    event.stopPropagation(); // Prevent row click
+    setSelectedProfiles(prev => {
+      if (prev.includes(profileId)) {
+        return prev.filter(id => id !== profileId);
+      } else {
+        return [...prev, profileId];
+      }
+    });
+  };
+  // Add this function to handle opening the role change dialog
+  const handleChangeRoleClick = (profile) => {
+    setSelectedProfileForRoleChange(profile);
+    setChangeRoleDialogOpen(true);
+  };
 
+  // Add this function to handle role change completion
+  const handleRoleChangeComplete = () => {
+    // Refresh the user list
+    setRefreshTrigger(prev => prev + 1);
+  };
+  // Select/deselect all visible profiles
+  const handleSelectAll = (event) => {
+    event.stopPropagation(); // Prevent row click
+
+    if (event.target.checked) {
+      const visibleProfiles = filteredProfiles
+        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+        .map(profile => profile._id);
+      setSelectedProfiles(visibleProfiles);
+    } else {
+      setSelectedProfiles([]);
+    }
+  };
+
+  // Check if all visible profiles are selected
+  const areAllVisibleSelected = () => {
+    const visibleProfiles = filteredProfiles
+      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+      .map(profile => profile._id);
+
+    return visibleProfiles.length > 0 &&
+      visibleProfiles.every(id => selectedProfiles.includes(id));
+  };
+
+  // Open bulk delete confirmation dialog
+  const handleBulkDeleteClick = () => {
+    setBulkDeleteResult(null);
+    setBulkDeleteDialogOpen(true);
+  };
+
+  // Execute bulk delete
+  const handleBulkDelete = async () => {
+    try {
+      setBulkDeleteLoading(true);
+      setBulkDeleteResult(null);
+
+      const response = await axios.post(
+        `${config.API_URL}/api/user-profile/bulk-delete`,
+        { profileIds: selectedProfiles },
+        {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      setBulkDeleteResult(response.data);
+
+      // Refresh user list and clear selection if any profiles were deleted
+      if (response.data.totalDeleted > 0) {
+        setRefreshTrigger(prev => prev + 1);
+        setSelectedProfiles([]);
+      }
+    } catch (error) {
+      console.error('Error bulk deleting profiles:', error);
+      setBulkDeleteResult({
+        success: false,
+        error: error.response?.data?.error || 'Failed to bulk delete user profiles'
+      });
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
+  // Close bulk delete dialog
+  const handleCloseBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    // Keep result visible until user selects profiles again
+    if (bulkDeleteResult?.success) {
+      setSelectedProfiles([]);
+    }
+  };
   // Process statistics from user profiles
   const processStatistics = (profiles) => {
     const stats = {
@@ -120,64 +231,64 @@ const UserProfileList = () => {
       departments: [],
       companies: [] // Initialize companies array
     };
-    
+
     const departmentSet = new Set();
     const companySet = new Set(); // Create a Set for companies
-    
+
     profiles.forEach(profile => {
       if (profile.user.role === 'manager') {
         stats.managers++;
       } else if (profile.user.role === 'employee') {
         stats.employees++;
       }
-      
+
       if (profile.user.status === 'active') {
         stats.active++;
       } else {
         stats.inactive++;
       }
-      
+
       if (profile.department?.dep_name) {
         departmentSet.add(profile.department.dep_name);
       }
-      
+
       // Add company to the set if it exists
       if (profile.company) {
         companySet.add(profile.company);
       }
     });
-    
+
     stats.departments = Array.from(departmentSet);
     stats.companies = Array.from(companySet); // Convert Set to Array
-    
+
     setStatistics(stats);
   };
 
   // Filter profiles based on search term, role, department, status, and company
   const filteredProfiles = useMemo(() => {
     return userProfiles.filter(profile => {
-      const matchesSearch = 
+      const matchesSearch =
         profile.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         profile.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (profile.employeeId && profile.employeeId.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (profile.managerId && profile.managerId.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesRole = 
-        roleFilter === 'all' || 
+
+      const matchesRole =
+        roleFilter === 'all' ||
         profile.user.role === roleFilter;
-      
-      const matchesDepartment = 
-        departmentFilter === 'all' || 
+
+      const matchesDepartment =
+        departmentFilter === 'all' ||
         (profile.department?.dep_name === departmentFilter);
-      
-      const matchesStatus = 
-        statusFilter === 'all' || 
+
+      const matchesStatus =
+        statusFilter === 'all' ||
         profile.user.status === statusFilter;
-      
+
       const matchesCompany =
         companyFilter === 'all' ||
         profile.company === companyFilter;
-      
+
       return matchesSearch && matchesRole && matchesDepartment && matchesStatus && matchesCompany;
     });
   }, [userProfiles, searchTerm, roleFilter, departmentFilter, statusFilter, companyFilter]);
@@ -221,7 +332,7 @@ const UserProfileList = () => {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }
         });
-        
+
         if (response.data.success) {
           // Refresh the user list
           setRefreshTrigger(prev => prev + 1);
@@ -239,17 +350,17 @@ const UserProfileList = () => {
   // Render status badge
   const StatusBadge = ({ status }) => {
     return status === 'active' ? (
-      <Chip 
+      <Chip
         icon={<VerifiedUserIcon fontSize="small" />}
-        label="Active" 
+        label="Active"
         size="small"
         color="success"
         variant="outlined"
       />
     ) : (
-      <Chip 
+      <Chip
         icon={<InactiveIcon fontSize="small" />}
-        label="Inactive" 
+        label="Inactive"
         size="small"
         color="error"
         variant="outlined"
@@ -264,13 +375,13 @@ const UserProfileList = () => {
       manager: { color: 'primary', icon: <BusinessIcon fontSize="small" /> },
       employee: { color: 'info', icon: <GroupIcon fontSize="small" /> }
     };
-    
+
     const config = roleConfig[role] || roleConfig.employee;
-    
+
     return (
-      <Chip 
+      <Chip
         icon={config.icon}
-        label={role.charAt(0).toUpperCase() + role.slice(1)} 
+        label={role.charAt(0).toUpperCase() + role.slice(1)}
         size="small"
         color={config.color}
         variant="outlined"
@@ -309,13 +420,32 @@ const UserProfileList = () => {
         <Typography variant="h5" fontWeight="bold">
           User Profiles
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/admin-dashboard/user-profile/create')}
-        >
-          Create User
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {selectedProfiles.length > 0 && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteSweep />}
+              onClick={handleBulkDeleteClick}
+            >
+              Delete Selected ({selectedProfiles.length})
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/admin-dashboard/user-profile/create')}
+          >
+            Create User
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<CloudUpload />}
+            onClick={() => navigate('/admin-dashboard/user-profile/bulk-import')}
+          >
+            Bulk Import
+          </Button>
+        </Box>
       </Box>
 
       {/* Error message */}
@@ -423,7 +553,7 @@ const UserProfileList = () => {
               ),
             }}
           />
-          
+
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip
               icon={<FilterListIcon />}
@@ -516,6 +646,14 @@ const UserProfileList = () => {
           <Table sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={selectedProfiles.length > 0 && !areAllVisibleSelected()}
+                    checked={areAllVisibleSelected()}
+                    onChange={handleSelectAll}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>User</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Department</TableCell>
@@ -530,30 +668,40 @@ const UserProfileList = () => {
                 filteredProfiles
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((profile) => (
-                    <TableRow 
-                      key={profile._id} 
-                      hover 
+                    <TableRow
+                      key={profile._id}
+                      hover
                       onClick={() => handleUserRowClick(profile._id)}
-                      sx={{ 
+                      sx={{
                         cursor: 'pointer',
-                        '&:hover': { 
-                          bgcolor: 'action.hover',
+                        bgcolor: selectedProfiles.includes(profile._id) ? 'action.selected' : 'inherit',
+                        '&:hover': {
+                          bgcolor: selectedProfiles.includes(profile._id)
+                            ? 'action.selected'
+                            : 'action.hover',
                           '& .action-buttons': {
                             opacity: 1
                           }
                         }
                       }}
                     >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedProfiles.includes(profile._id)}
+                          onChange={(e) => handleProfileSelection(profile._id, e)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar
-                            src={profile.user.profileImage 
+                            src={profile.user.profileImage
                               ? profile.user.profileImage
                               : null
                             }
-                            sx={{ 
-                              width: 40, 
-                              height: 40, 
+                            sx={{
+                              width: 40,
+                              height: 40,
                               bgcolor: profile.user.role === 'manager'
                                 ? 'primary.main'
                                 : 'secondary.main'
@@ -593,9 +741,9 @@ const UserProfileList = () => {
                         <StatusBadge status={profile.user.status} />
                       </TableCell>
                       <TableCell align="right">
-                        <Box 
+                        <Box
                           className="action-buttons"
-                          sx={{ 
+                          sx={{
                             opacity: 0.3,
                             transition: 'opacity 0.2s',
                             display: 'flex',
@@ -640,6 +788,18 @@ const UserProfileList = () => {
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
+                          <Tooltip title="Change Role">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleChangeRoleClick(profile);
+                              }}
+                            >
+                              <SwapHorizIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -653,9 +813,9 @@ const UserProfileList = () => {
                         No users found
                       </Typography>
                       {searchTerm || roleFilter !== 'all' || departmentFilter !== 'all' || statusFilter !== 'all' || companyFilter !== 'all' ? (
-                        <Button 
-                          startIcon={<RefreshIcon />} 
-                          variant="outlined" 
+                        <Button
+                          startIcon={<RefreshIcon />}
+                          variant="outlined"
                           size="small"
                           onClick={() => {
                             setSearchTerm('');
@@ -684,7 +844,7 @@ const UserProfileList = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        
+
         <TablePagination
           rowsPerPageOptions={[5, 10, 25, 50]}
           component="div"
@@ -695,6 +855,90 @@ const UserProfileList = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onClose={handleCloseBulkDeleteDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          Confirm Bulk Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" gutterBottom>
+              Are you sure you want to delete {selectedProfiles.length} selected user profile{selectedProfiles.length === 1 ? '' : 's'}?
+            </Typography>
+            <Typography variant="body2" color="error" fontWeight="medium">
+              This action cannot be undone. All related data for these users will be permanently deleted, including:
+            </Typography>
+            <Box component="ul" sx={{ mt: 1, pl: 2 }}>
+              <Typography component="li" variant="body2">User accounts and authentication details</Typography>
+              <Typography component="li" variant="body2">Employee/Manager information</Typography>
+              <Typography component="li" variant="body2">Attendance records</Typography>
+              <Typography component="li" variant="body2">Salary records</Typography>
+              <Typography component="li" variant="body2">Leave records and balances</Typography>
+              <Typography component="li" variant="body2">Documents and profile images</Typography>
+              <Typography component="li" variant="body2">Tickets and notifications</Typography>
+            </Box>
+          </Box>
+
+          {bulkDeleteResult && (
+            <Box mt={2}>
+              <Alert
+                severity={bulkDeleteResult.success ? "success" : "error"}
+                variant="filled"
+              >
+                {bulkDeleteResult.success ?
+                  `Successfully deleted ${bulkDeleteResult.totalDeleted} of ${bulkDeleteResult.totalAttempted} profiles.` :
+                  `Failed to delete profiles: ${bulkDeleteResult.error}`
+                }
+              </Alert>
+              {bulkDeleteResult.failed && bulkDeleteResult.failed.length > 0 && (
+                <Box mt={1}>
+                  <Typography variant="body2" fontWeight="medium" sx={{ mt: 2 }}>
+                    Failed to delete {bulkDeleteResult.failed.length} profiles:
+                  </Typography>
+                  <List dense sx={{ bgcolor: 'background.paper', mt: 1, borderRadius: 1 }}>
+                    {bulkDeleteResult.failed.map((fail, index) => (
+                      <ListItem key={index} divider={index < bulkDeleteResult.failed.length - 1}>
+                        <ListItemText
+                          primary={`Profile ID: ${fail.id}`}
+                          secondary={`Error: ${fail.error}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={handleCloseBulkDeleteDialog}
+            disabled={bulkDeleteLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleBulkDelete}
+            color="error"
+            variant="contained"
+            disabled={bulkDeleteLoading || selectedProfiles.length === 0}
+            startIcon={bulkDeleteLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteSweepOutlined />}
+          >
+            {bulkDeleteLoading ? "Deleting..." : `Delete ${selectedProfiles.length} Profiles`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <ChangeRoleDialog
+        open={changeRoleDialogOpen}
+        onClose={() => setChangeRoleDialogOpen(false)}
+        user={selectedProfileForRoleChange}
+        onRoleChanged={handleRoleChangeComplete}
+      />
     </Box>
   );
 };
