@@ -8,7 +8,7 @@ const notificationSchema = new Schema(
         message: { type: String, required: true },
         type: { 
             type: String, 
-            enum: ["general", "birthday", "work_anniversary", "leave_request", "attendance", "document", "task", "system"],
+            enum: ["general", "birthday", "work_anniversary", "leave_request", "attendance", "document", "salary", "task", "system"],
             default: "general"
         },
         isRead: { type: Boolean, default: false },

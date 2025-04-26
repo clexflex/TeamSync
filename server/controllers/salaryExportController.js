@@ -157,12 +157,14 @@ export const exportSalaryData = async (req, res) => {
       });
     }
     
-    // Create Excel workbook and worksheet
+    // Create Excel workbook
     const workbook = new Excel.Workbook();
-    const worksheet = workbook.addWorksheet('Salary Report');
     
-    // Set column headers and formatting
-    worksheet.columns = [
+    // WORKSHEET 1: Detailed salary report
+    const detailedWorksheet = workbook.addWorksheet('Detailed Salary Report');
+    
+    // Set column headers and formatting for detailed worksheet
+    detailedWorksheet.columns = [
       { header: 'Name', key: 'name', width: 25 },
       { header: 'Employee/Manager ID', key: 'employeeId', width: 20 },
       { header: 'Designation', key: 'designation', width: 20 },
@@ -205,19 +207,19 @@ export const exportSalaryData = async (req, res) => {
     ];
     
     // Add headers with styling
-    worksheet.getRow(1).font = { bold: true, size: 12 };
-    worksheet.getRow(1).fill = {
+    detailedWorksheet.getRow(1).font = { bold: true, size: 12 };
+    detailedWorksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFD3D3D3' }
     };
     
     // Add report title
-    worksheet.insertRow(1, []);
-    worksheet.insertRow(1, [`Salary Report for ${periodString}`]);
-    worksheet.getRow(1).font = { bold: true, size: 16 };
-    worksheet.mergeCells('A1:Z1');
-    worksheet.getCell('A1').alignment = { horizontal: 'center' };
+    detailedWorksheet.insertRow(1, []);
+    detailedWorksheet.insertRow(1, [`Salary Report for ${periodString}`]);
+    detailedWorksheet.getRow(1).font = { bold: true, size: 16 };
+    detailedWorksheet.mergeCells('A1:Z1');
+    detailedWorksheet.getCell('A1').alignment = { horizontal: 'center' };
     
     // Calculate summary values
     const totalEmployees = filteredData.length;
@@ -226,20 +228,20 @@ export const exportSalaryData = async (req, res) => {
     const totalESI = filteredData.reduce((sum, item) => sum + item.ESI, 0);
     
     // Add summary info
-    worksheet.insertRow(2, [`Company: ${company || 'All Companies'} | Total Employees: ${totalEmployees} | Total Net Salary: ₹${totalNetSalary.toFixed(2)} | Total PF: ₹${totalPF.toFixed(2)} | Total ESI: ₹${totalESI.toFixed(2)}`]);
-    worksheet.getRow(2).font = { italic: true, size: 11 };
-    worksheet.mergeCells('A2:Z2');
+    detailedWorksheet.insertRow(2, [`Company: ${company || 'All Companies'} | Total Employees: ${totalEmployees} | Total Net Salary: ₹${totalNetSalary.toFixed(2)} | Total PF: ₹${totalPF.toFixed(2)} | Total ESI: ₹${totalESI.toFixed(2)}`]);
+    detailedWorksheet.getRow(2).font = { italic: true, size: 11 };
+    detailedWorksheet.mergeCells('A2:Z2');
     
     // Add data rows
     filteredData.forEach(record => {
       // Calculate gross salary
       record.grossSalary = record.basicSalary + record.totalAllowances;
       
-      worksheet.addRow(record);
+      detailedWorksheet.addRow(record);
     });
     
     // Apply basic styling to the data
-    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    detailedWorksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (rowNumber > 3) { // Skip header rows
         row.eachCell({ includeEmpty: false }, (cell) => {
           cell.border = {
@@ -250,6 +252,80 @@ export const exportSalaryData = async (req, res) => {
           };
         });
       }
+    });
+    
+    // WORKSHEET 2: Bank Transfer Summary
+    const bankTransferWorksheet = workbook.addWorksheet('Bank Transfer Summary');
+    
+    // Set column headers for bank transfer worksheet
+    bankTransferWorksheet.columns = [
+      { header: 'S.No.', key: 'sno', width: 5 },
+      { header: 'Employee Name', key: 'name', width: 30 },
+      { header: 'Bank Name', key: 'bankName', width: 25 },
+      { header: 'Account Number', key: 'accountNumber', width: 20 },
+      { header: 'IFSC Code', key: 'IFSCCode', width: 15 },
+      { header: 'Branch Name', key: 'branchName', width: 20 },
+      { header: 'Net Salary', key: 'netSalary', width: 15, style: { numFmt: '₹#,##0.00' } }
+    ];
+    
+    // Style header row
+    bankTransferWorksheet.getRow(1).font = { bold: true, size: 12 };
+    bankTransferWorksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' }
+    };
+    
+    // Add title
+    bankTransferWorksheet.insertRow(1, []);
+    bankTransferWorksheet.insertRow(1, [`Bank Transfer Summary - ${periodString}`]);
+    bankTransferWorksheet.getRow(1).font = { bold: true, size: 16 };
+    bankTransferWorksheet.mergeCells('A1:G1');
+    bankTransferWorksheet.getCell('A1').alignment = { horizontal: 'center' };
+    
+    // Add summary
+    bankTransferWorksheet.insertRow(2, [`Total Employees: ${totalEmployees} | Total Amount: ₹${totalNetSalary.toFixed(2)}`]);
+    bankTransferWorksheet.getRow(2).font = { italic: true, size: 11 };
+    bankTransferWorksheet.mergeCells('A2:G2');
+    
+    // Add bank transfer data
+    let serialNumber = 1;
+    filteredData.forEach(record => {
+      bankTransferWorksheet.addRow({
+        sno: serialNumber++,
+        name: record.name,
+        bankName: record.bankName,
+        accountNumber: record.accountNumber,
+        IFSCCode: record.IFSCCode,
+        branchName: record.branchName,
+        netSalary: record.netSalary
+      });
+    });
+    
+    // Apply styling to bank transfer data
+    bankTransferWorksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber > 3) { // Skip header rows
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      }
+    });
+    
+    // Auto-fit columns for better visualization
+    bankTransferWorksheet.columns.forEach(column => {
+      let maxLength = 0;
+      column.eachCell({ includeEmpty: true }, cell => {
+        const columnLength = cell.value ? cell.value.toString().length : 10;
+        if (columnLength > maxLength) {
+          maxLength = columnLength;
+        }
+      });
+      column.width = maxLength < 10 ? 10 : maxLength + 2;
     });
     
     // Generate Excel buffer

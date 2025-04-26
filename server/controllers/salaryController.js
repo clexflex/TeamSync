@@ -93,6 +93,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl, streamFileToResponse } from '../config/firebase.js';
+import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -350,8 +351,8 @@ export const generateSalaryDraft = async (req, res) => {
 
         // Format the pay period (e.g., "March 2025") using the timezone if available
         const payPeriod = timezone ? 
-            formatDateInTimezone(startDate, timezone).split(' ').slice(0, 2).join(' ') : 
-            `${format(startDate, 'MMMM yyyy')}`;
+    formatDateInTimezone(endDate, timezone).split(' ').slice(0, 2).join(' ') : 
+    `${format(endDate, 'MMMM yyyy')}`;
 
         // Create new salary record
         const newSalary = new Salary({
@@ -750,8 +751,8 @@ async function generateSalaryDraftForUser(userId, periodStart, periodEnd, creato
 
         // Format the pay period (e.g., "March 2025") using the timezone if available
         const payPeriod = timezone ? 
-            formatDateInTimezone(startDate, timezone).split(' ').slice(0, 2).join(' ') : 
-            `${format(startDate, 'MMMM yyyy')}`;
+            formatDateInTimezone(endDate, timezone).split(' ').slice(0, 2).join(' ') : 
+            `${format(endDate, 'MMMM yyyy')}`;
 
         // Create new salary record
         const newSalary = new Salary({
@@ -1052,7 +1053,34 @@ export const regenerateSalaryDraft = async (req, res) => {
         });
 
         await existingSalary.save();
+        // Send notification to the user
+        if (req.io && existingSalary.userId) {
+            const notificationData = {
+                userId: existingSalary.userId._id,
+                title: "Salary Regenerated",
+                message: `Your salary draft for ${existingSalary.payPeriod} has been regenerated with updated information.`,
+                type: "system",
+                relatedTo: {
+                    model: "Salary",
+                    id: existingSalary._id
+                },
+                metadata: {
+                    payPeriod: existingSalary.payPeriod,
+                    netSalary: existingSalary.netSalary,
+                    status: existingSalary.status,
+                    action: 'salary_regenerated'
+                },
+                sendEmail: false
+            };
 
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const notification = new Notification(notificationData);
+            await notification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${existingSalary.userId._id}`).emit('new_notification', notification);
+        }
         logger.info(`Salary draft ${id} regenerated for user ${userId}`);
 
         return res.status(200).json({
@@ -1345,7 +1373,34 @@ export const approveSalary = async (req, res) => {
 
         // Save the updated record
         await salary.save();
+        // Send notification to the user
+        if (req.io && salary.userId) {
+            const notificationData = {
+                userId: salary.userId._id,
+                title: "Salary Approved",
+                message: `Your salary for ${salary.payPeriod} has been approved. Net amount: ₹${salary.netSalary.toFixed(2)}`,
+                type: "system",
+                relatedTo: {
+                    model: "Salary",
+                    id: salary._id
+                },
+                metadata: {
+                    payPeriod: salary.payPeriod,
+                    netSalary: salary.netSalary,
+                    status: 'Approved',
+                    approvedBy: req.user.name
+                },
+                sendEmail: false
+            };
 
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const notification = new Notification(notificationData);
+            await notification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+        }
         logger.info(`Salary record ${id} approved by user ${req.user._id}`);
 
         return res.status(200).json({
@@ -1355,6 +1410,7 @@ export const approveSalary = async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error)
         logger.error(`Error approving salary: ${error.message}`);
         return res.status(500).json({
             success: false,
@@ -1406,7 +1462,35 @@ export const rejectSalary = async (req, res) => {
 
         // Save the updated record
         await salary.save();
+         // Send notification to the user
+         if (req.io && salary.userId) {
+            const notificationData = {
+                userId: salary.userId._id,
+                title: "Salary Rejected",
+                message: `Your salary for ${salary.payPeriod} has been rejected. Reason: ${comments}`,
+                type: "system",
+                relatedTo: {
+                    model: "Salary",
+                    id: salary._id
+                },
+                metadata: {
+                    payPeriod: salary.payPeriod,
+                    netSalary: salary.netSalary,
+                    status: 'Rejected',
+                    reason: comments,
+                    rejectedBy: req.user.name
+                },
+                sendEmail: false
+            };
 
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const notification = new Notification(notificationData);
+            await notification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+        }
         logger.info(`Salary record ${id} rejected by user ${req.user._id}`);
 
         return res.status(200).json({
@@ -1459,7 +1543,35 @@ export const convertToDraft = async (req, res) => {
 
         // Save the updated record
         await salary.save();
+        // Send notification to the user
+        if (req.io && salary.userId) {
+            const notificationData = {
+                userId: salary.userId._id,
+                title: "Salary Reopened",
+                message: `Your salary record for ${salary.payPeriod} has been reopened and converted back to draft status for review.`,
+                type: "system",
+                relatedTo: {
+                    model: "Salary",
+                    id: salary._id
+                },
+                metadata: {
+                    payPeriod: salary.payPeriod,
+                    status: 'Draft',
+                    previousStatus: 'Rejected',
+                    action: 'converted_to_draft',
+                    comments: comments
+                },
+                sendEmail: false
+            };
 
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const notification = new Notification(notificationData);
+            await notification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+        }
         logger.info(`Salary record ${id} converted to draft by user ${req.user._id}`);
 
         return res.status(200).json({
@@ -1527,7 +1639,36 @@ export const markSalaryAsPaid = async (req, res) => {
 
         // Save the updated record
         await salary.save();
+        // Send notification to the user
+        if (req.io && salary.userId) {
+            const notificationData = {
+                userId: salary.userId._id,
+                title: "Salary Credited",
+                message: `Your salary for ${salary.payPeriod} has been credited. Amount: ₹${salary.netSalary.toFixed(2)}. Payment method: ${paymentMethod}`,
+                type: "system",
+                relatedTo: {
+                    model: "Salary",
+                    id: salary._id
+                },
+                metadata: {
+                    payPeriod: salary.payPeriod,
+                    netSalary: salary.netSalary,
+                    status: 'Paid',
+                    paymentMethod: paymentMethod,
+                    transactionId: transactionId,
+                    paymentDate: salary.paymentDate
+                },
+                sendEmail: true
+            };
 
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const notification = new Notification(notificationData);
+            await notification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+        }
         logger.info(`Salary record ${id} marked as paid by user ${req.user._id}`);
 
         return res.status(200).json({
@@ -2122,7 +2263,33 @@ export const generatePayslip = async (req, res) => {
         });
 
         await salary.save();
+        // Send notification to the user
+        if (req.io && salary.userId) {
+            const notificationData = {
+                userId: salary.userId._id,
+                title: "Payslip Generated",
+                message: `Your payslip for ${salary.payPeriod} is now available for download.`,
+                type: "system",
+                relatedTo: {
+                    model: "Salary",
+                    id: salary._id
+                },
+                metadata: {
+                    payPeriod: salary.payPeriod,
+                    payslipUrl: salary.payslipUrl,
+                    action: 'payslip_generated'
+                },
+                sendEmail: false
+            };
 
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const notification = new Notification(notificationData);
+            await notification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+        }
         logger.info(`Payslip generated for salary record ${id}`);
 
         return res.status(200).json({
@@ -2257,8 +2424,9 @@ export const bulkApproveSalaries = async (req, res) => {
             });
         }
 
-        // Get all the salary records
-        const salaries = await Salary.find({ _id: { $in: salaryIds } });
+        // Get all the salary records with user information
+        const salaries = await Salary.find({ _id: { $in: salaryIds } })
+            .populate('userId', 'name email');
 
         if (salaries.length === 0) {
             return res.status(404).json({
@@ -2291,6 +2459,57 @@ export const bulkApproveSalaries = async (req, res) => {
 
             await salary.save();
             updatedSalaries.push(salary);
+
+            // Send notification to the user
+            if (req.io && salary.userId) {
+                const notificationData = {
+                    userId: salary.userId._id,
+                    title: "Salary Approved",
+                    message: `Your salary for ${salary.payPeriod} has been approved. Net amount: ₹${salary.netSalary.toFixed(2)}`,
+                    type: "system",
+                    relatedTo: {
+                        model: "Salary",
+                        id: salary._id
+                    },
+                    metadata: {
+                        payPeriod: salary.payPeriod,
+                        netSalary: salary.netSalary,
+                        status: 'Approved'
+                    },
+                    sendEmail: false
+                };
+
+                // Create notification in database
+                const Notification = mongoose.model("Notification");
+                const notification = new Notification(notificationData);
+                await notification.save();
+
+                // Send real-time notification via socket
+                req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+            }
+        }
+
+        // Notify admin about bulk operation success
+        if (req.io) {
+            const adminNotificationData = {
+                userId: req.user._id,
+                title: "Bulk Salary Approval Completed",
+                message: `Successfully approved ${updatedSalaries.length} salary records. ${salaries.length - updatedSalaries.length} records were skipped.`,
+                type: "system",
+                metadata: {
+                    action: 'bulk_approve',
+                    approved: updatedSalaries.length,
+                    skipped: salaries.length - updatedSalaries.length
+                }
+            };
+
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const adminNotification = new Notification(adminNotificationData);
+            await adminNotification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${req.user._id}`).emit('new_notification', adminNotification);
         }
 
         logger.info(`${updatedSalaries.length} salary records approved in bulk by user ${req.user._id}`);
@@ -2330,8 +2549,9 @@ export const bulkRejectSalaries = async (req, res) => {
             });
         }
 
-        // Get all the salary records
-        const salaries = await Salary.find({ _id: { $in: salaryIds } });
+        // Get all the salary records with user information
+        const salaries = await Salary.find({ _id: { $in: salaryIds } })
+            .populate('userId', 'name email');
 
         if (salaries.length === 0) {
             return res.status(404).json({
@@ -2364,6 +2584,59 @@ export const bulkRejectSalaries = async (req, res) => {
 
             await salary.save();
             updatedSalaries.push(salary);
+
+            // Send notification to the user
+            if (req.io && salary.userId) {
+                const notificationData = {
+                    userId: salary.userId._id,
+                    title: "Salary Rejected",
+                    message: `Your salary for ${salary.payPeriod} has been rejected. Reason: ${comments}`,
+                    type: "system",
+                    relatedTo: {
+                        model: "Salary",
+                        id: salary._id
+                    },
+                    metadata: {
+                        payPeriod: salary.payPeriod,
+                        netSalary: salary.netSalary,
+                        status: 'Rejected',
+                        reason: comments
+                    },
+                    sendEmail: false
+                };
+
+                // Create notification in database
+                const Notification = mongoose.model("Notification");
+                const notification = new Notification(notificationData);
+                await notification.save();
+
+                // Send real-time notification via socket
+                req.io.to(`user:${salary.userId._id}`).emit('new_notification', notification);
+            }
+        }
+
+        // Notify admin about bulk operation success
+        if (req.io) {
+            const adminNotificationData = {
+                userId: req.user._id,
+                title: "Bulk Salary Rejection Completed",
+                message: `Successfully rejected ${updatedSalaries.length} salary records. ${salaries.length - updatedSalaries.length} records were skipped.`,
+                type: "system",
+                metadata: {
+                    action: 'bulk_reject',
+                    rejected: updatedSalaries.length,
+                    skipped: salaries.length - updatedSalaries.length,
+                    reason: comments
+                }
+            };
+
+            // Create notification in database
+            const Notification = mongoose.model("Notification");
+            const adminNotification = new Notification(adminNotificationData);
+            await adminNotification.save();
+
+            // Send real-time notification via socket
+            req.io.to(`user:${req.user._id}`).emit('new_notification', adminNotification);
         }
 
         logger.info(`${updatedSalaries.length} salary records rejected in bulk by user ${req.user._id}`);
