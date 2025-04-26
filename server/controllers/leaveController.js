@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { uploadFileToFirebase, deleteFileFromFirebase, getFileSignedUrl } from '../config/firebase.js';
 import { uploadLeaveDocument as firebaseUploader } from '../utils/firebase-multer.js';
+import { createNotification } from './notificationController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +63,22 @@ export const createLeavePolicy = async (req, res) => {
         });
 
         await newLeavePolicy.save();
+        // Notify all users about new leave policy
+        const allUsers = await User.find({ status: 'active' });
+        for (const user of allUsers) {
+            const notifReq = {
+                body: {
+                    userId: user._id,
+                    title: "New Leave Policy Created",
+                    message: `A new leave policy "${name}" has been created. Please check the updated leave policies in your profile.`,
+                    type: "leave_request",
+                    shouldSendEmail: false
+                },
+                io: req.io
+            };
+            
+            await createNotification(notifReq, res);
+        }
         
         logger.info(`Leave policy "${name}" created successfully`);
         return res.status(201).json({
@@ -499,7 +516,19 @@ export const updateLeaveBalance = async (req, res) => {
         
         userProfile.updatedAt = Date.now();
         await userProfile.save();
+        // Notify user about leave balance update
+        const notifReq = {
+            body: {
+                userId,
+                title: "Leave Balance Updated",
+                message: "Your leave balance has been updated by the administrator. Please check your new leave balance in your profile.",
+                type: "leave_request",
+                shouldSendEmail: true
+            },
+            io: req.io
+        };
         
+        await createNotification(notifReq, res);
         logger.info(`Leave balance updated for user ${userId}`);
         
         return res.status(200).json({
@@ -977,7 +1006,26 @@ export const addLeave = async (req, res) => {
         });
         
         await newLeave.save();
-        
+        // Notify admins about new leave request
+        const admins = await User.find({ role: 'admin', status: 'active' });
+        for (const admin of admins) {
+            const notifReq = {
+                body: {
+                    userId: admin._id,
+                    title: "New Leave Request",
+                    message: `${user.name} has submitted a leave request for ${leaveType} from ${start.toLocaleDateString()} to ${end.toLocaleDateString()}. Reason: ${reason}`,
+                    type: "leave_request",
+                    relatedTo: {
+                        model: "Leave",
+                        id: newLeave._id
+                    },
+                    shouldSendEmail: false
+                },
+                io: req.io
+            };
+            
+            await createNotification(notifReq, res);
+        }
         logger.info(`New leave request created for user ${userId} from ${start.toISOString()} to ${end.toISOString()}`);
         
         return res.status(201).json({
@@ -1106,7 +1154,23 @@ export const approveLeave = async (req, res) => {
             logger.error(`Failed to create attendance records for leave: ${error.message}`);
             // Continue with leave approval even if attendance creation fails
         }
+         // Notify user about leave approval
+         const notifReq = {
+            body: {
+                userId: leave.userId,
+                title: "Leave Request Approved",
+                message: `Your ${leave.leaveType} request from ${leave.startDate.toLocaleDateString()} to ${leave.endDate.toLocaleDateString()} has been approved by ${approver.name}.`,
+                type: "leave_request",
+                relatedTo: {
+                    model: "Leave",
+                    id: leave._id
+                },
+                shouldSendEmail: true
+            },
+            io: req.io
+        };
         
+        await createNotification(notifReq, res);
         return res.status(200).json({
             success: true,
             message: "Leave request approved successfully",
@@ -1167,7 +1231,23 @@ export const rejectLeave = async (req, res) => {
         leave.updatedAt = Date.now();
         
         await leave.save();
+        // Notify user about leave rejection
+        const notifReq = {
+            body: {
+                userId: leave.userId,
+                title: "Leave Request Rejected",
+                message: `Your ${leave.leaveType} request from ${leave.startDate.toLocaleDateString()} to ${leave.endDate.toLocaleDateString()} has been rejected by ${rejecter.name}. Reason: ${comment || 'No reason provided'}`,
+                type: "leave_request",
+                relatedTo: {
+                    model: "Leave",
+                    id: leave._id
+                },
+                shouldSendEmail: true
+            },
+            io: req.io
+        };
         
+        await createNotification(notifReq, res);
         logger.info(`Leave request ${id} rejected by user ${rejecterId}`);
         
         return res.status(200).json({

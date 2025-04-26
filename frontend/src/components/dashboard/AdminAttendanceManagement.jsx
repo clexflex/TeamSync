@@ -27,7 +27,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Grid
+  Grid,
+  Stack 
 } from '@mui/material';
 import { Add, Delete, Search, Refresh, FilterAlt } from '@mui/icons-material';
 import { format } from 'date-fns';
@@ -47,7 +48,7 @@ const AdminAttendanceManagement = () => {
 
   // Filters
   const [filters, setFilters] = useState({
-    userId: '',
+    search: '',
     dateFrom: '',
     dateTo: '',
     status: '',
@@ -56,8 +57,8 @@ const AdminAttendanceManagement = () => {
 
   // Status options for filter dropdown
   const statusOptions = [
-    "Present", "Absent", "Paid Leave", "Unpaid Leave", 
-    "Paid Half Leave", "Unpaid Half Leave", "Extra Work", 
+    "Present", "Absent", "Paid Leave", "Unpaid Leave",
+    "Paid Half Leave", "Unpaid Half Leave", "Extra Work",
     "Incomplete Attendance", "Weekly Off"
   ];
 
@@ -71,22 +72,22 @@ const AdminAttendanceManagement = () => {
   const fetchAttendanceRecords = async () => {
     try {
       setLoading(true);
-      
+
       // Build query string from filters
       const queryParams = new URLSearchParams();
       queryParams.append('page', page + 1); // API uses 1-based indexing
       queryParams.append('limit', rowsPerPage);
-      
+
       // Add filters if they have values
       Object.entries(filters).forEach(([key, value]) => {
         if (value) queryParams.append(key, value);
       });
-      
+
       const response = await axios.get(
         `${config.API_URL}/api/attendance/records?${queryParams.toString()}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      
+
       setAttendanceRecords(response.data.attendanceRecords);
       setTotalRecords(response.data.pagination.total);
     } catch (error) {
@@ -119,7 +120,7 @@ const AdminAttendanceManagement = () => {
 
   const resetFilters = () => {
     setFilters({
-      userId: '',
+      search: '',
       dateFrom: '',
       dateTo: '',
       status: '',
@@ -146,7 +147,7 @@ const AdminAttendanceManagement = () => {
         `${config.API_URL}/api/attendance/delete-record/${selectedAttendanceId}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      
+
       showNotification('Attendance record deleted successfully', 'success');
       fetchAttendanceRecords();
     } catch (error) {
@@ -192,17 +193,17 @@ const AdminAttendanceManagement = () => {
             Attendance Management
           </Typography>
           <Box>
-            <Button 
-              variant="contained" 
-              startIcon={<Add />} 
-              onClick={handleAddNewAttendance} 
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddNewAttendance}
               sx={{ mr: 1 }}
             >
               Add Attendance
             </Button>
-            <Button 
-              variant="outlined" 
-              startIcon={<FilterAlt />} 
+            <Button
+              variant="outlined"
+              startIcon={<FilterAlt />}
               onClick={() => setFilterOpen(!filterOpen)}
             >
               Filters
@@ -222,15 +223,17 @@ const AdminAttendanceManagement = () => {
               Filter Attendance Records
             </Typography>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={4}>
                 <TextField
                   fullWidth
-                  label="User ID"
-                  name="userId"
-                  value={filters.userId}
+                  label="Search by Name/ID"
+                  name="search"
+                  value={filters.search}
                   onChange={handleFilterChange}
                   variant="outlined"
                   size="small"
+                  placeholder="Employee/Manager name or ID"
+                  helperText="Search by name, employee ID, or email"
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
@@ -259,7 +262,7 @@ const AdminAttendanceManagement = () => {
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -340,7 +343,29 @@ const AdminAttendanceManagement = () => {
                     attendanceRecords.map((record) => (
                       <TableRow key={record._id}>
                         <TableCell>
-                          {record.userId ? `${record.userId.name} (${record.userId._id})` : 'Unknown User'}
+                          <Stack spacing={0.5}>
+                            <Typography variant="body2" fontWeight={500}>
+                              {record.userId?.name || 'Unknown User'}
+                            </Typography>
+                            {record.userId?.email && (
+                              <Typography variant="caption" color="text.secondary">
+                                {record.userId.email}
+                              </Typography>
+                            )}
+                            {record.employeeId && (
+                              <Typography variant="caption" color="primary">
+                                EMP ID: {record.employeeId}
+                              </Typography>
+                            )}
+                            {record.managerId && (
+                              <Typography variant="caption" color="secondary">
+                                MGR ID: {record.managerId}
+                              </Typography>
+                            )}
+                            <Typography variant="caption" color="text.secondary">
+                              User ID: {record.userId?._id}
+                            </Typography>
+                          </Stack>
                         </TableCell>
                         <TableCell>{formatDate(record.date)}</TableCell>
                         <TableCell>{formatTime(record.clockIn)}</TableCell>
@@ -349,8 +374,8 @@ const AdminAttendanceManagement = () => {
                         <TableCell>{record.credits}</TableCell>
                         <TableCell>{record.role}</TableCell>
                         <TableCell align="center">
-                          <IconButton 
-                            color="error" 
+                          <IconButton
+                            color="error"
                             onClick={() => handleDeleteClick(record._id)}
                             size="small"
                           >
@@ -369,7 +394,7 @@ const AdminAttendanceManagement = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             <TablePagination
               rowsPerPageOptions={[5, 10, 25, 50]}
               component="div"

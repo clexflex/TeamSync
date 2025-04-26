@@ -1449,30 +1449,93 @@ export const getAllAttendanceRecords = async (req, res) => {
     try {
         // Extract query parameters for filtering
         const {
-            userId,
+            search, // New search parameter
             dateFrom,
             dateTo,
             status,
             role,
-            limit = 50,  // Default limit to 50 records
-            page = 1     // Default to first page
+            limit = 50,
+            page = 1,
+            timezone
         } = req.query;
+
+        // Get user timezone or use default
+        const userTimezone = timezone || 'UTC';
 
         // Build query object
         const query = {};
 
-        // Add filters if provided
-        if (userId) query.userId = userId;
+        // Add search filter for name, email, or ID
+        if (search) {
+            const userQuery = {
+                $or: [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ]
+            };
+
+            // If search looks like MongoDB ObjectId, also search by ID
+            if (search.match(/^[0-9a-fA-F]{24}$/)) {
+                userQuery.$or.push({ _id: search });
+            }
+
+            // Find users matching the search criteria
+            const matchingUsers = await User.find(userQuery).select('_id');
+            const userIds = matchingUsers.map(user => user._id);
+
+            // If search looks like employee ID or manager ID, also search those
+            if (search.match(/^EMP-|^MGR-/)) {
+                const employeeQuery = { employeeId: search };
+                const managerQuery = { managerId: search };
+
+                const [matchingEmployees, matchingManagers] = await Promise.all([
+                    Employee.find(employeeQuery).select('userId'),
+                    Manager.find(managerQuery).select('userId')
+                ]);
+
+                matchingEmployees.forEach(emp => userIds.push(emp.userId));
+                matchingManagers.forEach(mgr => userIds.push(mgr.userId));
+            }
+
+            // Add user IDs to main query
+            if (userIds.length > 0) {
+                query.userId = { $in: userIds };
+            } else {
+                // No matching users found, return empty result
+                return res.status(200).json({
+                    success: true,
+                    attendanceRecords: [],
+                    pagination: {
+                        total: 0,
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        pages: 0
+                    }
+                });
+            }
+        }
+
+        // Add other filters
         if (status) query.status = status;
         if (role) query.role = role;
 
-        // Date range filter
+        // Date range filter with timezone adjustment
         if (dateFrom || dateTo) {
             query.date = {};
-            if (dateFrom) query.date.$gte = new Date(dateFrom);
+            if (dateFrom) {
+                const fromDate = adjustDateForTimezone(
+                    new Date(dateFrom),
+                    userTimezone,
+                    false // Start of day
+                );
+                query.date.$gte = fromDate;
+            }
             if (dateTo) {
-                const toDate = new Date(dateTo);
-                toDate.setHours(23, 59, 59, 999); // End of the day
+                const toDate = adjustDateForTimezone(
+                    new Date(dateTo),
+                    userTimezone,
+                    true // End of day
+                );
                 query.date.$lte = toDate;
             }
         }
@@ -1482,7 +1545,7 @@ export const getAllAttendanceRecords = async (req, res) => {
 
         // Execute query with pagination
         const attendanceRecords = await Attendance.find(query)
-            .sort({ date: -1 }) // Sort by date, newest first
+            .sort({ date: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .populate({
@@ -1497,9 +1560,29 @@ export const getAllAttendanceRecords = async (req, res) => {
         // Get total count for pagination
         const totalRecords = await Attendance.countDocuments(query);
 
+        // Fetch additional information for each record
+        const enhancedRecords = await Promise.all(attendanceRecords.map(async (record) => {
+            const recordObj = record.toObject();
+            
+            // Fetch employee/manager ID if applicable
+            if (record.role === 'employee') {
+                const employee = await Employee.findOne({ userId: record.userId }).select('employeeId');
+                if (employee) {
+                    recordObj.employeeId = employee.employeeId;
+                }
+            } else if (record.role === 'manager') {
+                const manager = await Manager.findOne({ userId: record.userId }).select('managerId');
+                if (manager) {
+                    recordObj.managerId = manager.managerId;
+                }
+            }
+            
+            return recordObj;
+        }));
+
         return res.status(200).json({
             success: true,
-            attendanceRecords,
+            attendanceRecords: enhancedRecords,
             pagination: {
                 total: totalRecords,
                 page: parseInt(page),

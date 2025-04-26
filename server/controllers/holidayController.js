@@ -1,8 +1,11 @@
 import logger from "../utils/logger.js"; 
 import Holiday from "../models/Holiday.js";
 import Department from "../models/Department.js";
+import { createNotification } from './notificationController.js';
 
 // Add a new holiday
+
+// Update addHoliday function
 export const addHoliday = async (req, res) => {
     try {
         const { name, date, isCompanyWide, applicableDepartments, description } = req.body;
@@ -34,8 +37,57 @@ export const addHoliday = async (req, res) => {
         });
 
         await newHoliday.save();
-        logger.info(`Holiday "${name}" added successfully on ${date} by user ${req.user._id}.`);
-        return res.status(201).json({ success: true, holiday: newHoliday });
+        
+        // Format date for notification
+        const holidayDate = new Date(date);
+        const formattedDate = holidayDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Create notification for all users
+        try {
+            const notificationMessage = `A holiday has been announced for ${formattedDate}${description ? ': ' + description : ''}. Please plan your work accordingly.`;
+            
+            const notificationReq = {
+                body: {
+                    title: `New Holiday: ${name}`,
+                    message: notificationMessage,
+                    type: 'general', // Use 'general' instead of 'holiday'
+                    isGlobal: isCompanyWide,
+                    shouldSendEmail: false,
+                    metadata: {
+                        holidayId: newHoliday._id,
+                        holidayName: name,
+                        holidayDate: date,
+                        isCompanyWide: isCompanyWide
+                    }
+                },
+                io: req.io
+            };
+
+            // Create a mock response object for the notification creation
+            const mockRes = {
+                status: (code) => ({
+                    json: (data) => data
+                })
+            };
+
+            await createNotification(notificationReq, mockRes);
+            
+            logger.info(`Holiday "${name}" added successfully on ${date} by user ${req.user._id}.`);
+            return res.status(201).json({ success: true, holiday: newHoliday });
+        } catch (notificationError) {
+            logger.error(`Error creating notification for holiday: ${notificationError.message}`);
+            // Still return success for holiday creation even if notification fails
+            return res.status(201).json({ 
+                success: true, 
+                holiday: newHoliday,
+                warning: "Holiday created but notification failed to send"
+            });
+        }
     } catch (error) {
         logger.error(`Error adding holiday "${name}" on ${date}: ${error.message}`);
         console.error("Error adding holiday:", error);
