@@ -40,13 +40,13 @@ const AddLeave = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [totalDays, setTotalDays] = useState(0);
-  
+
   const getBasePath = (user) => {
     return user.role === "employee" ? "/employee-dashboard" : "/manager-dashboard";
   };
 
   const basePath = getBasePath(user);
-  
+
   useEffect(() => {
     fetchLeaveBalances();
   }, []);
@@ -258,7 +258,10 @@ const AddLeave = () => {
                 <MenuItem value="Half Leave">Half Leave (Balance: {getLeaveBalance("Half Leave")})</MenuItem>
               </Select>
               <FormHelperText>
-                {formData.leaveType && `Available balance: ${getLeaveBalance(formData.leaveType)} days`}
+                {formData.leaveType && (formData.useLeaveBalance
+                  ? `Available balance: ${getLeaveBalance(formData.leaveType)} days`
+                  : 'Balance not required for unpaid leave'
+                )}
               </FormHelperText>
             </FormControl>
           </Grid>

@@ -830,9 +830,11 @@ const createAttendanceRecordsForLeave = async (leave) => {
 export const addLeave = async (req, res) => {
     try {
         const { 
-            startDate, endDate, leaveType, reason, 
-            useLeaveBalance = true
+            startDate, endDate, leaveType, reason
         } = req.body;
+        
+        // Convert useLeaveBalance from string to boolean
+        const useLeaveBalance = req.body.useLeaveBalance === 'true' || req.body.useLeaveBalance === true;
         
         const userId = req.user?._id;
         
@@ -1006,6 +1008,7 @@ export const addLeave = async (req, res) => {
         });
         
         await newLeave.save();
+        
         // Notify admins about new leave request
         const admins = await User.find({ role: 'admin', status: 'active' });
         for (const admin of admins) {
