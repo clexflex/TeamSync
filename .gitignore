@@ -5,3 +5,5 @@ dist/
 *.log
 server/public/*/*/*
 .DS_Store
+server/public/uploads/*
+server/public/uploads
