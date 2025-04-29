@@ -308,7 +308,10 @@ const EditUserProfile = () => {
               ...formattedUserProfile,
               employeeId: profileData.managerId || '', // Store managerId in employeeId field
               department: profileData.department?._id || '',
-              designation: profileData.designation || ''
+              designation: profileData.designation || '',
+              dob: profileData.dob ? new Date(profileData.dob).toISOString().split('T')[0] : '',
+              gender: profileData.gender || '',
+              maritalStatus: profileData.maritalStatus || ''
             };
           }
 

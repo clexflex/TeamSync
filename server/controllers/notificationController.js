@@ -2,21 +2,9 @@ import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 import Employee from "../models/Employee.js";
 import UserProfile from "../models/UserProfile.js";
-import nodemailer from "nodemailer";
+
 import logger from "../utils/logger.js";
-
-// Email transporter setup - configure in production
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.example.com",
-    port: process.env.EMAIL_PORT || 587,
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: {
-        user: process.env.EMAIL_USER || "notifications@teamsync.com",
-        pass: process.env.EMAIL_PASS || "password"
-    }
-});
-
-// Helper function to send email notification
+import { sendNotificationEmail } from "../utils/emailService.js";
 
 const sendEmail = async (notification, user) => {
     try {
@@ -24,30 +12,13 @@ const sendEmail = async (notification, user) => {
             return;
         }
 
-        const mailOptions = {
-            from: `"Mximize Market Research Pvt. Ltd." <${process.env.EMAIL_USER || "notifications@teamsync.com"}>`,
-            to: user.email,
-            subject: notification.title,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                    <div style="background-color: #3f51b5; color: white; padding: 10px 20px; border-radius: 5px 5px 0 0;">
-                        <h2 style="margin: 0;">${notification.title}</h2>
-                    </div>
-                    <div style="padding: 20px;">
-                        <p>${notification.message}</p>
-                        <p>Sent on: ${new Date(notification.createdAt).toLocaleString()}</p>
-                        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
-                        <p style="font-size: 12px; color: #666;">This is an automated message from Mximize Market Research Pvt. Ltd.. Please do not reply to this email.</p>
-                    </div>
-                </div>
-            `
-        };
-
-        await transporter.sendMail(mailOptions);
+        const result = await sendNotificationEmail(notification, user);
         
-        // Mark email as sent
-        await Notification.findByIdAndUpdate(notification._id, { emailSent: true });
-        logger.info(`Email sent to ${user.email} for notification ${notification._id}`);
+        if (result.success) {
+            // Mark email as sent
+            await Notification.findByIdAndUpdate(notification._id, { emailSent: true });
+            logger.info(`Email sent to ${user.email} for notification ${notification._id}`);
+        }
     } catch (error) {
         logger.error(`Failed to send email notification: ${error.message}`);
     }

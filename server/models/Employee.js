@@ -11,7 +11,7 @@ const employeeSchema = new Schema({
     dob: { type: Date },
     gender: { type: String },
     maritalStatus: { type: String },
-    salary: { type: Number, required: true },
+    salary: { type: Number },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });

@@ -696,7 +696,7 @@ const BulkUserImport = () => {
           
           // Use different ID field name based on user type
           [row.userType === 'manager' ? 'managerId' : 'employeeId']: row.employeeId,
-          
+          employeeId: row.employeeId,
           // Additional contact info
           primaryContactNo: row.primaryContactNo,
           address: row.address,

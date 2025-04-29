@@ -15,6 +15,8 @@ import Ticket from "../models/Ticket.js";
 import Team from "../models/Team.js";
 import Notification from "../models/Notification.js";
 import ResignationRequest from "../models/ResignationRequest.js";
+import { sendWelcomeEmail, sendProfileUpdateEmail } from '../utils/emailService.js'; 
+
 export { uploadProfileImage as upload };
 
 // Helper to create default leave balances
@@ -62,7 +64,8 @@ const createUserProfile = async (req, res) => {
             password,
             joiningDate,
             userType, // "employee" or "manager"
-            employeeId, // used for both employeeId and managerId
+            employeeId,
+            managerId,  
             department,
             designation,
             gender,
@@ -221,14 +224,74 @@ const createUserProfile = async (req, res) => {
             await newEmployee.save();
             logger.info(`Employee ${name} (ID: ${employeeId}) added successfully.`);
         } else if (role === "manager") {
+            const idToUse = managerId || employeeId;
+            
+            if (!idToUse) {
+                // If no ID is available, handle the error
+                await User.findByIdAndDelete(savedUser._id);
+                await UserProfile.findByIdAndDelete(savedUserProfile._id);
+                return res.status(400).json({ 
+                    success: false, 
+                    error: "Manager ID is required" 
+                });
+            }
+            
             const newManager = new Manager({
                 userId: savedUser._id,
-                managerId: employeeId, // using employeeId field for managerId
+                managerId: idToUse,
                 department,
+                dob,
+                gender,
+                maritalStatus,
                 designation: designation || "Team Manager"
             });
             await newManager.save();
-            logger.info(`Manager ${name} (ID: ${employeeId}) added successfully.`);
+            logger.info(`Manager ${name} (ID: ${idToUse}) added successfully.`);
+        }
+        // Create welcome notification
+        const notification = new Notification({
+            userId: savedUser._id,
+            title: "Welcome to TeamSync",
+            message: `Hello ${name}, welcome to TeamSync! Your account has been created successfully. You can now log in using your email and password.`,
+            type: "system",
+            isRead: false,
+            sendEmail: true,
+            metadata: {
+                action: "user_created",
+                userType: role
+            }
+        });
+        await notification.save();
+
+        // Send notification via socket.io if available
+        if (req.io) {
+            req.io.to(`user:${savedUser._id}`).emit('new_notification', notification);
+        }
+
+        // Send email with login credentials
+        await sendWelcomeEmail(savedUser, password, role);
+
+        // Also, notify admin about the new user
+        const admins = await User.find({ role: 'admin' });
+        if (admins.length > 0) {
+            const adminNotification = new Notification({
+                userId: admins[0]._id,
+                title: "New User Created",
+                message: `A new ${role} named ${name} has been added to the system.`,
+                type: "system",
+                isRead: false,
+                metadata: {
+                    action: "user_created",
+                    newUserId: savedUser._id,
+                    userType: role
+                }
+            });
+            await adminNotification.save();
+
+            // Send notification to admin via socket
+            if (req.io) {
+                req.io.to(`user:${admins[0]._id}`).emit('new_notification', adminNotification);
+            }
         }
 
         return res.status(201).json({
@@ -377,7 +440,10 @@ const getUserProfileById = async (req, res) => {
                     managerId: manager.managerId,
                     department: manager.department,
                     designation: manager.designation,
-                    teams: manager.teams
+                    teams: manager.teams,
+                    dob: manager.dob,
+                    gender: manager.gender,
+                    maritalStatus: manager.maritalStatus,
                 };
             }
         }
@@ -632,6 +698,9 @@ const updateUserProfile = async (req, res) => {
                 if (employeeId) manager.managerId = employeeId; // Using employeeId for managerId
                 if (designation) manager.designation = designation;
                 if (department) manager.department = department;
+                if (gender) manager.gender = gender;
+                if (dob) manager.dob = dob;
+                if (maritalStatus) manager.maritalStatus = maritalStatus;
 
                 await manager.save();
             }
@@ -1022,7 +1091,5 @@ const changeUserRole = async (req, res) => {
     }
 };
 
-// Add the import for mongoose if not already present
-// import mongoose from "mongoose";
 
 export { createUserProfile, getUserProfiles,changeUserRole ,getUserProfileById, updateUserProfile, deleteUserProfile, bulkDeleteUserProfiles };
