@@ -53,7 +53,7 @@ const parseNestedObjects = (obj) => {
 };
 
 // Create a new user profile
-const createUserProfile = async (req, res) => {
+export const createUserProfile = async (req, res) => {
     try {
         // Parse any JSON strings in the form data
         let formData = parseNestedObjects(req.body);
@@ -306,7 +306,7 @@ const createUserProfile = async (req, res) => {
 };
 
 // Get all user profiles (admin only)
-const getUserProfiles = async (req, res) => {
+export const getUserProfiles = async (req, res) => {
     try {
         const userProfiles = await UserProfile.find()
             .populate({
@@ -357,6 +357,7 @@ const getUserProfiles = async (req, res) => {
                 ...additionalData,
                 hasLeavePolicy: !!profile.leavePolicy,
                 company: profile.company,
+                canEditProfile: profile.canEditProfile, // ADDED THIS LINE
                 leavePolicyId: profile.leavePolicy?._id || null,
                 leavePolicyName: profile.leavePolicy?.name || null,
                 joiningDate: profile.joiningDate,
@@ -379,7 +380,7 @@ const getUserProfiles = async (req, res) => {
 };
 
 // Get a specific user profile by ID
-const getUserProfileById = async (req, res) => {
+export const getUserProfileById = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -464,6 +465,7 @@ const getUserProfileById = async (req, res) => {
             // Include all additional fields from user profile
             joiningDate: userProfile.joiningDate,
             company: userProfile.company,
+            canEditProfile: userProfile.canEditProfile, // ADDED THIS LINE
 
             // Personal Information
             companyEmail: userProfile.companyEmail,
@@ -518,7 +520,7 @@ const getUserProfileById = async (req, res) => {
 };
 
 // Update a user profile
-const updateUserProfile = async (req, res) => {
+export const updateUserProfile = async (req, res) => {
     try {
         const { id } = req.params;
         let updateData = req.body;
@@ -718,7 +720,7 @@ const updateUserProfile = async (req, res) => {
 };
 
 // Delete a user profile
-const deleteUserProfile = async (req, res) => {
+export const deleteUserProfile = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -755,7 +757,7 @@ const deleteUserProfile = async (req, res) => {
         return res.status(500).json({ success: false, error: "Server error in deleting user profile" });
     }
 };
-const bulkDeleteUserProfiles = async (req, res) => {
+export const bulkDeleteUserProfiles = async (req, res) => {
     try {
         const { profileIds } = req.body;
         
@@ -872,7 +874,7 @@ const bulkDeleteUserProfiles = async (req, res) => {
 };
 
 // Function to change a user's role between employee and manager
-const changeUserRole = async (req, res) => {
+export const changeUserRole = async (req, res) => {
     try {
         const { id } = req.params;
         const { 
@@ -1090,6 +1092,132 @@ const changeUserRole = async (req, res) => {
         });
     }
 };
+// Add this function to toggle user's ability to edit their profile
+export const toggleUserCanEditProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { canEditProfile } = req.body;
+        
+        const userProfile = await UserProfile.findById(id);
+        
+        if (!userProfile) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "User profile not found" 
+            });
+        }
+        
+        userProfile.canEditProfile = canEditProfile;
+        await userProfile.save();
+        
+        return res.status(200).json({
+            success: true,
+            message: "Profile edit permission updated successfully",
+            userProfile: {
+                _id: userProfile._id,
+                canEditProfile: userProfile.canEditProfile
+            }
+        });
+    } catch (error) {
+        logger.error(`Error toggling profile edit permission: ${error.message}`);
+        return res.status(500).json({ 
+            success: false, 
+            error: "Failed to update profile edit permission" 
+        });
+    }
+};
 
-
-export { createUserProfile, getUserProfiles,changeUserRole ,getUserProfileById, updateUserProfile, deleteUserProfile, bulkDeleteUserProfiles };
+// Add this function for users to edit their own profile
+export const updateMyProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        let updateData = req.body;
+        
+        // Parse any JSON strings in the form data
+        updateData = parseNestedObjects(updateData);
+        
+        // Find user profile
+        const userProfile = await UserProfile.findOne({ userId });
+        if (!userProfile) {
+            return res.status(404).json({ success: false, error: "User profile not found" });
+        }
+        
+        // Check if user has permission to edit their profile
+        if (!userProfile.canEditProfile) {
+            return res.status(403).json({ 
+                success: false, 
+                error: "You do not have permission to edit your profile" 
+            });
+        }
+        
+        // Check if user is trying to change restricted fields
+        const restrictedFields = ['canEditProfile', 'leaveBalances', 'leavePolicy', 'joiningDate', 'employeeId', 'managerId', 'department', 'salary', 'salaryInfo'];
+        const invalidUpdate = Object.keys(updateData).some(field => restrictedFields.includes(field));
+        
+        if (invalidUpdate) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "You cannot update restricted fields" 
+            });
+        }
+        
+        // Remove password from update if it's empty
+        if (updateData.password && updateData.password.trim() === '') {
+            delete updateData.password;
+        }
+        
+        // Hash password if provided
+        if (updateData.password && updateData.password.trim() !== '') {
+            const hashPassword = await bcrypt.hash(updateData.password, 10);
+            updateData.password = hashPassword;
+        }
+        
+        // Update allowed fields
+        const profileUpdates = {};
+        
+        // Allowed fields for users to update
+        const allowedFields = [
+            'companyEmail', 'location', 'primaryContactNo', 'bloodGroup', 'nationality',
+            'marriageDate', 'spouse', 'fatherName', 'religion', 'physicallyHandicapped',
+            'height', 'weight', 'address', 'education', 'confirmationDate', 'noticePeriod',
+            'employmentStatus', 'currentCompanyExperience', 'previousExperience', 'totalExperience',
+            'probationPeriod', 'previousEmployment'
+        ];
+        
+        allowedFields.forEach(field => {
+            if (updateData[field] !== undefined) {
+                profileUpdates[field] = updateData[field];
+            }
+        });
+        
+        // Handle specific fields
+        if (updateData.physicallyHandicapped !== undefined) {
+            profileUpdates.physicallyHandicapped = updateData.physicallyHandicapped === 'true' || updateData.physicallyHandicapped === true;
+        }
+        
+        if (Object.keys(profileUpdates).length > 0) {
+            await UserProfile.updateOne({ _id: userProfile._id }, { $set: profileUpdates });
+        }
+        
+        // Update user name if provided
+        if (updateData.name) {
+            const user = await User.findById(userId);
+            if (user) {
+                user.name = updateData.name;
+                await user.save();
+            }
+        }
+        
+        logger.info(`User ${userId} successfully updated their profile at ${new Date().toISOString()}`);
+        return res.status(200).json({
+            success: true,
+            message: "Your profile has been updated successfully"
+        });
+    } catch (error) {
+        logger.error(`Error updating user's own profile: ${error.message}`);
+        return res.status(500).json({ 
+            success: false, 
+            error: `Server error in updating profile: ${error.message}` 
+        });
+    }
+};

@@ -179,6 +179,8 @@ function App() {
                 <Route path="submit-resignation" element={<SubmitResignationForm />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="realtime-attendance" element={<RealTimeAttendanceForm />} />
+                <Route path="my-profile/edit" element={<EditUserProfile />} />
+
               </Route>
 
               {/* Manager Dashboard */}
@@ -211,6 +213,8 @@ function App() {
                 <Route path="submit-resignation" element={<SubmitResignationForm />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="realtime-attendance" element={<RealTimeAttendanceForm />} />
+                <Route path="my-profile/edit" element={<EditUserProfile />} />
+
               </Route>
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="*" element={<NotFound />} />

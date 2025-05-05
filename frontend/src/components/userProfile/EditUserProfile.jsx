@@ -29,7 +29,8 @@ import {
 } from '@mui/material';
 import { ArrowBack, Add, Delete } from '@mui/icons-material';
 import config from "../../config";
-
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/authContext';
 // Tab panel component
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -52,6 +53,10 @@ function TabPanel(props) {
 }
 
 const EditUserProfile = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const isAdminEdit = user?.role === 'admin' && location.pathname.includes('/admin-dashboard');
+  const isSelfEdit = !isAdminEdit && user?.role !== 'admin'; 
   const [userProfile, setUserProfile] = useState({
     name: '',
     email: '',
@@ -169,7 +174,7 @@ const EditUserProfile = () => {
 
   const navigate = useNavigate();
   const { id } = useParams();
-
+  const profileId = id || user?._id;
   // Fetch departments
   const fetchDepartments = async () => {
     try {
@@ -196,9 +201,14 @@ const EditUserProfile = () => {
       try {
         setLoading(true);
         setError('');
-
+        // Ensure we have a profileId
+        if (!profileId) {
+          setError('User ID not found');
+          setLoading(false);
+          return;
+        }
         // Fetch user profile directly using the user profile ID
-        const userProfileResponse = await axios.get(`${config.API_URL}/api/user-profile/${id}`, {
+        const userProfileResponse = await axios.get(`${config.API_URL}/api/user-profile/${profileId}`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem('token')}`
           }
@@ -220,7 +230,7 @@ const EditUserProfile = () => {
             joiningDate: profileData.joiningDate?.split('T')[0] || '',
             password: '',
             leaveBalances: profileData.leaveBalances || [],
-            company: profileData.company , 
+            company: profileData.company,
 
 
             // Personal Information (initialize with default values if not present)
@@ -374,7 +384,7 @@ const EditUserProfile = () => {
     };
 
     fetchUserProfile();
-  }, [id]);
+  }, [profileId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -546,27 +556,49 @@ const EditUserProfile = () => {
         delete updateData.password;
       }
 
-      // Add userId to identify the user in the backend
-      const userData = {
-        ...updateData,
-        userId: userProfile.userId // Make sure userId is available
-      };
+      console.log("Sending update with data:", updateData);
 
-      console.log("Sending update with data:", userData);
-
-      const response = await axios.put(
-        `${config.API_URL}/api/user-profile/${id}`,
-        userData,
-        {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem('token')}`,
-            "Content-Type": "application/json"
+      let response;
+      if (isSelfEdit) {
+        // Use the new my-profile endpoint
+        response = await axios.put(
+          `${config.API_URL}/api/user-profile/my-profile`,
+          updateData, // Note: we don't send userId for self-edit
+          {
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem('token')}`,
+              "Content-Type": "application/json"
+            }
           }
-        }
-      );
+        );
+      } else {
+        // Add userId to the data for admin edit
+        const userData = {
+          ...updateData,
+          userId: userProfile.userId || id
+        };
+
+        // Use admin endpoint
+        response = await axios.put(
+          `${config.API_URL}/api/user-profile/${id}`,
+          userData,
+          {
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem('token')}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
 
       if (response.data.success) {
-        navigate("/admin-dashboard/user-profiles");
+        if (isAdminEdit) {
+          navigate("/admin-dashboard/user-profiles");
+        } else if (location.pathname.includes('/employee-dashboard')) {
+          navigate(`/employee-dashboard/user-profile/${profileId}`); 
+        } else if (location.pathname.includes('/manager-dashboard')) {
+          navigate(`/manager-dashboard/user-profile/${profileId}`); 
+        }
       } else {
         setError(response.data.error || "Failed to update user profile");
       }
@@ -588,16 +620,24 @@ const EditUserProfile = () => {
     <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
       <Button
         startIcon={<ArrowBack />}
-        onClick={() => navigate('/admin-dashboard/user-profiles')}
+        onClick={() => {
+          if (isAdminEdit) {
+            navigate('/admin-dashboard/user-profiles');
+          } else if (location.pathname.includes('/employee-dashboard')) {
+            navigate(`/employee-dashboard/user-profile/${user._id}`);
+          } else if (location.pathname.includes('/manager-dashboard')) {
+            navigate(`/manager-dashboard/user-profile/${user._id}`);
+          }
+        }}
         sx={{ mb: 4 }}
       >
-        Back to User Profiles
+        Back
       </Button>
 
       <Paper elevation={0} sx={{ borderRadius: 2 }}>
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" fontWeight="bold" color="text.primary">
-            Edit {userProfile.userType === 'employee' ? 'Employee' : 'Manager'} Profile
+            {isSelfEdit ? 'Edit My Profile' : `Edit ${userProfile.userType === 'employee' ? 'Employee' : 'Manager'} Profile`}
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={1}>
             Modify the user profile details

@@ -58,11 +58,14 @@ import {
   CloudUpload,
   DeleteSweep,
   DeleteSweepOutlined,
-  SwapHoriz as SwapHorizIcon
+  SwapHoriz as SwapHorizIcon,
+  LockOpen,
+  LockOutlined
 } from '@mui/icons-material';
 import axios from 'axios';
 import config from '../../config';
 import ChangeRoleDialog from './ChangeRoleDialog';
+import { useAuth } from '../../context/authContext';
 
 const UserProfileList = () => {
   const navigate = useNavigate();
@@ -86,6 +89,8 @@ const UserProfileList = () => {
   const [bulkDeleteResult, setBulkDeleteResult] = useState(null);
   const [changeRoleDialogOpen, setChangeRoleDialogOpen] = useState(false);
   const [selectedProfileForRoleChange, setSelectedProfileForRoleChange] = useState(null);
+  const { user } = useAuth();
+  
   // Meta statistics
   const [statistics, setStatistics] = useState({
     total: 0,
@@ -96,6 +101,7 @@ const UserProfileList = () => {
     departments: [],
     companies: [] // Initialize companies array here
   });
+  const isAdmin = user?.role === 'admin';
 
   // Fetch user profiles
   useEffect(() => {
@@ -412,7 +418,27 @@ const UserProfileList = () => {
       </Box>
     );
   }
-
+  const handleToggleEditPermission = async (profileId, currentStatus) => {
+    try {
+      const response = await axios.put(
+        `${config.API_URL}/api/user-profile/${profileId}/toggle-edit-permission`,
+        { canEditProfile: !currentStatus },
+        {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Refresh the list
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error toggling edit permission:', error);
+      setError('Failed to update edit permission');
+    }
+  };
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -752,6 +778,20 @@ const UserProfileList = () => {
                           }}
                           onClick={(e) => e.stopPropagation()} // Prevent row click
                         >
+                          {isAdmin && (
+      <Tooltip title={profile.canEditProfile ? "Disable Profile Editing" : "Enable Profile Editing"}>
+        <IconButton
+          size="small"
+          color={profile.canEditProfile ? "success" : "default"}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleEditPermission(profile._id, profile.canEditProfile);
+          }}
+        >
+          {profile.canEditProfile ? <LockOpen fontSize="small" /> : <LockOutlined fontSize="small" />}
+        </IconButton>
+      </Tooltip>
+    )}
                           <Tooltip title="View details">
                             <IconButton
                               size="small"

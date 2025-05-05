@@ -86,6 +86,7 @@ const userProfileSchema = new Schema({
     }],
     joiningDate: { type: Date, required: true },
     lastLeaveBalanceReset: { type: Date },
+    canEditProfile: { type: Boolean, default: false },
     
     // Personal Information
     companyEmail: { type: String },

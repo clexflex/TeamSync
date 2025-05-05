@@ -52,7 +52,9 @@ import {
   Flag as FlagIcon,
   Apartment as ApartmentIcon,
   AccountBalance as AccountBalanceIcon,
-  Edit as EditIcon, // Added for mobile UI quick actions
+  Edit as EditIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon, 
 } from '@mui/icons-material';
 import { useAuth } from '../../context/authContext';
 
@@ -204,40 +206,89 @@ const ViewUserProfile = () => {
       </Box>
     </Stack>
   );
-
+  const handleToggleEditPermission = async () => {
+    try {
+      const response = await axios.put(
+        `${config.API_URL}/api/user-profile/${id}/toggle-edit-permission`,
+        { canEditProfile: !userProfile.canEditProfile },
+        {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Refresh user profile data
+        const updatedResponse = await axios.get(`${config.API_URL}/api/user-profile/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (updatedResponse.data.success) {
+          setUserProfile(updatedResponse.data.userProfile);
+          
+          // Show success message (optional - you can add a toast notification)
+          console.log(`Profile editing ${!userProfile.canEditProfile ? 'enabled' : 'disabled'} successfully`);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling edit permission:', error);
+      setError(`Failed to ${!userProfile.canEditProfile ? 'enable' : 'disable'} profile editing`);
+    }
+  };
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: 1200, mx: 'auto' }}>
-      {/* Back button - hidden on small screens to save space */}
-      {!isMobile && (
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={navigateBack}
-          sx={{ mb: 3 }}
-        >
-          {isAdminDashboard
-            ? `Back to ${isEmployee ? 'Employees' : isManager ? 'Managers' : 'Dashboard'}`
-            : 'Back to Dashboard'}
-        </Button>
-      )}
+    <Box  size={{ xs: 12 }}  sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: 1200, mx: 'auto' }}>
 
-      {/* Mobile header with back button */}
-      {isMobile && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <IconButton onClick={navigateBack}>
-            <ArrowBackIcon />
-          </IconButton>
 
-          {/* Edit button (for admin) */}
-          {isAdmin && isAdminDashboard && (
-            <IconButton
-              color="primary"
-              onClick={() => navigate(`/admin-dashboard/user-profile/edit/${id}`)}
-            >
-              <EditIcon />
-            </IconButton>
-          )}
+      {isAdmin && isAdminDashboard && !isMobile && (
+        <Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          {/* Add toggle button for admin */}
+          <Button
+            variant="outlined"
+            color={userProfile.canEditProfile ? "success" : "error"}
+            onClick={handleToggleEditPermission}
+            startIcon={userProfile.canEditProfile ? <LockOpenIcon /> : <LockIcon />}
+          >
+            {userProfile.canEditProfile ? "Disable Profile Editing" : "Enable Profile Editing"}
+          </Button>
+          
+          <Button
+            variant="outlined"
+            onClick={navigateBack}
+          >
+            Back
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => navigate(`/admin-dashboard/user-profile/edit/${id}`)}
+          >
+            Edit Profile
+          </Button>
         </Box>
       )}
+
+
+{!isAdmin && userProfile?.canEditProfile && (
+  <Box sx={{ p: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+    <Button
+      variant="contained"
+      color="primary"
+      onClick={() => {
+        if (isEmployeeDashboard) {
+          navigate(`/employee-dashboard/my-profile/edit`);
+        } else if (isManagerDashboard) {
+          navigate(`/manager-dashboard/my-profile/edit`);
+        }
+      }}
+      startIcon={<EditIcon />}
+    >
+      Edit My Profile
+    </Button>
+  </Box>
+)}
+
 
       <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         {/* Header Section */}
@@ -331,7 +382,7 @@ const ViewUserProfile = () => {
         {/* Basic Information Tab */}
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid item size={{ xs: 12, md: 6 }} >
               <Paper
                 elevation={0}
                 sx={{
