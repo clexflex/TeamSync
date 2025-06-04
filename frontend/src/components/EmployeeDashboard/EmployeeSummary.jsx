@@ -254,95 +254,6 @@ const fetchUpcomingHolidays = async () => {
     }
   };
   
-  // Get attendance status message and action button
-  const getAttendanceStatusUI = () => {
-    if (!attendanceStatus) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress size={20} />
-        </Box>
-      );
-    }
-    
-    if (attendanceStatus.isHoliday) {
-      return (
-        <Box>
-          <Typography variant="h6" color="primary" gutterBottom>
-            Today is a Holiday
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            {attendanceStatus.holidayDetails?.name || 'Holiday'}
-          </Typography>
-        </Box>
-      );
-    }
-    
-    if (attendanceStatus.status === 'not-started') {
-      return (
-        <Box>
-          <Typography variant="body1" gutterBottom>
-            You haven't clocked in today
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<AccessTimeIcon />}
-            onClick={() => handleClockAction('in')}
-          >
-            Clock In
-          </Button>
-        </Box>
-      );
-    }
-    
-    if (attendanceStatus.status === 'clocked-in') {
-      return (
-        <Box>
-          <Typography variant="body1" color="primary" gutterBottom>
-            You are currently clocked in
-          </Typography>
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            Clocked in at: {formatDate(attendanceStatus.attendance?.clockIn)} {new Date(attendanceStatus.attendance?.clockIn).toLocaleTimeString()}
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="secondary"
-            startIcon={<AccessTimeIcon />}
-            onClick={() => handleClockAction('out')}
-          >
-            Clock Out
-          </Button>
-        </Box>
-      );
-    }
-    
-    if (attendanceStatus.status === 'completed') {
-      return (
-        <Box>
-          <Typography variant="body1" color="success.main" gutterBottom>
-            Attendance completed for today
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Clocked in: {new Date(attendanceStatus.attendance?.clockIn).toLocaleTimeString()}
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Clocked out: {new Date(attendanceStatus.attendance?.clockOut).toLocaleTimeString()}
-          </Typography>
-          {attendanceStatus.attendance?.hoursWorked && (
-            <Typography variant="body2" color="textSecondary">
-              Hours worked: {attendanceStatus.attendance.hoursWorked.toFixed(2)}
-            </Typography>
-          )}
-        </Box>
-      );
-    }
-    
-    return (
-      <Typography variant="body1">
-        Status not available
-      </Typography>
-    );
-  };
   
   if (loading) {
     return (
@@ -411,32 +322,7 @@ const fetchUpcomingHolidays = async () => {
       </Paper>
       
       <Grid container spacing={3}>
-        {/* Attendance Status Card */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%', borderRadius: 2 }} elevation={2}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <AccessTimeIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6" component="div">
-                  Attendance Status
-                </Typography>
-              </Box>
-              <Divider sx={{ mb: 2 }} />
-              
-              {getAttendanceStatusUI()}
-              
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => navigate('/employee-dashboard/attendance-form')}
-                >
-                  View Attendance History
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+
         
         {/* Leave Balance Card */}
         <Grid item xs={12} md={6}>
